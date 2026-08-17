@@ -14,6 +14,14 @@ type ActionItem = {
   state: string;
   detail: string;
   sourceUrl: string;
+  description: string;
+  availableFrom: string | null;
+  availableUntil: string | null;
+  submissionTypes: string[];
+  allowedExtensions: string[];
+  gradingType: string | null;
+  allowedAttempts: number | null;
+  published: boolean | null;
 };
 
 type WeekItem = {
@@ -104,7 +112,91 @@ function formatDate(value: string | null) {
   return Number.isNaN(date.getTime()) ? "Date unavailable" : dateFormat.format(date);
 }
 
-function ActionList({ items, empty }: { items: ActionItem[]; empty: string }) {
+function readableLabel(value: string) {
+  return value
+    .split("_")
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
+}
+
+function assignmentStatus(value: string) {
+  const labels: Record<string, string> = {
+    late: "Late",
+    locked: "Locked",
+    missing: "Missing",
+    open: "Open",
+  };
+  return labels[value] ?? readableLabel(value);
+}
+
+function AssignmentModal({ item, onClose }: { item: ActionItem; onClose: () => void }) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
+  }, [onClose]);
+
+  const detailRows = [
+    { label: "Course", value: item.course },
+    { label: "Due", value: formatDate(item.dueAt) },
+    { label: "Status", value: assignmentStatus(item.state) },
+    { label: "Points", value: item.points === null ? "Not listed" : `${item.points} possible` },
+    { label: "Available from", value: item.availableFrom ? formatDate(item.availableFrom) : "Immediately" },
+    { label: "Available until", value: item.availableUntil ? formatDate(item.availableUntil) : "No closing date listed" },
+    { label: "Submit with", value: item.submissionTypes.length ? item.submissionTypes.map(readableLabel).join(", ") : "Not specified" },
+    { label: "Grading", value: item.gradingType ? readableLabel(item.gradingType) : "Not specified" },
+    { label: "Attempts", value: item.allowedAttempts === -1 ? "Unlimited" : item.allowedAttempts === null ? "Not specified" : String(item.allowedAttempts) },
+    { label: "File types", value: item.allowedExtensions.length ? item.allowedExtensions.join(", ").toUpperCase() : "Any allowed format" },
+    { label: "Published", value: item.published === null ? "Not reported" : item.published ? "Yes" : "No" },
+  ];
+
+  return (
+    <div className="assignment-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <section className="assignment-modal" role="dialog" aria-modal="true" aria-labelledby="assignment-modal-title" aria-describedby="assignment-modal-description">
+        <button className="assignment-modal-x" type="button" onClick={onClose} aria-label="Close assignment details">×</button>
+        <div className="assignment-modal-scroll">
+          <header className="assignment-modal-heading">
+            <span aria-hidden="true">A</span>
+            <div><p>Assignment details</p><h2 id="assignment-modal-title">{item.title}</h2><small>{item.course}</small></div>
+          </header>
+
+          <section className="assignment-detail-section">
+            <h3>At a glance</h3>
+            <dl className="assignment-detail-grid">
+              {detailRows.map((row) => <div key={row.label}><dt>{row.label}</dt><dd>{row.value}</dd></div>)}
+            </dl>
+          </section>
+
+          <section className="assignment-detail-section assignment-description" id="assignment-modal-description">
+            <h3>Instructions &amp; details</h3>
+            <p>{item.description || "Canvas has not included written instructions for this assignment. Use the Canvas button below to check for files, worksheets, videos, rubrics, or teacher updates."}</p>
+          </section>
+        </div>
+
+        <footer className="assignment-modal-actions">
+          <a href={item.sourceUrl} target="_blank" rel="noreferrer">See in Canvas <span aria-hidden="true">↗</span></a>
+          <button type="button" onClick={onClose} ref={closeButtonRef}>Close</button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
+function ActionList({ items, empty, onSelectAssignment }: { items: ActionItem[]; empty: string; onSelectAssignment: (item: ActionItem) => void }) {
   if (!items.length) {
     return (
       <div className="empty-state">
@@ -116,30 +208,35 @@ function ActionList({ items, empty }: { items: ActionItem[]; empty: string }) {
 
   return (
     <div className="action-list">
-      {items.map((item, index) => (
-        <a className="action-item" href={item.sourceUrl} key={item.id} rel="noreferrer" target="_blank">
+      {items.map((item, index) => {
+        const content = <>
           <span className={`action-icon action-tone-${(index % 4) + 1}`} aria-hidden="true">
             {item.kind === "message" ? "M" : "A"}
           </span>
           <span className="action-copy"><strong>{item.title}</strong><small>{item.course}</small></span>
           <span className="action-due">{item.kind === "message" ? "Unread" : formatDate(item.dueAt)}</span>
           <span className="action-arrow" aria-hidden="true">›</span>
-        </a>
-      ))}
+        </>;
+        return item.kind === "assignment" ? (
+          <button className="action-item" type="button" key={item.id} onClick={() => onSelectAssignment(item)} aria-label={`View details for ${item.title}`}>{content}</button>
+        ) : (
+          <a className="action-item" href={item.sourceUrl} key={item.id} rel="noreferrer" target="_blank">{content}</a>
+        );
+      })}
     </div>
   );
 }
 
-function MobileDueCard({ title, items, empty }: { title: string; items: ActionItem[]; empty: string }) {
+function MobileDueCard({ title, items, empty, onSelectAssignment }: { title: string; items: ActionItem[]; empty: string; onSelectAssignment: (item: ActionItem) => void }) {
   return (
     <section className={`mobile-due-card${items.length ? " has-items" : ""}`}>
       <header><span aria-hidden="true">●</span><h2>{title}</h2><strong>{items.length}</strong></header>
       {items.length ? (
         <div className="mobile-due-list">
           {items.map((item) => (
-            <a href={item.sourceUrl} key={item.id} rel="noreferrer" target="_blank">
+            <button type="button" key={item.id} onClick={() => onSelectAssignment(item)} aria-label={`View details for ${item.title}`}>
               <span><strong>{item.title}</strong><small>{item.course}</small></span><i aria-hidden="true">›</i>
-            </a>
+            </button>
           ))}
         </div>
       ) : <p>{empty}</p>}
@@ -187,6 +284,8 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const [focusMode, setFocusMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [greetingIndex, setGreetingIndex] = useState(0);
+  const [selectedAction, setSelectedAction] = useState<ActionItem | null>(null);
+  const closeAssignment = useCallback(() => setSelectedAction(null), []);
 
   useEffect(() => {
     setGreetingIndex(Math.floor(Math.random() * familyGreetings.length));
@@ -382,19 +481,19 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           <span className="critical-shield" aria-hidden="true">{allClear ? "✓" : "!"}</span>
           <div><p>Critical information</p><strong>{allClear ? "Nothing is due today and there are no unread teacher messages." : `${data.critical.length} items need attention.`}</strong></div>
           <span className="critical-chevron" aria-hidden="true">›</span>
-          {!allClear ? <ActionList items={data.critical} empty="Nothing needs attention." /> : null}
+          {!allClear ? <ActionList items={data.critical} empty="Nothing needs attention." onSelectAssignment={setSelectedAction} /> : null}
         </section>
 
         <div className="mobile-due-stack" aria-label="Assignment due dates">
-          <MobileDueCard title="Due today" items={dueToday} empty="Nothing is due today." />
-          <MobileDueCard title="Due tomorrow" items={dueTomorrow} empty="Nothing is due tomorrow." />
-          <MobileDueCard title="Due this week" items={dueThisWeek} empty="Nothing else is due this week." />
+          <MobileDueCard title="Due today" items={dueToday} empty="Nothing is due today." onSelectAssignment={setSelectedAction} />
+          <MobileDueCard title="Due tomorrow" items={dueTomorrow} empty="Nothing is due tomorrow." onSelectAssignment={setSelectedAction} />
+          <MobileDueCard title="Due this week" items={dueThisWeek} empty="Nothing else is due this week." onSelectAssignment={setSelectedAction} />
         </div>
 
         <div className="primary-dashboard-grid">
           <section className="dash-panel upcoming-panel">
             <div className="panel-title-row"><div><span aria-hidden="true">□</span><h2>Important upcoming</h2></div><span className="blue-count">{data.upcoming.length}</span></div>
-            <ActionList items={visibleUpcoming} empty="No incomplete assignments are due in the next seven days." />
+            <ActionList items={visibleUpcoming} empty="No incomplete assignments are due in the next seven days." onSelectAssignment={setSelectedAction} />
             {data.upcoming.length > 5 ? <button className="panel-link" type="button" onClick={() => setShowAllUpcoming((visible) => !visible)}>{showAllUpcoming ? "Show the priority five" : `View all upcoming (${data.upcoming.length})`}<span aria-hidden="true">→</span></button> : null}
           </section>
 
@@ -430,6 +529,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
         <footer className="dashboard-footer"><span>Canvas data is read-only and source-linked.</span><span>Times shown in Pacific Time.</span></footer>
       </section>
+      {selectedAction ? <AssignmentModal item={selectedAction} onClose={closeAssignment} /> : null}
     </main>
   );
 }

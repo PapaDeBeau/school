@@ -25,11 +25,17 @@ type PlannerItem = {
   plannable?: {
     id?: number;
     title?: string;
+    description?: string | null;
     due_at?: string | null;
     points_possible?: number | null;
     html_url?: string;
     unlock_at?: string | null;
     lock_at?: string | null;
+    submission_types?: string[];
+    allowed_extensions?: string[];
+    grading_type?: string | null;
+    allowed_attempts?: number | null;
+    published?: boolean;
   };
   submissions?: {
     submitted?: boolean;
@@ -61,6 +67,14 @@ type ActionItem = {
   state: string;
   detail: string;
   sourceUrl: string;
+  description: string;
+  availableFrom: string | null;
+  availableUntil: string | null;
+  submissionTypes: string[];
+  allowedExtensions: string[];
+  gradingType: string | null;
+  allowedAttempts: number | null;
+  published: boolean | null;
 };
 
 const PACIFIC_TIME_ZONE = "America/Los_Angeles";
@@ -88,6 +102,34 @@ function pacificDateKey(value: Date) {
     month: "2-digit",
     day: "2-digit",
   }).format(value);
+}
+
+function canvasHtmlToText(value?: string | null) {
+  if (!value) return "";
+  const entities: Record<string, string> = {
+    amp: "&",
+    apos: "'",
+    gt: ">",
+    lt: "<",
+    nbsp: " ",
+    quot: '"',
+  };
+  return value
+    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<\s*br\s*\/?>/gi, "\n")
+    .replace(/<\/\s*(div|p|li|h[1-6]|tr)\s*>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (_match, entity: string) => {
+      if (entity[0] !== "#") return entities[entity.toLowerCase()] ?? `&${entity};`;
+      const hexadecimal = entity[1]?.toLowerCase() === "x";
+      const codePoint = Number.parseInt(entity.slice(hexadecimal ? 2 : 1), hexadecimal ? 16 : 10);
+      return Number.isFinite(codePoint) && codePoint >= 0 && codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : "";
+    })
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
 }
 
 function normalizePlannerItem(item: PlannerItem, courseNames: Map<number, string>): ActionItem | null {
@@ -123,6 +165,14 @@ function normalizePlannerItem(item: PlannerItem, courseNames: Map<number, string
     state,
     detail: locked && unlockAt ? `Unlocks ${unlockAt.toISOString()}` : state,
     sourceUrl: source.startsWith("http") ? source : `${CANVAS_BASE_URL}${source}`,
+    description: canvasHtmlToText(item.plannable?.description),
+    availableFrom: item.plannable?.unlock_at ?? null,
+    availableUntil: item.plannable?.lock_at ?? null,
+    submissionTypes: item.plannable?.submission_types ?? [],
+    allowedExtensions: item.plannable?.allowed_extensions ?? [],
+    gradingType: item.plannable?.grading_type ?? null,
+    allowedAttempts: item.plannable?.allowed_attempts ?? null,
+    published: item.plannable?.published ?? null,
   };
 }
 
@@ -186,6 +236,14 @@ export async function GET(request: Request) {
       state: "unread",
       detail: conversation.last_message?.trim() || "New unread message",
       sourceUrl: `${CANVAS_BASE_URL}/conversations#filter=type=inbox`,
+      description: conversation.last_message?.trim() || "New unread Canvas message.",
+      availableFrom: null,
+      availableUntil: null,
+      submissionTypes: [],
+      allowedExtensions: [],
+      gradingType: null,
+      allowedAttempts: null,
+      published: null,
     }));
 
     const now = new Date();

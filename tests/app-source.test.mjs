@@ -111,3 +111,17 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.ok(syncArtwork.size < 60_000);
   assert.ok(logoutArtwork.size < 30_000);
 });
+
+test("assignments open a detailed accessible modal before leaving for Canvas", async () => {
+  const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
+  const dashboardRoute = await readFile(new URL("app/api/dashboard/route.ts", root), "utf8");
+  const styles = await readFile(new URL("app/globals.css", root), "utf8");
+
+  assert.match(dashboard, /role="dialog" aria-modal="true"/);
+  assert.match(dashboard, /See in Canvas/);
+  assert.match(dashboard, /Instructions &amp; details/);
+  assert.match(dashboard, /event\.key === "Escape"/);
+  assert.match(dashboardRoute, /description: canvasHtmlToText/);
+  assert.match(dashboardRoute, /submissionTypes:/);
+  assert.match(styles, /\.assignment-modal-scroll \{[^}]*overflow-y: auto/);
+});
