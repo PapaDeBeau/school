@@ -106,6 +106,14 @@ function ordinalDate(value: string) {
   return mobileDateFormat.format(date).replace(String(day), `${day}${suffix}`);
 }
 
+function shortOrdinalDay(key: string) {
+  const [year, month, day] = key.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  const suffix = day % 10 === 1 && day % 100 !== 11 ? "st" : day % 10 === 2 && day % 100 !== 12 ? "nd" : day % 10 === 3 && day % 100 !== 13 ? "rd" : "th";
+  const monthLabel = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short" }).format(date);
+  return `${monthLabel} ${day}${suffix}`;
+}
+
 function formatDate(value: string | null) {
   if (!value) return "No due date";
   const date = new Date(value);
@@ -227,19 +235,19 @@ function ActionList({ items, empty, onSelectAssignment }: { items: ActionItem[];
   );
 }
 
-function MobileDueCard({ title, items, empty, onSelectAssignment, featured = false, banner = "/due-today-banner.webp", period = "today" }: { title: string; items: ActionItem[]; empty: string; onSelectAssignment: (item: ActionItem) => void; featured?: boolean; banner?: string; period?: string }) {
+function MobileDueCard({ title, items, empty, onSelectAssignment, featured = false, banner = "/due-today-banner.webp", tone = "week", summary = `${items.length} ${items.length === 1 ? "ITEM" : "ITEMS"} DUE` }: { title: string; items: ActionItem[]; empty: string; onSelectAssignment: (item: ActionItem) => void; featured?: boolean; banner?: string; tone?: "today" | "tomorrow" | "week"; summary?: string }) {
   return (
-    <section className={`mobile-due-card${featured ? " is-featured" : ""}${items.length ? " has-items" : ""}`}>
+    <section className={`mobile-due-card due-tone-${tone}${featured ? " is-featured" : ""}${items.length ? " has-items" : ""}`}>
       {featured ? (
         <>
           <h2 className="visually-hidden">{title}</h2>
-          {/* Supplied due-date artwork forms the full-width top of this card. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="mobile-due-banner" src={appPath(banner)} alt="" aria-hidden="true" />
-          <div className="mobile-today-summary">
-            <span className="spider-count-badge" aria-label={`${items.length} ${items.length === 1 ? "item" : "items"} for ${period}`}><strong>{items.length}</strong></span>
-            <p>{items.length === 1 ? `item for ${period}` : `items for ${period}`}</p>
+          <div className="mobile-due-visual">
+            {/* Supplied due-date artwork forms the full-width top of this card. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="mobile-due-banner" src={appPath(banner)} alt="" aria-hidden="true" />
+            <span className="spider-count-badge" aria-label={summary}><strong>{items.length}</strong></span>
           </div>
+          <p className="mobile-due-summary">{summary}</p>
         </>
       ) : <header><span aria-hidden="true">●</span><h2>{title}</h2><strong>{items.length}</strong></header>}
       {items.length ? (
@@ -250,7 +258,7 @@ function MobileDueCard({ title, items, empty, onSelectAssignment, featured = fal
             </button>
           ))}
         </div>
-      ) : <p>{empty}</p>}
+      ) : featured ? null : <p className="mobile-due-empty">{empty}</p>}
     </section>
   );
 }
@@ -291,7 +299,6 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showAllUpcoming, setShowAllUpcoming] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [greetingIndex, setGreetingIndex] = useState(0);
@@ -377,7 +384,6 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   }
 
   const allClear = data.critical.length === 0;
-  const visibleUpcoming = showAllUpcoming ? data.upcoming : data.upcoming.slice(0, 5);
   const firstName = data.student.split(" ")[0] || "Beau";
   const viewerInitials = data.viewer.displayName.slice(0, 2).toUpperCase();
   const viewerPhoto = familyProfilePhoto[data.viewer.username];
@@ -398,6 +404,9 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     const dueDay = dayKey(item.dueAt);
     return dueDay >= weekStart && dueDay <= weekEnd;
   });
+  const todaySummary = `${dueToday.length} ${dueToday.length === 1 ? "ITEM" : "ITEMS"} DUE TODAY`;
+  const tomorrowSummary = `${dueTomorrow.length} ${dueTomorrow.length === 1 ? "ITEM" : "ITEMS"} DUE ${shortOrdinalDay(tomorrow)}`;
+  const weekSummary = `${dueThisWeek.length} ${dueThisWeek.length === 1 ? "ITEM" : "ITEMS"} DUE THIS WEEK`;
 
   return (
     <main className={`school-app${immersive ? " immersive-dashboard" : ""}${focusMode ? " is-focus-mode" : ""}`} ref={appRef}>
@@ -473,13 +482,13 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
         <div className="featured-due-stack">
           <div className="today-featured-slot due-featured-slot" aria-label="Assignments due today">
-            <MobileDueCard title="Due today" items={dueToday} empty="Nothing is due today." onSelectAssignment={setSelectedAction} featured />
+            <MobileDueCard title="Due today" items={dueToday} empty="Nothing is due today." onSelectAssignment={setSelectedAction} featured tone="today" summary={todaySummary} />
           </div>
           <div className="tomorrow-featured-slot due-featured-slot" aria-label="Assignments due tomorrow">
-            <MobileDueCard title="Due tomorrow" items={dueTomorrow} empty="Nothing is due tomorrow." onSelectAssignment={setSelectedAction} featured banner="/due-tomorrow-banner.webp" period="tomorrow" />
+            <MobileDueCard title="Due tomorrow" items={dueTomorrow} empty="Nothing is due tomorrow." onSelectAssignment={setSelectedAction} featured banner="/due-tomorrow-banner.webp" tone="tomorrow" summary={tomorrowSummary} />
           </div>
           <div className="week-featured-slot due-featured-slot" aria-label="Assignments due this week">
-            <MobileDueCard title="Due this week" items={dueThisWeek} empty="Nothing else is due this week." onSelectAssignment={setSelectedAction} featured banner="/this-week-banner.webp" period="this week" />
+            <MobileDueCard title="Due this week" items={dueThisWeek} empty="Nothing else is due this week." onSelectAssignment={setSelectedAction} featured banner="/this-week-banner.webp" tone="week" summary={weekSummary} />
           </div>
         </div>
 
@@ -493,7 +502,6 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
         <section className="summary-grid" aria-label="Dashboard summary">
           <article className={`summary-card critical-stat${data.critical.length ? "" : " is-zero"}`}><span aria-hidden="true">!</span><div><strong>{data.critical.length}</strong><small>Critical</small></div></article>
-          <article className="summary-card upcoming-stat"><span aria-hidden="true">□</span><div><strong>{data.upcoming.length}</strong><small>Upcoming</small></div></article>
           <article className={`summary-card unread-stat${data.unreadCount ? "" : " is-zero"}`}><span aria-hidden="true">✉</span><div><strong>{data.unreadCount}</strong><small>Unread</small></div></article>
           <article className="summary-card course-stat"><span aria-hidden="true">▤</span><div><strong>{data.courseCount}</strong><small>Courses</small></div></article>
         </section>
@@ -507,13 +515,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           {!allClear ? <ActionList items={data.critical} empty="Nothing needs attention." onSelectAssignment={setSelectedAction} /> : null}
         </section>
 
-        <div className="primary-dashboard-grid">
-          <section className="dash-panel upcoming-panel">
-            <div className="panel-title-row"><div><span aria-hidden="true">□</span><h2>Important upcoming</h2></div><span className="blue-count">{data.upcoming.length}</span></div>
-            <ActionList items={visibleUpcoming} empty="No incomplete assignments are due in the next seven days." onSelectAssignment={setSelectedAction} />
-            {data.upcoming.length > 5 ? <button className="panel-link" type="button" onClick={() => setShowAllUpcoming((visible) => !visible)}>{showAllUpcoming ? "Show the priority five" : `View all upcoming (${data.upcoming.length})`}<span aria-hidden="true">→</span></button> : null}
-          </section>
-
+        <div className="primary-dashboard-grid schedule-only-grid">
           <section className="dash-panel schedule-panel">
             <div className="panel-title-row"><div><span aria-hidden="true">⌁</span><h2>This week</h2></div><a href="https://sequoiagrove.instructure.com/calendar" target="_blank" rel="noreferrer">View calendar</a></div>
             <div className="week-list">

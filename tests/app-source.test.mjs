@@ -4,10 +4,10 @@ import test from "node:test";
 
 const root = new URL("../", import.meta.url);
 
-test("dashboard contains the three priority surfaces", async () => {
+test("dashboard contains the priority due-date surfaces", async () => {
   const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
   assert.match(dashboard, /Critical information/);
-  assert.match(dashboard, /Important upcoming/);
+  assert.match(dashboard, /Due tomorrow/);
   assert.match(dashboard, /This week/);
   assert.match(dashboard, /Courses &amp; grades/);
 });
@@ -112,9 +112,13 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(dashboard, /spider-count-badge/);
   assert.match(dashboard, /Due tomorrow/);
   assert.match(dashboard, /Due this week/);
+  assert.match(dashboard, /shortOrdinalDay\(tomorrow\)/);
+  assert.match(dashboard, /tone="today"/);
+  assert.match(dashboard, /tone="tomorrow"/);
+  assert.doesNotMatch(dashboard, /upcoming-stat|upcoming-panel|Important upcoming/);
   assert.match(styles, /\.school-app \.school-sidebar \{ display: none; \}/);
   assert.match(styles, /\.school-app \.summary-card\.is-zero/);
-  assert.match(styles, /\.school-app \.course-stat,\s*\.school-app \.upcoming-stat \{ display: none; \}/);
+  assert.match(styles, /\.school-app \.course-stat \{ display: none; \}/);
   assert.match(styles, /\.school-app \.critical-strip\.is-clear \{ display: none; \}/);
   assert.match(styles, /\.school-app \.schedule-panel,/);
   assert.match(styles, /\.school-app \.quick-panel \{ display: none; \}/);
@@ -123,6 +127,8 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(styles, /background-color: #fff;/);
   assert.match(styles, /panel-pattern-5\.webp/);
   assert.match(styles, /\.school-app \.overview-hero \{ display: none; \}/);
+  assert.match(styles, /@keyframes due-today-circle-pulse/);
+  assert.match(styles, /\.due-tone-tomorrow \.spider-count-badge/);
   assert.ok(menuArtwork.size < 30_000);
   assert.ok(syncArtwork.size < 60_000);
   assert.ok(logoutArtwork.size < 30_000);
