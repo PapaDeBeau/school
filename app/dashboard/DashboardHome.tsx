@@ -1551,7 +1551,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       if (batchTimer !== null) window.clearTimeout(batchTimer);
       values.forEach(resetValue);
     };
-  }, [activeView, gradeOverrides]);
+  }, [activeView, data, gradeOverrides]);
 
   useLayoutEffect(() => {
     const app = appRef.current;

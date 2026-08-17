@@ -312,6 +312,7 @@ test("admin stores percentages and controls empty due-card visibility", async ()
   assert.match(dashboard, /gsap\.timeline\(\{ repeat: -1, repeatDelay: 0\.65 \}\)/);
   assert.match(dashboard, /\.to\(motion, \{ rotation: "\+=360"/);
   assert.match(dashboard, /startPersistentMotion\(value, motion\)/);
+  assert.match(dashboard, /\}, \[activeView, data, gradeOverrides\]\);/);
   assert.match(styles, /\.grade-tone-b \.grade-artwork-letter,[\s\S]*\.grade-tone-d \.grade-artwork-letter \{ left: 57%; \}/);
   assert.match(styles, /\.grade-artwork-value \{[^}]*visibility: hidden; opacity: 0;/);
   assert.doesNotMatch(dashboard, /autoAlpha: 0\.18/);
