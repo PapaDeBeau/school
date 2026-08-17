@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import Link from "next/link";
 import { appPath } from "../lib/app-paths";
 
 const CANVAS_BASE_URL = "https://sequoiagrove.instructure.com";
@@ -117,7 +116,7 @@ export function CanvasConnectionForm() {
           <div><span>Active courses found</span><strong>{connection.courseCount}</strong></div>
           <div><span>Verified</span><strong>{new Date(connection.verifiedAt).toLocaleString()}</strong></div>
         </div>
-        <Link className="primary-link" href={appPath("/dashboard")}>Open school dashboard</Link>
+        <a className="primary-link" href={appPath("/dashboard")}>Open school dashboard</a>
         <button className="text-button" type="button" onClick={disconnect}>Remove secure connection</button>
       </section>
     );

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { appPath } from "../../lib/app-paths";
 
 type ActionItem = {
@@ -156,7 +155,7 @@ export function DashboardHome() {
           <p>{error}</p>
           <div className="error-actions">
             <button type="button" onClick={() => void sync()}>Try again</button>
-            <Link href={appPath("/")}>Check connection</Link>
+            <a href={appPath("/")}>Check connection</a>
           </div>
         </div>
       </main>
@@ -168,10 +167,10 @@ export function DashboardHome() {
   return (
     <main className="dashboard-shell">
       <header className="dashboard-header">
-        <Link className="dashboard-brand" href={appPath("/")} aria-label="Beau School Dashboard connection settings">
+        <a className="dashboard-brand" href={appPath("/")} aria-label="Beau School Dashboard connection settings">
           <span>B</span>
           <span><strong>Beau School Dashboard</strong><small>Private family workspace</small></span>
-        </Link>
+        </a>
         <div className="dashboard-controls">
           <span className="sync-time">
             <i aria-hidden="true" /> Updated {timeFormat.format(new Date(data.generatedAt))}

@@ -31,7 +31,8 @@ test("production Canvas APIs require the BeauVizenor proxy secret", async () => 
 test("internal navigation stays under the school base path", async () => {
   const form = await readFile(new URL("app/CanvasConnectionForm.tsx", root), "utf8");
   const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
-  assert.match(form, /href={appPath\("\/dashboard"\)}/);
-  assert.match(dashboard, /href={appPath\("\/"\)}/);
+  assert.match(form, /<a className="primary-link" href={appPath\("\/dashboard"\)}/);
+  assert.match(dashboard, /<a href={appPath\("\/"\)}/);
   assert.doesNotMatch(form, /href="\/dashboard"/);
+  assert.doesNotMatch(form, /next\/link/);
 });
