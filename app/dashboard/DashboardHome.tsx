@@ -1628,10 +1628,11 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
             {gradeArtwork.map((item, index) => {
               const course = data.courses[index];
               const grade = course ? gradeOverrides.find((entry) => entry.courseKey === String(course.id)) : null;
+              const calculatedLetter = grade ? letterGrade(grade.percentage) : null;
               return <article className="grade-artwork-card" key={item.label} aria-label={course?.name ?? item.label}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={appPath(item.image)} alt={course?.name ?? item.label} />
-                {grade ? <div className="grade-artwork-value"><strong>{letterGrade(grade.percentage)}</strong><span>{grade.percentage.toFixed(grade.percentage % 1 ? 1 : 0)}%</span></div> : null}
+                {grade && calculatedLetter ? <div className={`grade-artwork-value grade-tone-${calculatedLetter.toLowerCase()}`}><strong>{calculatedLetter}</strong><span>{grade.percentage.toFixed(grade.percentage % 1 ? 1 : 0)}%</span></div> : null}
               </article>;
             })}
           </div>
