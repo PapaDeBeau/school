@@ -227,10 +227,21 @@ function ActionList({ items, empty, onSelectAssignment }: { items: ActionItem[];
   );
 }
 
-function MobileDueCard({ title, items, empty, onSelectAssignment }: { title: string; items: ActionItem[]; empty: string; onSelectAssignment: (item: ActionItem) => void }) {
+function MobileDueCard({ title, items, empty, onSelectAssignment, featured = false }: { title: string; items: ActionItem[]; empty: string; onSelectAssignment: (item: ActionItem) => void; featured?: boolean }) {
   return (
-    <section className={`mobile-due-card${items.length ? " has-items" : ""}`}>
-      <header><span aria-hidden="true">●</span><h2>{title}</h2><strong>{items.length}</strong></header>
+    <section className={`mobile-due-card${featured ? " is-featured" : ""}${items.length ? " has-items" : ""}`}>
+      {featured ? (
+        <>
+          <h2 className="visually-hidden">{title}</h2>
+          {/* Supplied Due Today artwork forms the full-width top of this card. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="mobile-due-banner" src={appPath("/due-today-banner.webp")} alt="" aria-hidden="true" />
+          <div className="mobile-today-summary">
+            <span className="spider-count-badge" aria-label={`${items.length} ${items.length === 1 ? "item" : "items"} for today`}><strong>{items.length}</strong></span>
+            <p>{items.length === 1 ? "item for today" : "items for today"}</p>
+          </div>
+        </>
+      ) : <header><span aria-hidden="true">●</span><h2>{title}</h2><strong>{items.length}</strong></header>}
       {items.length ? (
         <div className="mobile-due-list">
           {items.map((item) => (
@@ -485,7 +496,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
         </section>
 
         <div className="mobile-due-stack" aria-label="Assignment due dates">
-          <MobileDueCard title="Due today" items={dueToday} empty="Nothing is due today." onSelectAssignment={setSelectedAction} />
+          <MobileDueCard title="Due today" items={dueToday} empty="Nothing is due today." onSelectAssignment={setSelectedAction} featured />
           <MobileDueCard title="Due tomorrow" items={dueTomorrow} empty="Nothing is due tomorrow." onSelectAssignment={setSelectedAction} />
           <MobileDueCard title="Due this week" items={dueThisWeek} empty="Nothing else is due this week." onSelectAssignment={setSelectedAction} />
         </div>

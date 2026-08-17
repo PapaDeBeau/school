@@ -89,6 +89,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   const menuArtwork = await stat(new URL("public/menu-button.webp", root));
   const syncArtwork = await stat(new URL("public/sync-button.webp", root));
   const logoutArtwork = await stat(new URL("public/logout-button.webp", root));
+  const dueTodayArtwork = await stat(new URL("public/due-today-banner.webp", root));
 
   assert.match(dashboard, /mobile-dashboard-bar/);
   assert.match(dashboard, /mobile-family-greeting/);
@@ -99,6 +100,8 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(dashboard, /logout-button\.webp/);
   assert.match(dashboard, /mobile-school-menu/);
   assert.match(dashboard, /Due today/);
+  assert.match(dashboard, /due-today-banner\.webp/);
+  assert.match(dashboard, /spider-count-badge/);
   assert.match(dashboard, /Due tomorrow/);
   assert.match(dashboard, /Due this week/);
   assert.match(styles, /\.school-app \.school-sidebar \{ display: none; \}/);
@@ -110,6 +113,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.ok(menuArtwork.size < 30_000);
   assert.ok(syncArtwork.size < 60_000);
   assert.ok(logoutArtwork.size < 30_000);
+  assert.ok(dueTodayArtwork.size < 100_000);
 });
 
 test("assignments open a detailed accessible modal before leaving for Canvas", async () => {
