@@ -67,6 +67,9 @@ export function FamilyLogin() {
   const [pin, setPin] = useState("");
   const [status, setStatus] = useState<"checking" | "idle" | "submitting">("checking");
   const [message, setMessage] = useState("");
+  const selectedTheme = selectedProfile
+    ? selectedProfile.username === "beau" || selectedProfile.username === "dad" ? "boy" : "girl"
+    : null;
 
   useLayoutEffect(() => {
     const card = cardRef.current;
@@ -178,7 +181,7 @@ export function FamilyLogin() {
 
   return (
     <main className="family-login-shell" ref={shellRef}>
-      <section className="family-login-card" aria-label="Family login" ref={cardRef}>
+      <section className={`family-login-card${selectedTheme ? ` theme-${selectedTheme}` : ""}`} aria-label="Family login" ref={cardRef}>
         <div className={`selected-profile${selectedProfile ? " has-profile" : ""}`} aria-live="polite">
           <div className="selected-profile-circle">
             {selectedProfile ? <FamilyAvatar profile={selectedProfile} large /> : <SpiderEmblem />}

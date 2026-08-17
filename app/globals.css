@@ -739,10 +739,10 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   padding: 26px 30px;
   border: 1px solid rgba(205, 232, 251, .38);
   border-radius: 27px;
-  background: linear-gradient(145deg, rgba(2, 15, 36, .09), rgba(1, 21, 43, .04));
-  box-shadow: 0 35px 100px rgba(0, 4, 17, .3), inset 0 1px 0 rgba(221, 239, 255, .2);
-  -webkit-backdrop-filter: blur(54px) brightness(1.18) saturate(120%);
-  backdrop-filter: blur(54px) brightness(1.18) saturate(120%);
+  background: linear-gradient(145deg, rgba(2, 15, 36, .06), rgba(1, 21, 43, .02));
+  box-shadow: 0 30px 80px rgba(0, 4, 17, .24), inset 0 1px 0 rgba(221, 239, 255, .18);
+  -webkit-backdrop-filter: blur(.5px) brightness(1.02) saturate(105%);
+  backdrop-filter: blur(.5px) brightness(1.02) saturate(105%);
 }
 
 .selected-profile {
@@ -768,6 +768,14 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .selected-profile.has-profile .selected-profile-circle {
   border-color: #1297cf;
   box-shadow: 0 0 0 6px rgba(17, 126, 181, .2), 0 0 40px rgba(11, 134, 199, .42);
+}
+.family-login-card.theme-boy .selected-profile-circle {
+  border-color: #168cff;
+  box-shadow: 0 0 0 6px rgba(22, 140, 255, .2), 0 0 42px rgba(22, 140, 255, .55);
+}
+.family-login-card.theme-girl .selected-profile-circle {
+  border-color: #ff2eae;
+  box-shadow: 0 0 0 6px rgba(255, 46, 174, .2), 0 0 42px rgba(255, 46, 174, .58);
 }
 .selected-profile > strong {
   min-height: 20px;
@@ -860,6 +868,16 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 }
 .profile-options > button:hover:not(:disabled) { transform: translateY(-2px); border-color: rgba(64, 168, 225, .8); background: rgba(7, 42, 78, .75); }
 .profile-options > button.is-selected { border-color: #e51d3a; background: linear-gradient(160deg, rgba(15, 73, 118, .8), rgba(71, 10, 32, .62)); box-shadow: 0 0 0 2px rgba(213, 20, 49, .15), inset 0 1px 0 rgba(255, 255, 255, .09); }
+.family-login-card.theme-boy .profile-options > button.is-selected {
+  border-color: #168cff;
+  background: linear-gradient(155deg, rgba(22, 140, 255, .42), rgba(4, 30, 74, .22));
+  box-shadow: 0 0 0 3px rgba(22, 140, 255, .24), 0 0 24px rgba(22, 140, 255, .35);
+}
+.family-login-card.theme-girl .profile-options > button.is-selected {
+  border-color: #ff2eae;
+  background: linear-gradient(155deg, rgba(255, 46, 174, .42), rgba(90, 5, 60, .2));
+  box-shadow: 0 0 0 3px rgba(255, 46, 174, .24), 0 0 24px rgba(255, 46, 174, .38);
+}
 .profile-options > button.has-profile-photo { padding: 4px; overflow: hidden; }
 .profile-options > button.has-profile-photo .family-avatar {
   width: 100%;
@@ -933,6 +951,20 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .pin-number-grid button:active:not(:disabled) { transform: translateY(1px) scale(.96); }
 .pin-number-grid button:focus-visible { outline: 3px solid #68c9f2; outline-offset: 2px; }
 .pin-number-grid button:disabled { opacity: .38; cursor: default; }
+.family-login-card.theme-boy .pin-number-grid button {
+  color: #63b7ff;
+  border-color: rgba(50, 155, 255, .78);
+  background: rgba(4, 50, 101, .14);
+  text-shadow: 0 0 12px rgba(22, 140, 255, .58);
+}
+.family-login-card.theme-girl .pin-number-grid button {
+  color: #ff59bd;
+  border-color: rgba(255, 46, 174, .82);
+  background: rgba(105, 4, 70, .13);
+  text-shadow: 0 0 12px rgba(255, 46, 174, .62);
+}
+.family-login-card.theme-boy .pin-number-grid button:hover:not(:disabled) { color: #b8ddff; border-color: #48a9ff; background: rgba(11, 91, 168, .28); }
+.family-login-card.theme-girl .pin-number-grid button:hover:not(:disabled) { color: #ffd0eb; border-color: #ff4fba; background: rgba(155, 8, 100, .28); }
 .pin-status {
   min-height: 16px;
   margin: 12px 0 0;
