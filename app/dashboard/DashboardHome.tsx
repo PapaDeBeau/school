@@ -471,6 +471,10 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           </div>
         </header>
 
+        <div className="today-featured-slot" aria-label="Assignments due today">
+          <MobileDueCard title="Due today" items={dueToday} empty="Nothing is due today." onSelectAssignment={setSelectedAction} featured />
+        </div>
+
         <section className="overview-hero" aria-labelledby="dashboard-title">
           <div className="hero-message">
             <span className={`hero-check ${allClear ? "is-clear" : "needs-attention"}`} aria-hidden="true">{allClear ? "✓" : "!"}</span>
@@ -496,7 +500,6 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
         </section>
 
         <div className="mobile-due-stack" aria-label="Assignment due dates">
-          <MobileDueCard title="Due today" items={dueToday} empty="Nothing is due today." onSelectAssignment={setSelectedAction} featured />
           <MobileDueCard title="Due tomorrow" items={dueTomorrow} empty="Nothing is due tomorrow." onSelectAssignment={setSelectedAction} />
           <MobileDueCard title="Due this week" items={dueThisWeek} empty="Nothing else is due this week." onSelectAssignment={setSelectedAction} />
         </div>

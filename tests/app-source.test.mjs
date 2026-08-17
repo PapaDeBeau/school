@@ -100,6 +100,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(dashboard, /logout-button\.webp/);
   assert.match(dashboard, /mobile-school-menu/);
   assert.match(dashboard, /Due today/);
+  assert.match(dashboard, /today-featured-slot/);
   assert.match(dashboard, /due-today-banner\.webp/);
   assert.match(dashboard, /spider-count-badge/);
   assert.match(dashboard, /Due tomorrow/);
@@ -110,6 +111,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(styles, /\.school-app \.critical-strip\.is-clear \{ display: none; \}/);
   assert.match(styles, /\.school-app \.schedule-panel,/);
   assert.match(styles, /\.school-app \.quick-panel \{ display: none; \}/);
+  assert.match(styles, /\.today-featured-slot \{ width: 100%/);
   assert.ok(menuArtwork.size < 30_000);
   assert.ok(syncArtwork.size < 60_000);
   assert.ok(logoutArtwork.size < 30_000);
