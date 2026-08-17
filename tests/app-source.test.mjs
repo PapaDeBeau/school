@@ -112,6 +112,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(layout, /Schoolbell/);
   assert.match(styles, /var\(--font-chalk\)/);
   assert.match(styles, /\.school-portal-shell\.dashboard-active \{ padding: 12px 16px; overflow: visible; \}/);
+  assert.match(styles, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(dashboard, /mobile-school-menu/);
   assert.match(dashboard, /menu-todo\.webp/);
   assert.match(dashboard, /menu-classes\.webp/);

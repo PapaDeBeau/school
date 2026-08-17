@@ -1405,7 +1405,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
     left: 16px;
     right: 16px;
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     padding: 10px;
     border: 1px solid rgba(181, 220, 255, .38);
@@ -1419,6 +1419,11 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
     min-width: 0;
     overflow: hidden;
     border-radius: 12px;
+  }
+  .mobile-menu-option:last-child:nth-child(odd) {
+    width: calc(50% - 5px);
+    grid-column: 1 / -1;
+    justify-self: center;
   }
   .mobile-menu-option img { width: 100%; height: auto; display: block; }
   .featured-due-stack { margin-bottom: 0; }
