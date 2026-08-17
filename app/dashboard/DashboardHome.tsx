@@ -1501,7 +1501,8 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       entries.forEach((entry) => {
         const value = observerTargets.get(entry.target);
         if (!value) return;
-        if (entry.isIntersecting) {
+        const isOnScreen = entry.isIntersecting && entry.intersectionRatio >= 0.28;
+        if (isOnScreen) {
           visible.add(value);
           pending.add(value);
         } else {
@@ -1511,7 +1512,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
         }
       });
       if (pending.size && batchTimer === null) batchTimer = window.setTimeout(flushPending, 40);
-    }, { threshold: 0.28, rootMargin: "0px 0px -4% 0px" });
+    }, { threshold: [0, 0.28], rootMargin: "0px" });
 
     observerTargets.forEach((_value, target) => observer.observe(target));
     return () => {
