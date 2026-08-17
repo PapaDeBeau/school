@@ -24,6 +24,16 @@ const profiles: FamilyProfile[] = [
 const pinDigits = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
 
 function FamilyAvatar({ profile, large = false }: { profile: FamilyProfile; large?: boolean }) {
+  if (profile.username === "cathy") {
+    return (
+      <span className={`family-avatar avatar-cathy${large ? " avatar-large" : ""}`} aria-hidden="true">
+        {/* Cathy supplied this finished profile artwork for her login tile. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="family-profile-photo" src={appPath("/cathy-profile.png")} alt="" />
+      </span>
+    );
+  }
+
   return (
     <span className={`family-avatar avatar-${profile.username}${large ? " avatar-large" : ""}`} aria-hidden="true">
       <i className="avatar-hair" />
@@ -76,6 +86,7 @@ export function FamilyLogin() {
       preload(appPath("/login-desktop.png")),
       preload(appPath("/login-mobile.png")),
       preload(appPath("/login-spider-logo.png")),
+      preload(appPath("/cathy-profile.png")),
     ]).then(() => {
       if (cancelled) return;
       timeline = gsap.timeline({ delay: 1 })
@@ -170,15 +181,16 @@ export function FamilyLogin() {
         <div className="profile-options" role="group" aria-label="Choose a family profile">
           {profiles.map((profile) => (
             <button
-              className={selectedProfile?.username === profile.username ? "is-selected" : ""}
+              className={`${selectedProfile?.username === profile.username ? "is-selected" : ""}${profile.username === "cathy" ? " has-profile-photo" : ""}`.trim()}
               type="button"
               key={profile.username}
               onClick={() => chooseProfile(profile)}
               aria-pressed={selectedProfile?.username === profile.username}
+              aria-label={profile.displayName}
               disabled={status !== "idle"}
             >
               <FamilyAvatar profile={profile} />
-              <span>{profile.displayName}</span>
+              {profile.username === "cathy" ? null : <span>{profile.displayName}</span>}
             </button>
           ))}
         </div>
