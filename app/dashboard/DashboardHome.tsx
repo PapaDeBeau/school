@@ -1003,6 +1003,7 @@ type DashboardHomeProps = {
 };
 
 const AUTO_REFRESH_MS = 7 * 60 * 1000;
+const gradeAnimationRank: Record<string, number> = { A: 5, B: 4, C: 3, D: 2, F: 1 };
 
 export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps = {}) {
   const appRef = useRef<HTMLElement>(null);
@@ -1010,6 +1011,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const mobileMenuPanelRef = useRef<HTMLDivElement>(null);
   const homeContentRef = useRef<HTMLDivElement>(null);
   const featureViewRef = useRef<HTMLDivElement>(null);
+  const gradesShowcaseRef = useRef<HTMLElement>(null);
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1422,6 +1424,98 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   }, [activeView, adminLoading, chatLoading, chatMessages, postBoardLoading, postsByBoard]);
 
   useLayoutEffect(() => {
+    const showcase = gradesShowcaseRef.current;
+    if (activeView !== "dashboard" || !showcase) return;
+    const values = Array.from(showcase.querySelectorAll<HTMLElement>(".grade-artwork-value"));
+    if (!values.length) return;
+
+    const visible = new Set<HTMLElement>();
+    const pending = new Set<HTMLElement>();
+    const persistentMotion = new Map<HTMLElement, gsap.core.Animation>();
+    let batchTimer: number | null = null;
+
+    const gradeParts = (value: HTMLElement) => ({
+      letter: value.querySelector<HTMLElement>(".grade-artwork-letter"),
+      percentage: value.querySelector<HTMLElement>(".grade-artwork-percentage"),
+    });
+
+    const resetValue = (value: HTMLElement) => {
+      const { letter, percentage } = gradeParts(value);
+      const targets = [value, letter, percentage].filter((target): target is HTMLElement => Boolean(target));
+      persistentMotion.get(value)?.kill();
+      persistentMotion.delete(value);
+      gsap.killTweensOf(targets);
+      gsap.set(value, { autoAlpha: 0 });
+      if (letter) gsap.set(letter, { autoAlpha: 0, scale: 0, xPercent: -50, yPercent: -50, rotation: -18 });
+      if (percentage) gsap.set(percentage, { autoAlpha: 0, scale: 0, rotation: -12 });
+    };
+
+    const startGradeMotion = (value: HTMLElement, letter: HTMLElement) => {
+      if (!visible.has(value)) return;
+      if (value.dataset.grade === "D") {
+        persistentMotion.set(value, gsap.to(letter, { autoAlpha: 0.1, scale: 1.18, duration: 1.7, repeat: -1, yoyo: true, ease: "sine.inOut" }));
+      }
+      if (value.dataset.grade === "F") {
+        persistentMotion.set(value, gsap.timeline({ repeat: -1, repeatDelay: 1.8 })
+          .to(letter, { rotation: 358, duration: 1.2, ease: "power2.inOut" }, 0)
+          .to(letter, { autoAlpha: 0.1, duration: 0.08, repeat: 5, yoyo: true, ease: "none" }, 0.08)
+          .set(letter, { autoAlpha: 1, rotation: -2 }));
+      }
+    };
+
+    const revealValue = (value: HTMLElement, order: number) => {
+      const { letter, percentage } = gradeParts(value);
+      if (!letter || !percentage || !visible.has(value)) return;
+      gsap.killTweensOf([value, letter, percentage]);
+      gsap.set(value, { autoAlpha: 1 });
+      gsap.timeline({ delay: order * 0.16 })
+        .fromTo(letter, { autoAlpha: 0, scale: 0, xPercent: -50, yPercent: -50, rotation: -18 }, { autoAlpha: 1, scale: 1, xPercent: -50, yPercent: -50, rotation: -2, duration: 1.05, ease: "elastic.out(1, 0.3)" }, 0)
+        .fromTo(percentage, { autoAlpha: 0, scale: 0, rotation: -12 }, { autoAlpha: 1, scale: 1, rotation: -4, duration: 0.82, ease: "elastic.out(1, 0.38)" }, 0.22)
+        .call(() => startGradeMotion(value, letter));
+    };
+
+    const flushPending = () => {
+      batchTimer = null;
+      const ordered = Array.from(pending)
+        .filter((value) => visible.has(value))
+        .sort((a, b) => Number(b.dataset.gradeRank ?? 0) - Number(a.dataset.gradeRank ?? 0));
+      pending.clear();
+      ordered.forEach(revealValue);
+    };
+
+    values.forEach(resetValue);
+    if (!("IntersectionObserver" in window)) {
+      values.forEach((value, index) => {
+        visible.add(value);
+        revealValue(value, index);
+      });
+      return () => values.forEach(resetValue);
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        const value = entry.target as HTMLElement;
+        if (entry.isIntersecting) {
+          visible.add(value);
+          pending.add(value);
+        } else {
+          visible.delete(value);
+          pending.delete(value);
+          resetValue(value);
+        }
+      });
+      if (pending.size && batchTimer === null) batchTimer = window.setTimeout(flushPending, 40);
+    }, { threshold: 0.28, rootMargin: "0px 0px -4% 0px" });
+
+    values.forEach((value) => observer.observe(value));
+    return () => {
+      observer.disconnect();
+      if (batchTimer !== null) window.clearTimeout(batchTimer);
+      values.forEach(resetValue);
+    };
+  }, [activeView, gradeOverrides]);
+
+  useLayoutEffect(() => {
     const app = appRef.current;
     if (!immersive || !data || !app) return;
 
@@ -1620,7 +1714,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           </section>
         </div>
 
-        <section className="grades-showcase" aria-label="Grades by class">
+        <section className="grades-showcase" aria-label="Grades by class" ref={gradesShowcaseRef}>
           {/* Supplied artwork keeps the future letter-grade and percentage spaces open. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="grades-banner" src={appPath("/grades-banner.webp")} alt="Grades" />
@@ -1632,7 +1726,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
               return <article className="grade-artwork-card" key={item.label} aria-label={course?.name ?? item.label}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={appPath(item.image)} alt={course?.name ?? item.label} />
-                {grade && calculatedLetter ? <div className={`grade-artwork-value grade-tone-${calculatedLetter.toLowerCase()}`}><strong>{calculatedLetter}</strong><span>{grade.percentage.toFixed(grade.percentage % 1 ? 1 : 0)}%</span></div> : null}
+                {grade && calculatedLetter ? <div className={`grade-artwork-value grade-tone-${calculatedLetter.toLowerCase()}`} data-grade={calculatedLetter} data-grade-rank={gradeAnimationRank[calculatedLetter]}><strong className="grade-artwork-letter">{calculatedLetter}</strong><span className="grade-artwork-percentage">{grade.percentage.toFixed(grade.percentage % 1 ? 1 : 0)}</span></div> : null}
               </article>;
             })}
           </div>

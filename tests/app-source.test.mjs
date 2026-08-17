@@ -177,7 +177,8 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(styles, /\.school-app \.school-sidebar \{ display: none; \}/);
   assert.match(styles, /\.school-app \.summary-card\.is-zero/);
   assert.match(styles, /\.school-app \.course-stat \{ display: none; \}/);
-  assert.match(styles, /\.school-app \.critical-strip\.is-clear \{ display: none; \}/);
+  assert.match(styles, /\.school-app \.critical-stat,/);
+  assert.match(styles, /\.school-app \.critical-strip \{ display: none; \}/);
   assert.match(styles, /\.school-app \.schedule-panel,/);
   assert.match(styles, /\.school-app \.quick-panel \{ display: none; \}/);
   assert.match(styles, /\.featured-due-stack \{ width: 100%/);
@@ -291,6 +292,11 @@ test("admin stores percentages and controls empty due-card visibility", async ()
   assert.match(dashboard, /showDueWeekWhenEmpty/);
   assert.match(dashboard, /function letterGrade/);
   assert.match(dashboard, /grade-artwork-value/);
+  assert.match(dashboard, /IntersectionObserver/);
+  assert.match(dashboard, /elastic\.out/);
+  assert.match(dashboard, /value\.dataset\.grade === "D"/);
+  assert.match(dashboard, /value\.dataset\.grade === "F"/);
+  assert.match(dashboard, /data-grade-rank/);
   assert.match(adminRoute, /isAuthorizedAppRequest/);
   assert.match(adminRoute, /readFamilySession/);
   assert.match(adminRoute, /ON CONFLICT\(course_key\) DO UPDATE/);
