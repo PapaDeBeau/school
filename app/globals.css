@@ -647,6 +647,13 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   background-size: cover;
   box-shadow: 0 24px 70px rgba(0, 5, 20, .48), inset 0 1px 0 rgba(255, 255, 255, .1);
 }
+/* Retired title panels must never appear above feature content. */
+.portal-feature-view > .portal-feature-header,
+.portal-feature-view > .inbox-view-header,
+.portal-feature-view > .post-board-header,
+.portal-feature-view > .chat-view-header,
+.portal-feature-view > .classes-view-header,
+.portal-feature-view > .admin-view-header { display: none !important; }
 .classes-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
 .class-box { min-width: 0; display: grid; align-content: start; padding: 18px; overflow: hidden; border: 1px solid rgba(219, 234, 252, .38); border-radius: 17px; background: rgba(0, 9, 25, .82); box-shadow: 0 13px 32px rgba(0, 0, 0, .34), inset 0 1px 0 rgba(255, 255, 255, .07); }
 .class-box > p { margin: 0 0 4px; color: #77baff; font-size: 8px; font-weight: 900; letter-spacing: .17em; text-transform: uppercase; }

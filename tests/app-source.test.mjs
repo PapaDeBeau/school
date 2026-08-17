@@ -264,6 +264,7 @@ test("Classes and family boards use the shared animated feature view", async () 
   assert.match(styles, /justify-content: center/);
   assert.doesNotMatch(dashboard, /className="portal-feature-header"/);
   assert.doesNotMatch(dashboard, /className="inbox-view-header"/);
+  assert.match(styles, /\.portal-feature-view > \.portal-feature-header,[\s\S]*display: none !important/);
   assert.match(styles, /margin: 0 calc\(var\(--feature-pad\) \* -1\) calc\(var\(--feature-pad\) \* -1\)/);
 });
 
