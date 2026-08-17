@@ -16,7 +16,7 @@ A private family dashboard that reads Beau Vizenor's Sequoia Grove Canvas data t
 - The Canvas token is encrypted with AES-GCM before it is written to D1.
 - The token is never returned to the browser after connection.
 - API responses are marked `no-store`.
-- The production Site is owner-only and requires sign-in.
+- The production data APIs accept requests only through the protected `BeauVizenor.com/school` reverse proxy.
 
 ## Local development
 
@@ -34,5 +34,5 @@ The managed Sites project ID is stored in `.openai/hosting.json`. Future version
 
 Target entry points:
 
-- canonical app: `https://school.beauvizenor.com`
-- family shortcut: `https://beauvizenor.com/school`
+- canonical app: `https://beauvizenor.com/school`
+- shortcut: `https://school.beauvizenor.com`
