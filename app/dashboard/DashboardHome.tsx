@@ -561,6 +561,7 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onB
   const [sending, setSending] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingBody, setEditingBody] = useState("");
+  const [openActionsId, setOpenActionsId] = useState<string | null>(null);
   const [changingId, setChangingId] = useState<string | null>(null);
 
   useLayoutEffect(() => {
@@ -638,16 +639,16 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onB
             const girl = message.author.username === "mom" || message.author.username === "cathy";
             const profilePhoto = familyProfilePhoto[message.author.username];
             const edited = message.updatedAt !== message.createdAt;
+            const profileContents = profilePhoto ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={appPath(profilePhoto)} alt="" />
+            ) : message.author.name.slice(0, 1).toUpperCase();
             return (
               <article className={`chat-message${mine ? " is-mine" : ""} ${girl ? "tone-girl" : "tone-boy"} chat-tilt-${Number(message.id) % 5}`} key={message.id}>
-                <span className="chat-profile-square" aria-hidden="true">
-                  {profilePhoto ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={appPath(profilePhoto)} alt="" />
-                  ) : message.author.name.slice(0, 1).toUpperCase()}
-                </span>
+                {mine ? <button className="chat-profile-square chat-message-menu-trigger" type="button" aria-label={`Show actions for ${message.author.name}'s message`} aria-expanded={openActionsId === message.id} onClick={() => setOpenActionsId((current) => current === message.id ? null : message.id)}>{profileContents}</button> : <span className="chat-profile-square" aria-hidden="true">{profileContents}</span>}
+                {mine && openActionsId === message.id && editingId !== message.id ? <div className="chat-profile-actions" role="menu" aria-label="Message actions"><button type="button" role="menuitem" onClick={() => { setEditingId(message.id); setEditingBody(message.body); setOpenActionsId(null); }}>Edit</button><button type="button" role="menuitem" onClick={() => { setOpenActionsId(null); void remove(message.id); }} disabled={changingId === message.id}>Delete</button></div> : null}
                 <div className="chat-bubble">
-                  <header><strong>{message.author.name}</strong><time dateTime={message.createdAt}>{formatInboxDate(message.createdAt)}</time></header>
+                  <header>{mine ? <><time dateTime={message.createdAt}>{formatInboxDate(message.createdAt)}</time><strong>{message.author.name}</strong></> : <><strong>{message.author.name}</strong><time dateTime={message.createdAt}>{formatInboxDate(message.createdAt)}</time></>}</header>
                   {editingId === message.id ? (
                     <div className="chat-edit-form">
                       <textarea value={editingBody} onChange={(event) => setEditingBody(event.target.value)} maxLength={2000} rows={3} aria-label="Edit family chat message" />
@@ -656,7 +657,6 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onB
                   ) : <ChatMessageBody body={message.body} />}
                   <footer>
                     {edited ? <small>Edited</small> : <span />}
-                    {mine && editingId !== message.id ? <div><button type="button" onClick={() => { setEditingId(message.id); setEditingBody(message.body); }}>Edit</button><button type="button" onClick={() => void remove(message.id)} disabled={changingId === message.id}>Delete</button></div> : null}
                   </footer>
                 </div>
               </article>
