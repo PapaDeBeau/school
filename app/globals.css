@@ -688,3 +688,206 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 @media (prefers-reduced-motion: reduce) {
   .login-glow { animation: none; }
 }
+
+/* Family profile selector over Beau's supplied superhero-school artwork. */
+.family-login-shell {
+  min-height: 100svh;
+  place-items: center;
+  padding: 28px 16px;
+  background: #020d1e;
+}
+.family-login-shell::before {
+  content: "";
+  position: absolute;
+  z-index: -2;
+  inset: -18px;
+  background: url("/school/login-desktop.png") center / cover no-repeat;
+  filter: blur(8px) brightness(.45) saturate(.85);
+  transform: scale(1.045);
+}
+.family-login-shell::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(10, 71, 125, .06), rgba(1, 9, 24, .42) 72%),
+    linear-gradient(180deg, rgba(0, 9, 23, .12), rgba(0, 7, 18, .58));
+  pointer-events: none;
+}
+.family-login-card {
+  width: min(500px, 100%);
+  padding: 28px;
+  border: 1px solid rgba(83, 159, 220, .43);
+  border-radius: 27px;
+  background: linear-gradient(145deg, rgba(2, 17, 40, .86), rgba(2, 23, 49, .76));
+  box-shadow: 0 35px 100px rgba(0, 4, 17, .7), inset 0 1px 0 rgba(193, 227, 255, .1);
+  backdrop-filter: blur(18px) saturate(120%);
+}
+
+.selected-profile {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  margin-bottom: 23px;
+}
+.selected-profile-circle {
+  width: 118px;
+  height: 118px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 2px solid #b20e2d;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(18, 92, 143, .64), rgba(3, 18, 43, .96) 68%),
+    #06152d;
+  box-shadow: 0 0 0 6px rgba(10, 87, 145, .2), 0 0 34px rgba(5, 119, 187, .32), inset 0 0 25px rgba(0, 0, 0, .42);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.selected-profile.has-profile .selected-profile-circle {
+  border-color: #1297cf;
+  box-shadow: 0 0 0 6px rgba(17, 126, 181, .2), 0 0 40px rgba(11, 134, 199, .42);
+}
+.selected-profile > strong {
+  min-height: 20px;
+  color: #eef7ff;
+  font-size: 14px;
+  letter-spacing: .025em;
+}
+
+.spider-emblem { position: relative; width: 66px; height: 72px; filter: drop-shadow(0 0 9px rgba(222, 19, 54, .5)); }
+.spider-body {
+  position: absolute;
+  z-index: 2;
+  left: 26px;
+  top: 17px;
+  width: 15px;
+  height: 38px;
+  border-radius: 48% 48% 55% 55%;
+  background: linear-gradient(180deg, #fa2a42, #9d071f);
+}
+.spider-body::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: -10px;
+  width: 11px;
+  height: 13px;
+  border-radius: 50%;
+  background: #ed203a;
+}
+.spider-legs { position: absolute; z-index: 1; top: 12px; width: 32px; height: 48px; }
+.spider-legs::before,
+.spider-legs::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-top: 4px solid #d71934;
+  border-bottom: 4px solid #d71934;
+  transform: skewY(-28deg) rotate(-8deg);
+}
+.spider-legs-left { left: 2px; border-left: 4px solid #d71934; transform: rotate(-13deg); }
+.spider-legs-right { right: 2px; border-right: 4px solid #d71934; transform: scaleX(-1) rotate(-13deg); }
+.spider-legs::after { top: 13px; height: 22px; }
+
+.profile-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
+.profile-options > button {
+  min-width: 0;
+  min-height: 105px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  padding: 10px 5px;
+  border: 1px solid rgba(100, 154, 202, .27);
+  border-radius: 14px;
+  color: #dcecff;
+  background: rgba(2, 15, 37, .56);
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+.profile-options > button:hover:not(:disabled) { transform: translateY(-2px); border-color: rgba(64, 168, 225, .8); background: rgba(7, 42, 78, .75); }
+.profile-options > button.is-selected { border-color: #e51d3a; background: linear-gradient(160deg, rgba(15, 73, 118, .8), rgba(71, 10, 32, .62)); box-shadow: 0 0 0 2px rgba(213, 20, 49, .15), inset 0 1px 0 rgba(255, 255, 255, .09); }
+.profile-options > button:focus-visible { outline: 3px solid #65c6ee; outline-offset: 3px; }
+.profile-options > button:disabled { opacity: .65; cursor: wait; }
+.profile-options > button > span:last-child { overflow: hidden; max-width: 100%; font-size: 12px; font-weight: 800; text-overflow: ellipsis; }
+
+.family-avatar {
+  --avatar-skin: #d99c72;
+  --avatar-hair: #2b1b16;
+  --avatar-shirt: #0f76ae;
+  position: relative;
+  width: 54px;
+  height: 54px;
+  display: block;
+  overflow: hidden;
+  border: 1px solid rgba(160, 210, 245, .5);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 30%, #173c67, #07182f 70%);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, .035);
+}
+.family-avatar.avatar-large { width: 112px; height: 112px; border: 0; background: radial-gradient(circle at 50% 28%, #1b5684, #071c3b 74%); }
+.family-avatar i { position: absolute; display: block; }
+.avatar-head { z-index: 2; top: 20%; left: 32%; width: 36%; height: 38%; border-radius: 48% 48% 45% 45%; background: var(--avatar-skin); }
+.avatar-hair { z-index: 3; top: 13%; left: 29%; width: 42%; height: 24%; border-radius: 60% 60% 28% 28%; background: var(--avatar-hair); transform: rotate(-4deg); }
+.avatar-body { z-index: 1; left: 20%; bottom: -7%; width: 60%; height: 48%; border-radius: 48% 48% 12% 12%; background: linear-gradient(150deg, color-mix(in srgb, var(--avatar-shirt), white 13%), var(--avatar-shirt)); }
+.avatar-spider { z-index: 4; left: 46%; bottom: 13%; color: #e11b36; font-size: 7px; transform: rotate(45deg); }
+.avatar-large .avatar-spider { bottom: 14%; font-size: 14px; }
+.avatar-beau { --avatar-skin: #d8a276; --avatar-hair: #271913; --avatar-shirt: #123f72; }
+.avatar-cathy { --avatar-skin: #d7a27d; --avatar-hair: #5c3625; --avatar-shirt: #8b2348; }
+.avatar-cathy .avatar-hair { left: 24%; width: 52%; height: 48%; border-radius: 55% 55% 42% 42%; }
+.avatar-mom { --avatar-skin: #e1ac82; --avatar-hair: #39261f; --avatar-shirt: #3f6994; }
+.avatar-mom .avatar-hair { top: 10%; left: 25%; width: 50%; height: 42%; border-radius: 60% 60% 46% 46%; }
+.avatar-dad { --avatar-skin: #cc926c; --avatar-hair: #2a201c; --avatar-shirt: #6e2636; }
+.avatar-dad .avatar-hair { top: 13%; left: 31%; width: 38%; height: 17%; border-radius: 65% 65% 25% 25%; }
+
+.family-login-card .family-login-form { margin-top: 17px; }
+.family-login-card .login-field {
+  min-height: 54px;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  border-color: rgba(90, 163, 215, .32);
+  background: rgba(0, 11, 28, .72);
+}
+.family-login-card .login-field:focus-within { border-color: #158bc6; background: rgba(0, 14, 34, .88); box-shadow: 0 0 0 4px rgba(17, 126, 181, .18); }
+.family-login-card .pin-field input { letter-spacing: .06em; }
+.family-login-card .pin-field input::placeholder { color: #7c97b1; letter-spacing: 0; }
+.family-login-card .login-message { margin: 0 0 13px; }
+.family-login-card .family-login-button {
+  min-height: 56px;
+  margin-top: 15px;
+  border: 1px solid rgba(246, 81, 97, .58);
+  color: white;
+  background: linear-gradient(100deg, #8d0d28 0%, #d51b35 43%, #0879b4 100%);
+  box-shadow: 0 13px 32px rgba(3, 60, 103, .34), inset 0 1px 0 rgba(255, 255, 255, .16);
+  font-size: 15px;
+  letter-spacing: .02em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .35);
+}
+.family-login-card .family-login-button:hover:not(:disabled) { filter: brightness(1.12) saturate(1.07); box-shadow: 0 16px 38px rgba(7, 93, 145, .42); }
+.family-login-card .family-login-button:disabled { filter: grayscale(.35); opacity: .52; }
+
+@media (max-width: 700px) {
+  .family-login-shell { min-height: 100svh; place-items: center; padding: 18px 12px; }
+  .family-login-shell::before {
+    inset: -8px;
+    background-image: url("/school/login-mobile.png");
+    background-position: center center;
+    filter: blur(3px) brightness(.45) saturate(.9);
+    transform: scale(1.018);
+  }
+  .family-login-card { width: min(440px, 100%); padding: 22px 18px; border-radius: 23px; }
+  .selected-profile { margin-bottom: 18px; }
+  .selected-profile-circle { width: 104px; height: 104px; }
+  .family-avatar.avatar-large { width: 99px; height: 99px; }
+  .profile-options { gap: 6px; }
+  .profile-options > button { min-height: 94px; padding: 8px 3px; }
+  .family-avatar { width: 48px; height: 48px; }
+}
+
+@media (max-width: 370px) {
+  .family-login-card { padding: 18px 12px; }
+  .profile-options > button { min-height: 84px; }
+  .family-avatar { width: 42px; height: 42px; }
+  .profile-options > button > span:last-child { font-size: 10px; }
+}

@@ -8,8 +8,41 @@ type LoginResponse = {
   error?: string;
 };
 
+type FamilyProfile = {
+  username: "beau" | "cathy" | "mom" | "dad";
+  displayName: "Beau" | "Cathy" | "Mom" | "Dad";
+};
+
+const profiles: FamilyProfile[] = [
+  { username: "beau", displayName: "Beau" },
+  { username: "cathy", displayName: "Cathy" },
+  { username: "mom", displayName: "Mom" },
+  { username: "dad", displayName: "Dad" },
+];
+
+function FamilyAvatar({ profile, large = false }: { profile: FamilyProfile; large?: boolean }) {
+  return (
+    <span className={`family-avatar avatar-${profile.username}${large ? " avatar-large" : ""}`} aria-hidden="true">
+      <i className="avatar-hair" />
+      <i className="avatar-head" />
+      <i className="avatar-body" />
+      {profile.username === "beau" ? <i className="avatar-spider">◆</i> : null}
+    </span>
+  );
+}
+
+function SpiderEmblem() {
+  return (
+    <span className="spider-emblem" aria-hidden="true">
+      <i className="spider-body" />
+      <i className="spider-legs spider-legs-left" />
+      <i className="spider-legs spider-legs-right" />
+    </span>
+  );
+}
+
 export function FamilyLogin() {
-  const [username, setUsername] = useState("");
+  const [selectedProfile, setSelectedProfile] = useState<FamilyProfile | null>(null);
   const [pin, setPin] = useState("");
   const [showPin, setShowPin] = useState(false);
   const [status, setStatus] = useState<"checking" | "idle" | "submitting">("checking");
@@ -32,10 +65,20 @@ export function FamilyLogin() {
     return () => { active = false; };
   }, []);
 
+  function chooseProfile(profile: FamilyProfile) {
+    setSelectedProfile(profile);
+    setPin("");
+    setMessage("");
+  }
+
   async function signIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!username.trim() || !/^\d{4}$/.test(pin)) {
-      setMessage("Enter your username and four-digit PIN.");
+    if (!selectedProfile) {
+      setMessage("Choose your profile first.");
+      return;
+    }
+    if (!/^\d{4}$/.test(pin)) {
+      setMessage("Enter your four-digit PIN.");
       return;
     }
 
@@ -46,12 +89,12 @@ export function FamilyLogin() {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: username.trim(), pin }),
+        body: JSON.stringify({ username: selectedProfile.username, pin }),
       });
       const body = await response.json() as LoginResponse;
       setPin("");
       if (!response.ok || !body.authenticated) {
-        setMessage(body.error ?? "That username and PIN do not match.");
+        setMessage(body.error ?? "That PIN does not match this profile.");
         setStatus("idle");
         return;
       }
@@ -65,77 +108,57 @@ export function FamilyLogin() {
 
   return (
     <main className="family-login-shell">
-      <div className="login-atmosphere" aria-hidden="true">
-        <span className="login-glow glow-one" />
-        <span className="login-glow glow-two" />
-        <span className="login-rain rain-one" />
-        <span className="login-rain rain-two" />
-        <span className="login-mountain mountain-one" />
-        <span className="login-mountain mountain-two" />
-      </div>
-
-      <section className="family-login-card" aria-labelledby="family-login-title">
-        <div className="login-brand">
-          <span className="login-brand-mark" aria-hidden="true">B</span>
-          <div><strong>Beau School</strong><small>Private family workspace</small></div>
+      <section className="family-login-card" aria-label="Family login">
+        <div className={`selected-profile${selectedProfile ? " has-profile" : ""}`} aria-live="polite">
+          <div className="selected-profile-circle">
+            {selectedProfile ? <FamilyAvatar profile={selectedProfile} large /> : <SpiderEmblem />}
+          </div>
+          <strong>{selectedProfile?.displayName ?? "Choose your profile"}</strong>
         </div>
 
-        <div className="login-heading">
-          <p>Welcome home</p>
-          <h1 id="family-login-title">Family login</h1>
-          <span>Enter your name and personal four-digit PIN.</span>
+        <div className="profile-options" role="group" aria-label="Choose a family profile">
+          {profiles.map((profile) => (
+            <button
+              className={selectedProfile?.username === profile.username ? "is-selected" : ""}
+              type="button"
+              key={profile.username}
+              onClick={() => chooseProfile(profile)}
+              aria-pressed={selectedProfile?.username === profile.username}
+              disabled={status !== "idle"}
+            >
+              <FamilyAvatar profile={profile} />
+              <span>{profile.displayName}</span>
+            </button>
+          ))}
         </div>
 
         <form className="family-login-form" onSubmit={signIn} noValidate>
           {message ? <div className="login-message" role="alert">{message}</div> : null}
 
-          <label htmlFor="family-username">Username</label>
-          <div className="login-field">
-            <span aria-hidden="true">●</span>
-            <input
-              id="family-username"
-              name="username"
-              type="text"
-              autoComplete="username"
-              autoCapitalize="words"
-              spellCheck={false}
-              placeholder="Your family name"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              disabled={status !== "idle"}
-              maxLength={64}
-            />
-          </div>
-
-          <div className="login-label-row"><label htmlFor="family-pin">PIN</label><span>4 digits</span></div>
           <div className="login-field pin-field">
             <span aria-hidden="true">◆</span>
             <input
               id="family-pin"
               name="pin"
+              aria-label="Four-digit PIN"
               type={showPin ? "text" : "password"}
               inputMode="numeric"
               pattern="[0-9]{4}"
               autoComplete="current-password"
-              placeholder="••••"
+              placeholder="Enter 4-digit PIN"
               value={pin}
               onChange={(event) => setPin(event.target.value.replace(/\D/g, "").slice(0, 4))}
-              disabled={status !== "idle"}
+              disabled={status !== "idle" || !selectedProfile}
               maxLength={4}
             />
             <button type="button" onClick={() => setShowPin((visible) => !visible)} aria-label={showPin ? "Hide PIN" : "Show PIN"}>{showPin ? "Hide" : "Show"}</button>
           </div>
 
-          <button className="family-login-button" type="submit" disabled={status !== "idle"}>
-            {status === "checking" ? "Checking session…" : status === "submitting" ? "Opening dashboard…" : "Open school dashboard"}
-            <span aria-hidden="true">→</span>
+          <button className="family-login-button" type="submit" disabled={status !== "idle" || !selectedProfile}>
+            {status === "checking" ? "Loading The Zone…" : status === "submitting" ? "Entering The Zone…" : "Enter The Zone"}
           </button>
         </form>
-
-        <p className="login-security"><span aria-hidden="true">✓</span> Secure private access · PIN attempts are protected</p>
       </section>
-
-      <footer className="login-footer"><span>Beau&apos;s 2026–27 school year</span><span>Canvas data stays under family control</span></footer>
     </main>
   );
 }
