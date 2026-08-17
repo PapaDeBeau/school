@@ -9,7 +9,8 @@ test("dashboard contains the priority due-date surfaces", async () => {
   assert.match(dashboard, /Critical information/);
   assert.match(dashboard, /Due tomorrow/);
   assert.match(dashboard, /This week/);
-  assert.match(dashboard, /Courses &amp; grades/);
+  assert.match(dashboard, /grades-banner\.webp/);
+  assert.doesNotMatch(dashboard, /Courses &amp; grades/);
 });
 
 test("Canvas token routes remain server-only", async () => {
@@ -93,6 +94,15 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
     "menu-classes.webp",
     "menu-inbox.webp",
   ].map((file) => stat(new URL(`public/${file}`, root))));
+  const gradeArtwork = await Promise.all([
+    "grades-banner.webp",
+    "grade-biology-garcia.webp",
+    "grade-biology-baier.webp",
+    "grade-algebra.webp",
+    "grade-english.webp",
+    "grade-hsva.webp",
+    "grade-history.webp",
+  ].map((file) => stat(new URL(`public/${file}`, root))));
   const logoutArtwork = await stat(new URL("public/logout-button.webp", root));
   const dueTodayArtwork = await stat(new URL("public/due-today-banner.webp", root));
   const dueTomorrowArtwork = await stat(new URL("public/due-tomorrow-banner.webp", root));
@@ -118,6 +128,8 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(dashboard, /menu-classes\.webp/);
   assert.match(dashboard, /menu-inbox\.webp/);
   assert.ok(mobileMenuArtwork.every((asset) => asset.size < 70_000));
+  assert.match(dashboard, /grade-artwork-grid/);
+  assert.ok(gradeArtwork.every((asset) => asset.size < 90_000));
   assert.match(dashboard, /Due today/);
   assert.match(dashboard, /today-featured-slot/);
   assert.match(dashboard, /due-today-banner\.webp/);

@@ -280,6 +280,15 @@ const mobileMenuItems = [
   { label: "Inbox", image: "/menu-inbox.webp" },
 ];
 
+const gradeArtwork = [
+  { label: "Biology — Garcia", image: "/grade-biology-garcia.webp" },
+  { label: "Biology — Baier", image: "/grade-biology-baier.webp" },
+  { label: "Algebra", image: "/grade-algebra.webp" },
+  { label: "English", image: "/grade-english.webp" },
+  { label: "HSVA", image: "/grade-hsva.webp" },
+  { label: "History", image: "/grade-history.webp" },
+];
+
 const familyProfilePhoto: Record<string, string> = {
   beau: "/beau-profile.webp",
   cathy: "/cathy-profile.webp",
@@ -352,7 +361,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
     const context = gsap.context(() => {
       const panels = app.querySelectorAll(
-        ".school-sidebar, .mobile-dashboard-bar, .mobile-family-greeting, .workspace-header, .overview-hero, .summary-card, .critical-strip, .mobile-due-card, .primary-dashboard-grid > .dash-panel, .secondary-dashboard-grid > .dash-panel, .dashboard-footer"
+        ".school-sidebar, .mobile-dashboard-bar, .mobile-family-greeting, .workspace-header, .overview-hero, .summary-card, .critical-strip, .mobile-due-card, .primary-dashboard-grid > .dash-panel, .secondary-dashboard-grid > .dash-panel, .grades-showcase, .dashboard-footer"
       );
       gsap.set(panels, { autoAlpha: 0, y: 34, scale: 0.975 });
       gsap.timeline({ delay: 0.08 })
@@ -534,22 +543,27 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           </section>
         </div>
 
-        <div className="secondary-dashboard-grid">
-          <section className="dash-panel courses-panel">
-            <div className="panel-title-row"><div><span aria-hidden="true">▤</span><h2>Courses &amp; grades</h2></div><a href="https://sequoiagrove.instructure.com/courses" target="_blank" rel="noreferrer">Open Canvas</a></div>
-            <div className="course-grid">
-              {data.courses.map((course, index) => (
-                <article className="course-card" key={course.id}><span className={`course-index course-tone-${(index % 4) + 1}`}>{String(index + 1).padStart(2, "0")}</span><div><h3>{course.name}</h3><small>{course.grade || course.score !== null ? "Current grade" : "No grade posted"}</small></div><strong>{course.grade ?? (course.score === null ? "—" : `${course.score}%`)}</strong></article>
-              ))}
-            </div>
-          </section>
-
+        <div className="secondary-dashboard-grid quick-only-grid">
           <section className="dash-panel quick-panel">
             <div className="panel-title-row"><div><span aria-hidden="true">✦</span><h2>Quick actions</h2></div></div>
             <div className="quick-actions"><a href="https://sequoiagrove.instructure.com/conversations#filter=type=inbox" target="_blank" rel="noreferrer"><span>✉</span>Message teachers</a><a href="https://sequoiagrove.instructure.com/files" target="_blank" rel="noreferrer"><span>⇧</span>Open files</a><a href="https://sequoiagrove.instructure.com/grades" target="_blank" rel="noreferrer"><span>▥</span>View grades</a><a href="https://sequoiagrove.instructure.com/calendar" target="_blank" rel="noreferrer"><span>□</span>Open calendar</a></div>
             <div className="encouragement"><span>{firstName.slice(0, 1)}</span><div><strong>Keep it going, {firstName}!</strong><small>One clear view for the whole school week.</small></div></div>
           </section>
         </div>
+
+        <section className="grades-showcase" aria-label="Grades by class">
+          {/* Supplied artwork keeps the future letter-grade and percentage spaces open. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="grades-banner" src={appPath("/grades-banner.webp")} alt="Grades" />
+          <div className="grade-artwork-grid">
+            {gradeArtwork.map((item) => (
+              <article className="grade-artwork-card" key={item.label} aria-label={item.label}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={appPath(item.image)} alt={item.label} />
+              </article>
+            ))}
+          </div>
+        </section>
 
         <footer className="dashboard-footer"><span>Canvas data is read-only and source-linked.</span><span>Times shown in Pacific Time.</span></footer>
       </section>

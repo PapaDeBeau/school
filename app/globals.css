@@ -449,6 +449,12 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .secondary-dashboard-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(390px, 1fr); gap: 14px; margin-top: 14px; }
 .primary-dashboard-grid.schedule-only-grid { grid-template-columns: minmax(0, 1fr); }
 .secondary-dashboard-grid { grid-template-columns: minmax(0, 1.35fr) minmax(340px, .65fr); }
+.secondary-dashboard-grid.quick-only-grid { grid-template-columns: minmax(0, 1fr); }
+.grades-showcase { width: min(920px, 100%); margin: 14px auto 0; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.grades-banner { width: 100%; height: auto; display: block; }
+.grade-artwork-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 10px; }
+.grade-artwork-card { min-width: 0; margin: 0; overflow: hidden; border: 0; border-radius: 18px; background: transparent; box-shadow: none; }
+.grade-artwork-card img { width: 100%; height: auto; display: block; }
 .dash-panel { min-width: 0; overflow: hidden; padding: 16px 18px 13px; border-radius: 15px; background: #fff; }
 .panel-title-row { min-height: 36px; display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 8px; }
 .panel-title-row > div { display: flex; align-items: center; gap: 10px; }
@@ -1524,6 +1530,8 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   .mobile-close-button,
   .mobile-close-button img { width: 36px; height: 36px; }
   .mobile-school-menu { top: 66px; left: 14px; right: 14px; }
+  .grade-artwork-grid { gap: 8px; margin-top: 8px; }
+  .grade-artwork-card { border-radius: 12px; }
   .assignment-modal-backdrop { padding: 10px; }
   .assignment-modal { max-height: calc(100dvh - 20px); border-radius: 18px; }
   .assignment-modal-scroll { padding: 22px 17px 18px; }
