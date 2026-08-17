@@ -735,14 +735,14 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   pointer-events: none;
 }
 .family-login-card {
-  width: min(440px, calc(100% - 24px));
-  padding: 28px 34px;
+  width: min(420px, calc(100% - 48px));
+  padding: 26px 30px;
   border: 1px solid rgba(205, 232, 251, .38);
   border-radius: 27px;
-  background: linear-gradient(145deg, rgba(2, 15, 36, .33), rgba(1, 21, 43, .22));
-  box-shadow: 0 35px 100px rgba(0, 4, 17, .42), inset 0 1px 0 rgba(221, 239, 255, .18);
-  -webkit-backdrop-filter: blur(44px) saturate(115%);
-  backdrop-filter: blur(44px) saturate(115%);
+  background: linear-gradient(145deg, rgba(2, 15, 36, .09), rgba(1, 21, 43, .04));
+  box-shadow: 0 35px 100px rgba(0, 4, 17, .3), inset 0 1px 0 rgba(221, 239, 255, .2);
+  -webkit-backdrop-filter: blur(54px) brightness(1.18) saturate(120%);
+  backdrop-filter: blur(54px) brightness(1.18) saturate(120%);
 }
 
 .selected-profile {
@@ -752,8 +752,8 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   margin-bottom: 23px;
 }
 .selected-profile-circle {
-  width: 144px;
-  height: 144px;
+  width: 196px;
+  height: 196px;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -854,7 +854,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   border: 1px solid rgba(100, 154, 202, .27);
   border-radius: 14px;
   color: #dcecff;
-  background: rgba(1, 13, 32, .23);
+  background: rgba(1, 13, 32, .09);
   cursor: pointer;
   transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
 }
@@ -887,7 +887,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   background: radial-gradient(circle at 50% 30%, #173c67, #07182f 70%);
   box-shadow: inset 0 0 0 3px rgba(255, 255, 255, .035);
 }
-.family-avatar.avatar-large { width: 138px; height: 138px; border: 0; background: radial-gradient(circle at 50% 28%, #1b5684, #071c3b 74%); }
+.family-avatar.avatar-large { width: 190px; height: 190px; border: 0; background: radial-gradient(circle at 50% 28%, #1b5684, #071c3b 74%); }
 .family-profile-photo { width: 100%; height: 100%; display: block; object-fit: cover; object-position: center; }
 .family-avatar i { position: absolute; display: block; }
 .avatar-head { z-index: 2; top: 20%; left: 32%; width: 36%; height: 38%; border-radius: 48% 48% 45% 45%; background: var(--avatar-skin); }
@@ -916,7 +916,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   border: 1px solid rgba(154, 205, 240, .36);
   border-radius: 13px;
   color: white;
-  background: linear-gradient(160deg, rgba(19, 71, 111, .34), rgba(1, 13, 32, .2));
+  background: linear-gradient(160deg, rgba(19, 71, 111, .16), rgba(1, 13, 32, .07));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 7px 18px rgba(0, 5, 18, .15);
   font-size: 20px;
   font-weight: 850;
@@ -979,17 +979,19 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
     transform: none;
   }
   .family-login-shell::after { background: linear-gradient(180deg, rgba(0, 7, 18, .08), rgba(0, 7, 18, .35)); }
-  .family-login-card { width: min(400px, calc(100% - 16px)); padding: 22px 24px; border-radius: 23px; }
+  .family-login-card { width: min(340px, calc(100% - 48px)); padding: 20px 22px; border-radius: 23px; }
   .selected-profile { margin-bottom: 18px; }
-  .selected-profile-circle { width: 126px; height: 126px; }
-  .family-avatar.avatar-large { width: 120px; height: 120px; }
+  .selected-profile-circle { width: 182px; height: 182px; }
+  .family-avatar.avatar-large { width: 176px; height: 176px; }
   .profile-options { gap: 6px; }
   .profile-options > button { min-height: 0; padding: 8px 3px; }
   .family-avatar { width: 48px; height: 48px; }
 }
 
 @media (max-width: 370px) {
-  .family-login-card { padding: 18px 12px; }
+  .family-login-card { width: calc(100% - 34px); padding: 17px 16px; }
+  .selected-profile-circle { width: 166px; height: 166px; }
+  .family-avatar.avatar-large { width: 160px; height: 160px; }
   .profile-options > button { min-height: 0; }
   .family-avatar { width: 42px; height: 42px; }
   .profile-options > button > span:last-child { font-size: 10px; }
