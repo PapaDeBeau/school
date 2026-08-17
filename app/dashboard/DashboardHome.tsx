@@ -1449,6 +1449,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       const targets = [value, letter, percentage].filter((target): target is HTMLElement => Boolean(target));
       persistentMotion.get(value)?.kill();
       persistentMotion.delete(value);
+      value.removeAttribute("data-grade-active");
       gsap.killTweensOf(targets);
       gsap.set(value, { autoAlpha: 0 });
       if (letter) gsap.set(letter, { autoAlpha: 0, scale: 0, xPercent: -50, yPercent: -50, rotation: -18 });
@@ -1457,14 +1458,16 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
     const startGradeMotion = (value: HTMLElement, letter: HTMLElement) => {
       if (!visible.has(value)) return;
+      value.dataset.gradeActive = "true";
+      gsap.set(letter, { autoAlpha: 1, scale: 1, rotation: -2 });
       if (value.dataset.grade === "D") {
-        persistentMotion.set(value, gsap.to(letter, { autoAlpha: 0.1, scale: 1.18, duration: 1.7, repeat: -1, yoyo: true, ease: "sine.inOut" }));
+        persistentMotion.set(value, gsap.to(letter, { scale: 1.24, duration: 1.25, repeat: -1, yoyo: true, ease: "sine.inOut" }));
       }
       if (value.dataset.grade === "F") {
-        persistentMotion.set(value, gsap.timeline({ repeat: -1, repeatDelay: 1.8 })
-          .to(letter, { rotation: 358, duration: 1.2, ease: "power2.inOut" }, 0)
-          .to(letter, { autoAlpha: 0.1, duration: 0.08, repeat: 5, yoyo: true, ease: "none" }, 0.08)
-          .set(letter, { autoAlpha: 1, rotation: -2 }));
+        persistentMotion.set(value, gsap.timeline({ repeat: -1, repeatDelay: 1.35 })
+          .to(letter, { rotation: "+=360", duration: 1.1, ease: "power2.inOut" }, 0)
+          .to(letter, { autoAlpha: 0.08, duration: 0.09, repeat: 5, yoyo: true, ease: "none" }, 0.05)
+          .set(letter, { autoAlpha: 1 }));
       }
     };
 
@@ -1473,10 +1476,9 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       if (!letter || !percentage || !visible.has(value)) return;
       gsap.killTweensOf([value, letter, percentage]);
       gsap.set(value, { autoAlpha: 1 });
-      gsap.timeline({ delay: order * 0.16 })
+      gsap.timeline({ delay: order * 0.16, onComplete: () => startGradeMotion(value, letter) })
         .fromTo(letter, { autoAlpha: 0, scale: 0, xPercent: -50, yPercent: -50, rotation: -18 }, { autoAlpha: 1, scale: 1, xPercent: -50, yPercent: -50, rotation: -2, duration: 1.05, ease: "elastic.out(1, 0.3)" }, 0)
-        .fromTo(percentage, { autoAlpha: 0, scale: 0, rotation: -12 }, { autoAlpha: 1, scale: 1, rotation: -4, duration: 0.82, ease: "elastic.out(1, 0.38)" }, 0.22)
-        .call(() => startGradeMotion(value, letter));
+        .fromTo(percentage, { autoAlpha: 0, scale: 0, rotation: -12 }, { autoAlpha: 1, scale: 1, rotation: -4, duration: 0.82, ease: "elastic.out(1, 0.38)" }, 0.22);
     };
 
     const flushPending = () => {
@@ -1501,7 +1503,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       entries.forEach((entry) => {
         const value = observerTargets.get(entry.target);
         if (!value) return;
-        const isOnScreen = entry.isIntersecting && entry.intersectionRatio >= 0.28;
+        const isOnScreen = entry.isIntersecting && entry.intersectionRatio >= 0.08;
         if (isOnScreen) {
           visible.add(value);
           pending.add(value);
@@ -1512,7 +1514,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
         }
       });
       if (pending.size && batchTimer === null) batchTimer = window.setTimeout(flushPending, 40);
-    }, { threshold: [0, 0.28], rootMargin: "0px" });
+    }, { threshold: [0, 0.08], rootMargin: "0px" });
 
     observerTargets.forEach((_value, target) => observer.observe(target));
     return () => {

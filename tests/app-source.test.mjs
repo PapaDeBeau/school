@@ -283,6 +283,7 @@ test("family chat is persistent, paginated, link-aware, and sender controlled", 
 
 test("admin stores percentages and controls empty due-card visibility", async () => {
   const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
+  const styles = await readFile(new URL("app/globals.css", root), "utf8");
   const adminRoute = await readFile(new URL("app/api/admin/route.ts", root), "utf8");
   const schema = await readFile(new URL("db/schema.ts", root), "utf8");
 
@@ -295,9 +296,13 @@ test("admin stores percentages and controls empty due-card visibility", async ()
   assert.match(dashboard, /grade-artwork-value/);
   assert.match(dashboard, /IntersectionObserver/);
   assert.match(dashboard, /observerTargets\.set\(value\.closest<HTMLElement>\("\.grade-artwork-card"\)/);
-  assert.match(dashboard, /entry\.intersectionRatio >= 0\.28/);
-  assert.match(dashboard, /threshold: \[0, 0\.28\]/);
+  assert.match(dashboard, /entry\.intersectionRatio >= 0\.08/);
+  assert.match(dashboard, /threshold: \[0, 0\.08\]/);
   assert.match(dashboard, /elastic\.out/);
+  assert.match(dashboard, /rotation: "\+=360"/);
+  assert.match(dashboard, /scale: 1\.24/);
+  assert.match(styles, /\.grade-tone-b \.grade-artwork-letter,[\s\S]*\.grade-tone-d \.grade-artwork-letter \{ left: 59%; \}/);
+  assert.doesNotMatch(dashboard, /autoAlpha: 0\.18/);
   assert.match(dashboard, /value\.dataset\.grade === "D"/);
   assert.match(dashboard, /value\.dataset\.grade === "F"/);
   assert.match(dashboard, /data-grade-rank/);
