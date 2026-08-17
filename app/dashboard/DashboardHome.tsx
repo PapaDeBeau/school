@@ -319,18 +319,20 @@ function InboxAvatar({ person, fallbackUrl, label }: { person: InboxPerson | nul
   );
 }
 
-function InboxView({ conversations, loading, error, threadLoadingId, onRead, onBack }: {
+function FeatureBackBar({ onBack }: { onBack: () => void }) {
+  return <button className="feature-back-bar" type="button" onClick={onBack}><span aria-hidden="true">←</span> Back To Dashboard</button>;
+}
+
+function InboxView({ conversations, loading, error, threadLoadingId, onRead }: {
   conversations: InboxConversation[];
   loading: boolean;
   error: string | null;
   threadLoadingId: string | null;
   onRead: (conversation: InboxConversation) => void;
-  onBack: () => void;
 }) {
   return (
     <section className="inbox-view" aria-labelledby="inbox-view-title">
       <header className="inbox-view-header">
-        <button type="button" onClick={onBack} aria-label="Return to dashboard">←</button>
         <div><p>Canvas messages</p><h1 id="inbox-view-title">Inbox</h1><small>The 10 most recent conversations</small></div>
         <span aria-hidden="true">✉</span>
       </header>
@@ -363,7 +365,7 @@ function comparableCourseName(value: string) {
   return value.toLocaleLowerCase("en-US").replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-function ClassesView({ courses, week, onBack }: { courses: Course[]; week: WeekItem[]; onBack: () => void }) {
+function ClassesView({ courses, week }: { courses: Course[]; week: WeekItem[] }) {
   const scheduled = Array.from(new Set(week.map((item) => item.course))).map((name) => {
     const comparableName = comparableCourseName(name);
     const course = courses.find((candidate) => {
@@ -380,7 +382,6 @@ function ClassesView({ courses, week, onBack }: { courses: Course[]; week: WeekI
   return (
     <section className="portal-feature-view classes-view" aria-labelledby="classes-view-title">
       <header className="portal-feature-header">
-        <button type="button" onClick={onBack} aria-label="Return to dashboard">←</button>
         <div><p>Canvas courses &amp; weekly times</p><h1 id="classes-view-title">Classes</h1><small>{classes.length} classes and course spaces</small></div>
         <span aria-hidden="true">▤</span>
       </header>
@@ -421,12 +422,11 @@ function youtubeEmbedUrl(value: string | null) {
   }
 }
 
-function PostBoardView({ board, posts, loading, error, onBack, onNewPost }: {
+function PostBoardView({ board, posts, loading, error, onNewPost }: {
   board: PostBoard;
   posts: FamilyPost[];
   loading: boolean;
   error: string | null;
-  onBack: () => void;
   onNewPost: () => void;
 }) {
   const title = board === "inspiration" ? "Inspiration" : "Resources";
@@ -434,7 +434,6 @@ function PostBoardView({ board, posts, loading, error, onBack, onNewPost }: {
   return (
     <section className="portal-feature-view post-board-view" aria-labelledby={`${board}-view-title`}>
       <header className="portal-feature-header">
-        <button type="button" onClick={onBack} aria-label="Return to dashboard">←</button>
         <div><p>Family learning board</p><h1 id={`${board}-view-title`}>{title}</h1><small>{description}</small></div>
         <span aria-hidden="true">{board === "inspiration" ? "✦" : "▱"}</span>
       </header>
@@ -541,14 +540,13 @@ function ChatMessageBody({ body }: { body: string }) {
   );
 }
 
-function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onBack, onLoadOlder, onSend, onEdit, onDelete }: {
+function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onLoadOlder, onSend, onEdit, onDelete }: {
   messages: ChatMessage[];
   viewer: DashboardData["viewer"];
   loading: boolean;
   olderLoading: boolean;
   hasMore: boolean;
   error: string | null;
-  onBack: () => void;
   onLoadOlder: () => Promise<void>;
   onSend: (body: string) => Promise<void>;
   onEdit: (id: string, body: string) => Promise<void>;
@@ -623,7 +621,6 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onB
   return (
     <section className="portal-feature-view chat-view" aria-labelledby="chat-view-title">
       <header className="portal-feature-header">
-        <button type="button" onClick={onBack} aria-label="Return to dashboard">←</button>
         <div><p>Private family conversation</p><h1 id="chat-view-title">Chat</h1><small>The newest 15 messages appear first</small></div>
         <span aria-hidden="true">•••</span>
       </header>
@@ -692,13 +689,12 @@ function letterGrade(percentage: number) {
   return "F";
 }
 
-function AdminView({ courses, settings, grades, loading, error, onBack, onSave }: {
+function AdminView({ courses, settings, grades, loading, error, onSave }: {
   courses: Course[];
   settings: DashboardPreferences;
   grades: GradeOverride[];
   loading: boolean;
   error: string | null;
-  onBack: () => void;
   onSave: (settings: DashboardPreferences, grades: GradeOverride[]) => Promise<void>;
 }) {
   const editableCourses = courses.slice(0, 6);
@@ -733,7 +729,6 @@ function AdminView({ courses, settings, grades, loading, error, onBack, onSave }
   return (
     <section className="portal-feature-view admin-view" aria-labelledby="admin-view-title">
       <header className="portal-feature-header">
-        <button type="button" onClick={onBack} aria-label="Return to dashboard">←</button>
         <div><p>Family dashboard controls</p><h1 id="admin-view-title">Admin</h1><small>Grades and empty due-card display</small></div>
         <span aria-hidden="true">⚙</span>
       </header>
@@ -1427,7 +1422,6 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     const showcase = gradesShowcaseRef.current;
     if (activeView !== "dashboard" || !showcase) return;
     const values = Array.from(showcase.querySelectorAll<HTMLElement>(".grade-artwork-value"));
-    const cards = Array.from(showcase.querySelectorAll<HTMLElement>(".grade-artwork-card"));
     if (!values.length) return;
 
     const observerTargets = new Map<Element, HTMLElement>();
@@ -1442,41 +1436,40 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
     const gradeParts = (value: HTMLElement) => ({
       letter: value.querySelector<HTMLElement>(".grade-artwork-letter"),
+      motion: value.querySelector<HTMLElement>(".grade-artwork-letter-motion"),
       percentage: value.querySelector<HTMLElement>(".grade-artwork-percentage"),
     });
 
     const resetValue = (value: HTMLElement) => {
-      const { letter, percentage } = gradeParts(value);
-      const targets = [value, letter, percentage].filter((target): target is HTMLElement => Boolean(target));
+      const { letter, motion, percentage } = gradeParts(value);
+      const targets = [value, letter, motion, percentage].filter((target): target is HTMLElement => Boolean(target));
       persistentMotion.get(value)?.kill();
       persistentMotion.delete(value);
       value.removeAttribute("data-grade-active");
       gsap.killTweensOf(targets);
       gsap.set(value, { autoAlpha: 0 });
       if (letter) gsap.set(letter, { autoAlpha: 0, scale: 0, x: 0, xPercent: -50, yPercent: -50, rotation: -18 });
+      if (motion) gsap.set(motion, { autoAlpha: 1, scale: 1, rotation: 0 });
       if (percentage) gsap.set(percentage, { autoAlpha: 0, scale: 0, x: 0, rotation: -12 });
     };
 
     const revealValue = (value: HTMLElement, order: number) => {
-      const { letter, percentage } = gradeParts(value);
-      if (!letter || !percentage || !visible.has(value)) return;
-      const card = value.closest<HTMLElement>(".grade-artwork-card");
-      const cardIndex = card ? cards.indexOf(card) : 0;
-      const flyFromX = cardIndex % 2 === 0 ? -150 : 150;
-      gsap.killTweensOf([value, letter, percentage]);
+      const { letter, motion, percentage } = gradeParts(value);
+      if (!letter || !motion || !percentage || !visible.has(value)) return;
+      gsap.killTweensOf([value, letter, motion, percentage]);
       gsap.set(value, { autoAlpha: 1 });
       value.dataset.gradeActive = "true";
       const gradeTimeline = gsap.timeline({ delay: order * 0.16 })
-        .fromTo(letter, { autoAlpha: 0, scale: 0.35, x: flyFromX, xPercent: -50, yPercent: -50, rotation: -18 }, { autoAlpha: 1, scale: 1, x: 0, xPercent: -50, yPercent: -50, rotation: -2, duration: 1.15, ease: "elastic.out(1, 0.3)" }, 0)
-        .fromTo(percentage, { autoAlpha: 0, scale: 0.5, x: flyFromX * 0.65, rotation: -12 }, { autoAlpha: 1, scale: 1, x: 0, rotation: -4, duration: 0.88, ease: "elastic.out(1, 0.38)" }, 0.18);
+        .fromTo(letter, { autoAlpha: 0, scale: 0, x: 0, xPercent: -50, yPercent: -50, rotation: -12 }, { autoAlpha: 1, scale: 1, x: 0, xPercent: -50, yPercent: -50, rotation: -2, duration: 1.15, ease: "elastic.out(1, 0.3)" }, 0)
+        .fromTo(percentage, { autoAlpha: 0, scale: 0, x: 0, rotation: -10 }, { autoAlpha: 1, scale: 1, x: 0, rotation: -4, duration: 0.88, ease: "elastic.out(1, 0.38)" }, 0.18);
 
       if (value.dataset.grade === "D") {
-        gradeTimeline.to(letter, { scale: 1.26, duration: 1.05, repeat: -1, yoyo: true, ease: "sine.inOut" }, 1.15);
+        gradeTimeline.to(motion, { scale: 1.26, duration: 1.05, repeat: -1, yoyo: true, ease: "sine.inOut" }, 1.15);
       } else if (value.dataset.grade === "F") {
         const failMotion = gsap.timeline({ repeat: -1, repeatDelay: 0.65 })
-          .to(letter, { rotation: "+=360", duration: 1.35, ease: "power2.inOut" }, 0)
-          .to(letter, { autoAlpha: 0.06, duration: 0.08, repeat: 7, yoyo: true, ease: "none" }, 0.08)
-          .set(letter, { autoAlpha: 1 });
+          .to(motion, { rotation: "+=360", duration: 1.35, ease: "power2.inOut" }, 0)
+          .to(motion, { autoAlpha: 0.06, duration: 0.08, repeat: 7, yoyo: true, ease: "none" }, 0.08)
+          .set(motion, { autoAlpha: 1 });
         gradeTimeline.add(failMotion, 1.15);
       }
       persistentMotion.set(value, gradeTimeline);
@@ -1736,7 +1729,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
               return <article className="grade-artwork-card" key={item.label} aria-label={course?.name ?? item.label}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={appPath(item.image)} alt={course?.name ?? item.label} />
-                {grade && calculatedLetter ? <div className={`grade-artwork-value grade-tone-${calculatedLetter.toLowerCase()}`} data-grade={calculatedLetter} data-grade-rank={gradeAnimationRank[calculatedLetter]}><strong className="grade-artwork-letter">{calculatedLetter}</strong><span className="grade-artwork-percentage">{grade.percentage.toFixed(grade.percentage % 1 ? 1 : 0)}</span></div> : null}
+                {grade && calculatedLetter ? <div className={`grade-artwork-value grade-tone-${calculatedLetter.toLowerCase()}`} data-grade={calculatedLetter} data-grade-rank={gradeAnimationRank[calculatedLetter]}><strong className="grade-artwork-letter"><span className="grade-artwork-letter-motion">{calculatedLetter}</span></strong><span className="grade-artwork-percentage">{grade.percentage.toFixed(grade.percentage % 1 ? 1 : 0)}</span></div> : null}
               </article>;
             })}
           </div>
@@ -1744,21 +1737,20 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
         </div>
         ) : (
           <div className="feature-view-shell" ref={featureViewRef}>
+            <FeatureBackBar onBack={returnToDashboard} />
             {activeView === "inbox" ? <InboxView
               conversations={inboxConversations}
               loading={inboxLoading}
               error={inboxError}
               threadLoadingId={threadLoadingId}
               onRead={(conversation) => void openThread(conversation)}
-              onBack={returnToDashboard}
-            /> : activeView === "classes" ? <ClassesView courses={data.courses} week={data.week} onBack={returnToDashboard} /> : activeView === "chat" ? <ChatView
+            /> : activeView === "classes" ? <ClassesView courses={data.courses} week={data.week} /> : activeView === "chat" ? <ChatView
               messages={chatMessages}
               viewer={data.viewer}
               loading={chatLoading}
               olderLoading={chatOlderLoading}
               hasMore={chatHasMore}
               error={chatError}
-              onBack={returnToDashboard}
               onLoadOlder={loadOlderChat}
               onSend={sendChatMessage}
               onEdit={editChatMessage}
@@ -1770,14 +1762,12 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
               grades={gradeOverrides}
               loading={adminLoading}
               error={adminError}
-              onBack={returnToDashboard}
               onSave={saveAdmin}
             /> : <PostBoardView
               board={activeView}
               posts={postsByBoard[activeView]}
               loading={postBoardLoading}
               error={postBoardError}
-              onBack={returnToDashboard}
               onNewPost={() => setComposerBoard(activeView)}
             />}
           </div>

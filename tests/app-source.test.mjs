@@ -251,12 +251,17 @@ test("Classes and family boards use the shared animated feature view", async () 
   assert.match(dashboard, /youtube-nocookie\.com\/embed/);
   assert.match(dashboard, /action: "inspiration"/);
   assert.match(dashboard, /action: "resources"/);
+  assert.match(dashboard, /function FeatureBackBar/);
+  assert.equal((dashboard.match(/<FeatureBackBar onBack=\{returnToDashboard\}/g) ?? []).length, 1);
+  assert.doesNotMatch(dashboard, /aria-label="Return to dashboard">←<\/button>/);
   assert.match(postsRoute, /isAuthorizedAppRequest/);
   assert.match(postsRoute, /readFamilySession/);
   assert.match(postsRoute, /ensureFamilyPostsSchema/);
   assert.match(styles, /\.portal-feature-view/);
   assert.match(styles, /menu-popup-bg\.webp/);
   assert.match(styles, /\.post-board-create-bar \{ position: sticky/);
+  assert.match(styles, /\.feature-back-bar \{/);
+  assert.match(styles, /margin: 0 calc\(var\(--feature-pad\) \* -1\) calc\(var\(--feature-pad\) \* -1\)/);
 });
 
 test("family chat is persistent, paginated, link-aware, and sender controlled", async () => {
@@ -299,12 +304,13 @@ test("admin stores percentages and controls empty due-card visibility", async ()
   assert.match(dashboard, /entry\.intersectionRatio >= 0\.08/);
   assert.match(dashboard, /threshold: \[0, 0\.08\]/);
   assert.match(dashboard, /elastic\.out/);
-  assert.match(dashboard, /const flyFromX = cardIndex % 2 === 0 \? -150 : 150/);
-  assert.match(dashboard, /x: flyFromX/);
+  assert.match(dashboard, /scale: 0, x: 0/);
+  assert.doesNotMatch(dashboard, /flyFromX/);
   assert.match(dashboard, /const gradeTimeline = gsap\.timeline/);
-  assert.match(dashboard, /gradeTimeline\.to\(letter, \{ scale: 1\.26,[^}]*repeat: -1, yoyo: true/);
+  assert.match(dashboard, /grade-artwork-letter-motion/);
+  assert.match(dashboard, /gradeTimeline\.to\(motion, \{ scale: 1\.26,[^}]*repeat: -1, yoyo: true/);
   assert.match(dashboard, /const failMotion = gsap\.timeline\(\{ repeat: -1/);
-  assert.match(dashboard, /rotation: "\+=360"/);
+  assert.match(dashboard, /\.to\(motion, \{ rotation: "\+=360"/);
   assert.match(dashboard, /gradeTimeline\.add\(failMotion, 1\.15\)/);
   assert.match(styles, /\.grade-tone-b \.grade-artwork-letter,[\s\S]*\.grade-tone-d \.grade-artwork-letter \{ left: 57%; \}/);
   assert.match(styles, /\.grade-artwork-value \{[^}]*visibility: hidden; opacity: 0;/);
