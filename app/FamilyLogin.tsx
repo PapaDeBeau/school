@@ -178,10 +178,10 @@ export function FamilyLogin() {
       }
       gsap.to(card, {
         autoAlpha: 0,
-        x: Math.max(window.innerWidth * 0.9, card.offsetWidth + 120),
-        y: -90,
-        rotation: 11,
-        scale: 0.86,
+        x: 0,
+        y: -Math.max(window.innerHeight * 1.05, card.offsetHeight + 140),
+        rotation: 0,
+        scale: 0.9,
         duration: 0.86,
         ease: "power4.in",
         onComplete: () => setView("dashboard"),

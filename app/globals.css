@@ -1131,6 +1131,10 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .immersive-dashboard .course-card,
 .immersive-dashboard .quick-actions a { background: rgba(251, 253, 255, .78); }
 
+.mobile-dashboard-bar,
+.mobile-school-menu,
+.mobile-due-stack { display: none; }
+
 @keyframes portal-loader-arrive {
   from { opacity: 0; transform: translateY(18px) scale(.97); }
   to { opacity: 1; transform: translateY(0) scale(1); }
@@ -1144,13 +1148,166 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
     min-height: calc(100svh - 24px);
     padding: 0;
   }
-  .immersive-dashboard .school-workspace { height: auto; overflow: visible; }
+  .school-app .school-sidebar { display: none; }
+  .school-app .school-workspace,
+  .immersive-dashboard .school-workspace {
+    position: relative;
+    height: auto;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .school-app .workspace-header { display: none; }
+  .mobile-dashboard-bar {
+    position: sticky;
+    z-index: 30;
+    top: 0;
+    min-height: 54px;
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 8px;
+    border: 1px solid rgba(174, 215, 255, .34);
+    border-radius: 15px;
+    color: white;
+    background: rgba(1, 15, 35, .66);
+    box-shadow: 0 12px 34px rgba(0, 5, 20, .28), inset 0 1px 0 rgba(255, 255, 255, .12);
+    -webkit-backdrop-filter: blur(13px) saturate(115%);
+    backdrop-filter: blur(13px) saturate(115%);
+  }
+  .mobile-dashboard-bar > strong {
+    overflow: hidden;
+    font-size: 14px;
+    letter-spacing: -.01em;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mobile-dashboard-bar > div { display: flex; align-items: center; gap: 7px; }
+  .mobile-dashboard-bar button {
+    min-height: 38px;
+    border-radius: 10px;
+    font: inherit;
+    font-weight: 850;
+    cursor: pointer;
+  }
+  .mobile-menu-button {
+    width: 42px;
+    padding: 0;
+    border: 1px solid rgba(115, 180, 255, .52);
+    color: #82c3ff;
+    background: rgba(24, 100, 190, .22);
+    font-size: 20px;
+  }
+  .mobile-sync-button {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 10px;
+    border: 1px solid rgba(75, 158, 255, .7);
+    color: #8dc9ff;
+    background: rgba(20, 99, 197, .25);
+    font-size: 11px;
+  }
+  .mobile-sync-button:disabled { opacity: .62; cursor: wait; }
+  .mobile-close-button {
+    width: 38px;
+    padding: 0;
+    border: 1px solid rgba(255, 77, 98, .7);
+    color: #ff5267;
+    background: rgba(165, 13, 38, .25);
+    font-size: 25px;
+    line-height: 1;
+  }
+  .mobile-dashboard-bar button:focus-visible,
+  .mobile-school-menu a:focus-visible { outline: 3px solid rgba(255, 255, 255, .86); outline-offset: 2px; }
+  .mobile-school-menu {
+    position: fixed;
+    z-index: 29;
+    top: 72px;
+    left: 16px;
+    right: 16px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid rgba(181, 220, 255, .38);
+    border-radius: 16px;
+    background: rgba(2, 19, 43, .88);
+    box-shadow: 0 22px 65px rgba(0, 5, 20, .46), inset 0 1px 0 rgba(255, 255, 255, .1);
+    -webkit-backdrop-filter: blur(18px) saturate(120%);
+    backdrop-filter: blur(18px) saturate(120%);
+  }
+  .mobile-school-menu a {
+    min-height: 45px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 0 12px;
+    border: 1px solid rgba(127, 182, 235, .18);
+    border-radius: 10px;
+    color: #eef7ff;
+    background: rgba(255, 255, 255, .055);
+    font-size: 12px;
+    font-weight: 750;
+    text-decoration: none;
+  }
+  .mobile-school-menu a > span { width: 20px; color: #75baff; text-align: center; }
+  .school-app .overview-hero { margin-top: 12px; }
+  .school-app .summary-grid { grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 10px; }
+  .school-app .summary-card.is-zero,
+  .school-app .course-stat { display: none; }
+  .school-app .critical-strip.is-clear { display: none; }
+  .mobile-due-stack { display: grid; gap: 11px; margin-top: 14px; }
+  .mobile-due-card {
+    overflow: hidden;
+    padding: 14px;
+    border: 1px solid rgba(207, 225, 244, .58);
+    border-radius: 14px;
+    color: var(--dash-ink);
+    background: rgba(253, 254, 255, .85);
+    box-shadow: 0 16px 42px rgba(0, 12, 34, .2), inset 0 1px 0 rgba(255, 255, 255, .42);
+    -webkit-backdrop-filter: blur(14px) saturate(112%);
+    backdrop-filter: blur(14px) saturate(112%);
+  }
+  .mobile-due-card > header { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+  .mobile-due-card > header > span { color: #5b9bff; font-size: 9px; }
+  .mobile-due-card.has-items > header > span { color: #f05269; }
+  .mobile-due-card h2 { margin: 0; font-size: 14px; letter-spacing: -.02em; }
+  .mobile-due-card > header > strong { min-width: 25px; height: 25px; display: grid; place-items: center; border-radius: 999px; color: #2463eb; background: #edf3ff; font-size: 10px; }
+  .mobile-due-card > p { margin: 11px 0 0 20px; color: #647089; font-size: 11px; }
+  .mobile-due-list { display: grid; margin-top: 9px; }
+  .mobile-due-list a { min-height: 49px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 4px 8px 20px; border-top: 1px solid rgba(210, 223, 240, .76); color: var(--dash-ink); text-decoration: none; }
+  .mobile-due-list a > span { min-width: 0; display: grid; gap: 3px; }
+  .mobile-due-list strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+  .mobile-due-list small { color: #6b7690; font-size: 9px; }
+  .mobile-due-list i { color: #65748f; font-size: 20px; font-style: normal; }
+  .school-app .schedule-panel,
+  .school-app .quick-panel { display: none; }
   .immersive-dashboard-state { min-height: calc(100svh - 24px); margin: 0 auto; }
 }
 
 @media (max-width: 560px) {
   .school-portal-shell.dashboard-active { padding: 10px 14px; }
   .school-app.immersive-dashboard { min-height: calc(100svh - 20px); }
+  .mobile-dashboard-bar {
+    min-height: 50px;
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+    gap: 6px;
+    padding: 6px;
+  }
+  .mobile-dashboard-bar > strong { font-size: 12px; }
+  .mobile-dashboard-bar button { min-height: 36px; }
+  .mobile-menu-button { width: 38px; }
+  .mobile-sync-button { padding: 0 8px; }
+  .mobile-close-button { width: 36px; }
+  .mobile-school-menu { top: 66px; left: 14px; right: 14px; }
   .immersive-dashboard-state { width: calc(100% - 28px); min-height: calc(100svh - 20px); }
   .immersive-dashboard-state .sync-loader,
   .immersive-dashboard-state .dashboard-error { padding: 30px 22px; }

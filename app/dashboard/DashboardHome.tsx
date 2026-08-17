@@ -68,6 +68,36 @@ const dayFormat = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
 });
 
+const dayKeyFormat = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/Los_Angeles",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+const mobileDateFormat = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/Los_Angeles",
+  weekday: "long",
+  month: "long",
+  day: "numeric",
+});
+
+function dayKey(value: string | Date) {
+  return dayKeyFormat.format(typeof value === "string" ? new Date(value) : value);
+}
+
+function offsetDayKey(key: string, days: number) {
+  const [year, month, day] = key.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
+function ordinalDate(value: string) {
+  const date = new Date(value);
+  const day = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", day: "numeric" }).format(date));
+  const suffix = day % 10 === 1 && day % 100 !== 11 ? "st" : day % 10 === 2 && day % 100 !== 12 ? "nd" : day % 10 === 3 && day % 100 !== 13 ? "rd" : "th";
+  return mobileDateFormat.format(date).replace(String(day), `${day}${suffix}`);
+}
+
 function formatDate(value: string | null) {
   if (!value) return "No due date";
   const date = new Date(value);
@@ -100,6 +130,23 @@ function ActionList({ items, empty }: { items: ActionItem[]; empty: string }) {
   );
 }
 
+function MobileDueCard({ title, items, empty }: { title: string; items: ActionItem[]; empty: string }) {
+  return (
+    <section className={`mobile-due-card${items.length ? " has-items" : ""}`}>
+      <header><span aria-hidden="true">●</span><h2>{title}</h2><strong>{items.length}</strong></header>
+      {items.length ? (
+        <div className="mobile-due-list">
+          {items.map((item) => (
+            <a href={item.sourceUrl} key={item.id} rel="noreferrer" target="_blank">
+              <span><strong>{item.title}</strong><small>{item.course}</small></span><i aria-hidden="true">›</i>
+            </a>
+          ))}
+        </div>
+      ) : <p>{empty}</p>}
+    </section>
+  );
+}
+
 const canvasLinks = [
   { label: "Dashboard", icon: "⌂", href: appPath("/dashboard"), local: true },
   { label: "Canvas", icon: "▣", href: "https://sequoiagrove.instructure.com/" },
@@ -123,6 +170,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const [loading, setLoading] = useState(true);
   const [showAllUpcoming, setShowAllUpcoming] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const sync = useCallback(async () => {
     setLoading(true);
@@ -155,7 +203,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
     const context = gsap.context(() => {
       const panels = app.querySelectorAll(
-        ".school-sidebar, .workspace-header, .overview-hero, .summary-card, .critical-strip, .primary-dashboard-grid > .dash-panel, .secondary-dashboard-grid > .dash-panel, .dashboard-footer"
+        ".school-sidebar, .mobile-dashboard-bar, .workspace-header, .overview-hero, .summary-card, .critical-strip, .mobile-due-card, .primary-dashboard-grid > .dash-panel, .secondary-dashboard-grid > .dash-panel, .dashboard-footer"
       );
       gsap.set(panels, { autoAlpha: 0, y: 34, scale: 0.975 });
       gsap.timeline({ delay: 0.08 })
@@ -202,6 +250,22 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const visibleUpcoming = showAllUpcoming ? data.upcoming : data.upcoming.slice(0, 5);
   const firstName = data.student.split(" ")[0] || "Beau";
   const viewerInitials = data.viewer.displayName.slice(0, 2).toUpperCase();
+  const assignmentPool = Array.from(new Map(
+    [...data.critical, ...data.upcoming]
+      .filter((item) => item.kind === "assignment" && item.dueAt)
+      .map((item) => [item.id, item])
+  ).values());
+  const today = dayKey(data.generatedAt);
+  const tomorrow = offsetDayKey(today, 1);
+  const weekStart = offsetDayKey(today, 2);
+  const weekEnd = offsetDayKey(today, 7);
+  const dueToday = assignmentPool.filter((item) => item.dueAt && dayKey(item.dueAt) === today);
+  const dueTomorrow = assignmentPool.filter((item) => item.dueAt && dayKey(item.dueAt) === tomorrow);
+  const dueThisWeek = assignmentPool.filter((item) => {
+    if (!item.dueAt) return false;
+    const dueDay = dayKey(item.dueAt);
+    return dueDay >= weekStart && dueDay <= weekEnd;
+  });
 
   return (
     <main className={`school-app${immersive ? " immersive-dashboard" : ""}${focusMode ? " is-focus-mode" : ""}`} ref={appRef}>
@@ -228,6 +292,24 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       </aside>
 
       <section className="school-workspace">
+        <div className="mobile-dashboard-bar">
+          <button className="mobile-menu-button" type="button" onClick={() => setMobileMenuOpen((open) => !open)} aria-expanded={mobileMenuOpen} aria-controls="mobile-school-menu" aria-label="Open school menu"><span aria-hidden="true">☰</span></button>
+          <strong>{ordinalDate(data.generatedAt)}</strong>
+          <div>
+            <button className="mobile-sync-button" type="button" onClick={() => void sync()} disabled={loading}><span aria-hidden="true">↻</span>{loading ? "Syncing" : "Sync"}</button>
+            <button className="mobile-close-button" type="button" onClick={() => void signOut()} aria-label={`Sign out ${data.viewer.displayName}`}>×</button>
+          </div>
+        </div>
+        {mobileMenuOpen ? (
+          <nav className="mobile-school-menu" id="mobile-school-menu" aria-label="Mobile school navigation">
+            {canvasLinks.map((item) => (
+              <a href={item.label === "Dashboard" && immersive ? appPath("/") : item.href} key={item.label} onClick={(event) => { setMobileMenuOpen(false); if (item.label === "Dashboard" && immersive) event.preventDefault(); }} {...(!item.local ? { target: "_blank", rel: "noreferrer" } : {})}>
+                <span aria-hidden="true">{item.icon}</span>{item.label}
+              </a>
+            ))}
+          </nav>
+        ) : null}
+
         <header className="workspace-header">
           <div><h1>Dashboard</h1><p>{dayFormat.format(new Date(data.generatedAt))}</p></div>
           <div className="dashboard-controls">
@@ -246,9 +328,9 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
         </section>
 
         <section className="summary-grid" aria-label="Dashboard summary">
-          <article className="summary-card critical-stat"><span aria-hidden="true">!</span><div><strong>{data.critical.length}</strong><small>Critical</small></div></article>
+          <article className={`summary-card critical-stat${data.critical.length ? "" : " is-zero"}`}><span aria-hidden="true">!</span><div><strong>{data.critical.length}</strong><small>Critical</small></div></article>
           <article className="summary-card upcoming-stat"><span aria-hidden="true">□</span><div><strong>{data.upcoming.length}</strong><small>Upcoming</small></div></article>
-          <article className="summary-card unread-stat"><span aria-hidden="true">✉</span><div><strong>{data.unreadCount}</strong><small>Unread</small></div></article>
+          <article className={`summary-card unread-stat${data.unreadCount ? "" : " is-zero"}`}><span aria-hidden="true">✉</span><div><strong>{data.unreadCount}</strong><small>Unread</small></div></article>
           <article className="summary-card course-stat"><span aria-hidden="true">▤</span><div><strong>{data.courseCount}</strong><small>Courses</small></div></article>
         </section>
 
@@ -260,6 +342,12 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           <span className="critical-chevron" aria-hidden="true">›</span>
           {!allClear ? <ActionList items={data.critical} empty="Nothing needs attention." /> : null}
         </section>
+
+        <div className="mobile-due-stack" aria-label="Assignment due dates">
+          <MobileDueCard title="Due today" items={dueToday} empty="Nothing is due today." />
+          <MobileDueCard title="Due tomorrow" items={dueTomorrow} empty="Nothing is due tomorrow." />
+          <MobileDueCard title="Due this week" items={dueThisWeek} empty="Nothing else is due this week." />
+        </div>
 
         <div className="primary-dashboard-grid">
           <section className="dash-panel upcoming-panel">
