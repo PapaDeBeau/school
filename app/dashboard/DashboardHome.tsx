@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { appPath } from "../../lib/app-paths";
 
@@ -35,6 +35,7 @@ type WeekItem = {
 type Course = {
   id: number;
   name: string;
+  sourceUrl: string;
   grade: string | null;
   score: number | null;
 };
@@ -97,6 +98,35 @@ type InboxThread = {
   participants: InboxPerson[];
   messages: InboxMessage[];
 };
+
+type PostBoard = "inspiration" | "resources";
+
+type FamilyPost = {
+  id: string;
+  board: PostBoard;
+  title: string;
+  body: string;
+  url: string | null;
+  author: { username: string; name: string };
+  createdAt: string;
+  updatedAt: string;
+};
+
+type ChatMessage = {
+  id: string;
+  body: string;
+  author: { username: string; name: string };
+  createdAt: string;
+  updatedAt: string;
+};
+
+type DashboardPreferences = {
+  showDueTodayWhenEmpty: boolean;
+  showDueTomorrowWhenEmpty: boolean;
+  showDueWeekWhenEmpty: boolean;
+};
+
+type GradeOverride = { courseKey: string; courseName: string; percentage: number };
 
 const dateFormat = new Intl.DateTimeFormat("en-US", {
   timeZone: "America/Los_Angeles",
@@ -329,6 +359,421 @@ function InboxView({ conversations, loading, error, threadLoadingId, onRead, onB
   );
 }
 
+function comparableCourseName(value: string) {
+  return value.toLocaleLowerCase("en-US").replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function ClassesView({ courses, week, onBack }: { courses: Course[]; week: WeekItem[]; onBack: () => void }) {
+  const scheduled = Array.from(new Set(week.map((item) => item.course))).map((name) => {
+    const comparableName = comparableCourseName(name);
+    const course = courses.find((candidate) => {
+      const comparableCandidate = comparableCourseName(candidate.name);
+      return comparableCandidate === comparableName || comparableCandidate.includes(comparableName) || comparableName.includes(comparableCandidate);
+    });
+    return { key: course?.id ?? name, name: course?.name ?? name, sourceUrl: course?.sourceUrl, meetings: week.filter((item) => item.course === name) };
+  });
+  const unscheduled = courses
+    .filter((course) => !scheduled.some((entry) => entry.key === course.id))
+    .map((course) => ({ key: course.id, name: course.name, sourceUrl: course.sourceUrl, meetings: [] as WeekItem[] }));
+  const classes = [...scheduled, ...unscheduled];
+
+  return (
+    <section className="portal-feature-view classes-view" aria-labelledby="classes-view-title">
+      <header className="portal-feature-header">
+        <button type="button" onClick={onBack} aria-label="Return to dashboard">←</button>
+        <div><p>Canvas courses &amp; weekly times</p><h1 id="classes-view-title">Classes</h1><small>{classes.length} classes and course spaces</small></div>
+        <span aria-hidden="true">▤</span>
+      </header>
+      <div className="classes-grid" role="list">
+        {classes.map((course) => (
+          <article className="class-box" role="listitem" key={course.key}>
+            <p>Class</p><h2>{course.name}</h2>
+            <div className="class-meetings">
+              {course.meetings.length ? course.meetings.map((meeting) => (
+                <div key={`${meeting.day}-${meeting.time}`}><strong>{meeting.day}</strong><time>{meeting.time}</time><small>{meeting.note}</small></div>
+              )) : <div className="class-time-missing"><strong>Canvas course</strong><small>Meeting time is not listed.</small></div>}
+            </div>
+            {course.sourceUrl ? <a href={course.sourceUrl} target="_blank" rel="noreferrer">Open class in Canvas <span aria-hidden="true">→</span></a> : null}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function youtubeEmbedUrl(value: string | null) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.replace(/^www\./, "").toLocaleLowerCase("en-US");
+    let id = "";
+    if (host === "youtu.be") id = url.pathname.split("/").filter(Boolean)[0] ?? "";
+    if (host === "youtube.com" || host === "m.youtube.com") {
+      id = url.searchParams.get("v") ?? "";
+      if (!id) {
+        const parts = url.pathname.split("/").filter(Boolean);
+        if (parts[0] === "shorts" || parts[0] === "embed") id = parts[1] ?? "";
+      }
+    }
+    return /^[a-zA-Z0-9_-]{6,20}$/.test(id) ? `https://www.youtube-nocookie.com/embed/${id}` : null;
+  } catch {
+    return null;
+  }
+}
+
+function PostBoardView({ board, posts, loading, error, onBack, onNewPost }: {
+  board: PostBoard;
+  posts: FamilyPost[];
+  loading: boolean;
+  error: string | null;
+  onBack: () => void;
+  onNewPost: () => void;
+}) {
+  const title = board === "inspiration" ? "Inspiration" : "Resources";
+  const description = board === "inspiration" ? "Ideas, videos, and sparks worth remembering" : "Useful lessons, links, and learning tools";
+  return (
+    <section className="portal-feature-view post-board-view" aria-labelledby={`${board}-view-title`}>
+      <header className="portal-feature-header">
+        <button type="button" onClick={onBack} aria-label="Return to dashboard">←</button>
+        <div><p>Family learning board</p><h1 id={`${board}-view-title`}>{title}</h1><small>{description}</small></div>
+        <span aria-hidden="true">{board === "inspiration" ? "✦" : "▱"}</span>
+      </header>
+      {loading ? <div className="post-board-state" role="status"><i aria-hidden="true" /><p>Loading {title.toLocaleLowerCase("en-US")}…</p></div> : null}
+      {error ? <div className="post-board-state is-error" role="alert"><strong>{title} could not be loaded.</strong><p>{error}</p></div> : null}
+      {!loading && !error && !posts.length ? <div className="post-board-state"><span aria-hidden="true">✦</span><strong>Start the {title} board.</strong><p>Add the first idea, video, or useful link.</p></div> : null}
+      <div className="post-board-list" role="feed" aria-busy={loading}>
+        {posts.map((post) => {
+          const embedUrl = youtubeEmbedUrl(post.url);
+          const profilePhoto = familyProfilePhoto[post.author.username];
+          return (
+            <article className="family-post" key={post.id}>
+              <header>
+                <span className="family-post-avatar" aria-hidden="true">
+                  {profilePhoto ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={appPath(profilePhoto)} alt="" />
+                  ) : post.author.name.slice(0, 1).toUpperCase()}
+                </span>
+                <div><p>{post.author.name}</p><time dateTime={post.createdAt}>{formatInboxDate(post.createdAt)}</time></div>
+              </header>
+              <h2>{post.title}</h2>
+              {post.body ? <p className="family-post-body">{post.body}</p> : null}
+              {embedUrl ? <div className="family-post-video"><iframe src={embedUrl} title={`${post.title} video`} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /></div> : null}
+              {post.url ? <a className="family-post-link" href={post.url} target="_blank" rel="noreferrer">Open link <span aria-hidden="true">→</span></a> : null}
+            </article>
+          );
+        })}
+      </div>
+      <div className="post-board-create-bar"><button type="button" onClick={onNewPost}>Make a new post</button></div>
+    </section>
+  );
+}
+
+function PostComposerModal({ board, onClose, onSubmit }: {
+  board: PostBoard;
+  onClose: () => void;
+  onSubmit: (payload: { title: string; body: string; url: string }) => Promise<void>;
+}) {
+  const titleRef = useRef<HTMLInputElement>(null);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [url, setUrl] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const boardTitle = board === "inspiration" ? "Inspiration" : "Resources";
+
+  useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    titleRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape" && !saving) onClose(); };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
+  }, [onClose, saving]);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setMessage("");
+    try {
+      await onSubmit({ title, body, url });
+    } catch (caught) {
+      setMessage(caught instanceof Error ? caught.message : "The post could not be saved.");
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="post-composer-backdrop">
+      <button className="modal-backdrop-dismiss" type="button" onClick={onClose} aria-label="Close new post" disabled={saving} />
+      <section className="post-composer-modal" role="dialog" aria-modal="true" aria-labelledby="post-composer-title">
+        <button className="post-composer-x" type="button" onClick={onClose} aria-label="Close new post" disabled={saving}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={appPath("/logout-button.webp")} alt="" aria-hidden="true" />
+        </button>
+        <header><p>Family learning board</p><h2 id="post-composer-title">New {boardTitle} post</h2><small>Share text, a YouTube video, a useful link—or all three.</small></header>
+        <form onSubmit={(event) => void submit(event)}>
+          <label><span>Title</span><input ref={titleRef} value={title} onChange={(event) => setTitle(event.target.value)} maxLength={140} required placeholder="What did you find?" /></label>
+          <label><span>Text</span><textarea value={body} onChange={(event) => setBody(event.target.value)} maxLength={8000} rows={7} placeholder="Add notes, a summary, or why this is useful…" /></label>
+          <label><span>YouTube video or any link</span><input type="url" value={url} onChange={(event) => setUrl(event.target.value)} maxLength={2000} placeholder="https://…" /></label>
+          {message ? <p className="post-composer-error" role="alert">{message}</p> : null}
+          <button className="post-composer-save" type="submit" disabled={saving}>{saving ? "Saving…" : "Add post"}</button>
+          <button className="post-composer-cancel" type="button" onClick={onClose} disabled={saving}>Cancel</button>
+        </form>
+      </section>
+    </div>
+  );
+}
+
+function ChatMessageBody({ body }: { body: string }) {
+  const parts = body.split(/(https?:\/\/[^\s]+)/gi);
+  return (
+    <p className="chat-message-body">
+      {parts.map((part, index) => /^https?:\/\//i.test(part)
+        ? <a href={part} target="_blank" rel="noreferrer" key={`${part}-${index}`}>{part}</a>
+        : part)}
+    </p>
+  );
+}
+
+function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onBack, onLoadOlder, onSend, onEdit, onDelete }: {
+  messages: ChatMessage[];
+  viewer: DashboardData["viewer"];
+  loading: boolean;
+  olderLoading: boolean;
+  hasMore: boolean;
+  error: string | null;
+  onBack: () => void;
+  onLoadOlder: () => Promise<void>;
+  onSend: (body: string) => Promise<void>;
+  onEdit: (id: string, body: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const preserveHeightRef = useRef<number | null>(null);
+  const previousLatestIdRef = useRef<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingBody, setEditingBody] = useState("");
+  const [changingId, setChangingId] = useState<string | null>(null);
+
+  useLayoutEffect(() => {
+    const scroll = scrollRef.current;
+    if (!scroll || loading) return;
+    if (preserveHeightRef.current !== null) {
+      scroll.scrollTop += scroll.scrollHeight - preserveHeightRef.current;
+      preserveHeightRef.current = null;
+      return;
+    }
+    const latestId = messages.at(-1)?.id ?? null;
+    if (previousLatestIdRef.current === null || (latestId !== previousLatestIdRef.current && scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 180)) {
+      scroll.scrollTop = scroll.scrollHeight;
+    }
+    previousLatestIdRef.current = latestId;
+  }, [loading, messages]);
+
+  async function loadOlder() {
+    const scroll = scrollRef.current;
+    if (!scroll || olderLoading || !hasMore) return;
+    preserveHeightRef.current = scroll.scrollHeight;
+    await onLoadOlder();
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!draft.trim() || sending) return;
+    setSending(true);
+    try {
+      await onSend(draft);
+      setDraft("");
+      window.requestAnimationFrame(() => {
+        const scroll = scrollRef.current;
+        if (scroll) scroll.scrollTop = scroll.scrollHeight;
+      });
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function saveEdit(id: string) {
+    if (!editingBody.trim() || changingId) return;
+    setChangingId(id);
+    try {
+      await onEdit(id, editingBody);
+      setEditingId(null);
+      setEditingBody("");
+    } finally {
+      setChangingId(null);
+    }
+  }
+
+  async function remove(id: string) {
+    if (changingId || !window.confirm("Delete this family chat message?")) return;
+    setChangingId(id);
+    try { await onDelete(id); } finally { setChangingId(null); }
+  }
+
+  return (
+    <section className="portal-feature-view chat-view" aria-labelledby="chat-view-title">
+      <header className="portal-feature-header">
+        <button type="button" onClick={onBack} aria-label="Return to dashboard">←</button>
+        <div><p>Private family conversation</p><h1 id="chat-view-title">Chat</h1><small>The newest 15 messages appear first</small></div>
+        <span aria-hidden="true">•••</span>
+      </header>
+
+      {error ? <div className="chat-error" role="alert">{error}</div> : null}
+      <div className="chat-message-scroll" ref={scrollRef} onScroll={(event) => { if (event.currentTarget.scrollTop < 24) void loadOlder(); }}>
+        {hasMore || olderLoading ? <button className="chat-load-older" type="button" onClick={() => void loadOlder()} disabled={olderLoading}>{olderLoading ? "Loading older messages…" : "Load 15 older messages"}</button> : messages.length ? <p className="chat-beginning">Beginning of the family chat</p> : null}
+        {loading ? <div className="chat-loading" role="status"><i aria-hidden="true" /><p>Loading family chat…</p></div> : null}
+        {!loading && !messages.length ? <div className="chat-empty"><span aria-hidden="true">✦</span><strong>Start the family chat.</strong><p>Send the first message below.</p></div> : null}
+        <div className="chat-message-list" role="log" aria-live="polite">
+          {messages.map((message) => {
+            const mine = message.author.username === viewer.username;
+            const girl = message.author.username === "mom" || message.author.username === "cathy";
+            const profilePhoto = familyProfilePhoto[message.author.username];
+            const edited = message.updatedAt !== message.createdAt;
+            return (
+              <article className={`chat-message${mine ? " is-mine" : ""} ${girl ? "tone-girl" : "tone-boy"} chat-tilt-${Number(message.id) % 5}`} key={message.id}>
+                <span className="chat-profile-square" aria-hidden="true">
+                  {profilePhoto ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={appPath(profilePhoto)} alt="" />
+                  ) : message.author.name.slice(0, 1).toUpperCase()}
+                </span>
+                <div className="chat-bubble">
+                  <header><strong>{message.author.name}</strong><time dateTime={message.createdAt}>{formatInboxDate(message.createdAt)}</time></header>
+                  {editingId === message.id ? (
+                    <div className="chat-edit-form">
+                      <textarea value={editingBody} onChange={(event) => setEditingBody(event.target.value)} maxLength={2000} rows={3} aria-label="Edit family chat message" />
+                      <div><button type="button" onClick={() => void saveEdit(message.id)} disabled={changingId === message.id}>Save</button><button type="button" onClick={() => { setEditingId(null); setEditingBody(""); }} disabled={changingId === message.id}>Cancel</button></div>
+                    </div>
+                  ) : <ChatMessageBody body={message.body} />}
+                  <footer>
+                    {edited ? <small>Edited</small> : <span />}
+                    {mine && editingId !== message.id ? <div><button type="button" onClick={() => { setEditingId(message.id); setEditingBody(message.body); }}>Edit</button><button type="button" onClick={() => void remove(message.id)} disabled={changingId === message.id}>Delete</button></div> : null}
+                  </footer>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+
+      <form className="chat-composer" onSubmit={(event) => void submit(event)}>
+        <span className={`chat-composer-profile ${viewer.username === "mom" || viewer.username === "cathy" ? "tone-girl" : "tone-boy"}`} aria-hidden="true">
+          {familyProfilePhoto[viewer.username] ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={appPath(familyProfilePhoto[viewer.username])} alt="" />
+          ) : viewer.displayName.slice(0, 1).toUpperCase()}
+        </span>
+        <textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => {
+          if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            event.currentTarget.form?.requestSubmit();
+          }
+        }} maxLength={2000} rows={2} placeholder={`Message the family as ${viewer.displayName}…`} aria-label="Family chat message" />
+        <button type="submit" disabled={sending || !draft.trim()} aria-label="Send family chat message">{sending ? "…" : "➤"}</button>
+      </form>
+    </section>
+  );
+}
+
+function letterGrade(percentage: number) {
+  if (percentage >= 90) return "A";
+  if (percentage >= 80) return "B";
+  if (percentage >= 70) return "C";
+  if (percentage >= 60) return "D";
+  return "F";
+}
+
+function AdminView({ courses, settings, grades, loading, error, onBack, onSave }: {
+  courses: Course[];
+  settings: DashboardPreferences;
+  grades: GradeOverride[];
+  loading: boolean;
+  error: string | null;
+  onBack: () => void;
+  onSave: (settings: DashboardPreferences, grades: GradeOverride[]) => Promise<void>;
+}) {
+  const editableCourses = courses.slice(0, 6);
+  const [draftSettings, setDraftSettings] = useState(() => settings);
+  const [draftGrades, setDraftGrades] = useState<Record<string, string>>(() => Object.fromEntries(grades.map((grade) => [grade.courseKey, String(grade.percentage)])));
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setSaveMessage("");
+    try {
+      await onSave(draftSettings, editableCourses.map((course) => ({
+        courseKey: String(course.id), courseName: course.name,
+        percentage: draftGrades[String(course.id)]?.trim() === "" || draftGrades[String(course.id)] === undefined ? Number.NaN : Number(draftGrades[String(course.id)]),
+      })));
+      setSaveMessage("Saved. The dashboard has been updated.");
+    } catch (caught) {
+      setSaveMessage(caught instanceof Error ? caught.message : "Admin settings could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const toggleRows: Array<{ key: keyof DashboardPreferences; title: string; detail: string }> = [
+    { key: "showDueTodayWhenEmpty", title: "Due Today", detail: "Show the Due Today card even when it has zero items." },
+    { key: "showDueTomorrowWhenEmpty", title: "Due Tomorrow", detail: "Show the Due Tomorrow card even when it has zero items." },
+    { key: "showDueWeekWhenEmpty", title: "This Week", detail: "Show the This Week card even when it has zero items." },
+  ];
+
+  return (
+    <section className="portal-feature-view admin-view" aria-labelledby="admin-view-title">
+      <header className="portal-feature-header">
+        <button type="button" onClick={onBack} aria-label="Return to dashboard">←</button>
+        <div><p>Family dashboard controls</p><h1 id="admin-view-title">Admin</h1><small>Grades and empty due-card display</small></div>
+        <span aria-hidden="true">⚙</span>
+      </header>
+      {loading ? <div className="admin-state" role="status"><i aria-hidden="true" /><p>Loading dashboard settings…</p></div> : null}
+      <form className="admin-form" onSubmit={(event) => void save(event)}>
+        <section className="admin-section">
+          <header><p>Dashboard display</p><h2>Show empty due cards</h2></header>
+          <div className="admin-toggle-list">
+            {toggleRows.map((row) => (
+              <label className="admin-toggle" key={row.key}>
+                <span><strong>{row.title}</strong><small>{row.detail}</small></span>
+                <input type="checkbox" checked={draftSettings[row.key]} onChange={(event) => setDraftSettings((current) => ({ ...current, [row.key]: event.target.checked }))} aria-label={`${row.title}: show when empty`} />
+                <i aria-hidden="true" />
+              </label>
+            ))}
+          </div>
+        </section>
+        <section className="admin-section">
+          <header><p>Six course slots</p><h2>Course percentages</h2><small>Letter grades are calculated automatically.</small></header>
+          <div className="admin-grade-list">
+            {editableCourses.map((course, index) => {
+              const value = draftGrades[String(course.id)] ?? "";
+              const percentage = value === "" ? null : Number(value);
+              return (
+                <label className="admin-grade-row" key={course.id}>
+                  <span><i>{index + 1}</i><strong>{course.name}</strong></span>
+                  <div><input type="number" min="0" max="100" step="0.1" inputMode="decimal" value={value} onChange={(event) => setDraftGrades((current) => ({ ...current, [String(course.id)]: event.target.value }))} placeholder="—" aria-label={`${course.name} percentage`} /><b>%</b><em>{percentage !== null && Number.isFinite(percentage) ? letterGrade(percentage) : "—"}</em></div>
+                </label>
+              );
+            })}
+          </div>
+        </section>
+        {error ? <p className="admin-message is-error" role="alert">{error}</p> : null}
+        {saveMessage ? <p className={`admin-message${saveMessage.startsWith("Saved") ? " is-success" : " is-error"}`} role="status">{saveMessage}</p> : null}
+        <button className="admin-save" type="submit" disabled={saving || loading}>{saving ? "Saving…" : "Save dashboard settings"}</button>
+      </form>
+    </section>
+  );
+}
+
 function InboxThreadModal({ thread, onClose }: { thread: InboxThread; onClose: () => void }) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -513,16 +958,19 @@ const canvasLinks = [
   { label: "Settings", icon: "⚙", href: appPath("/settings"), local: true },
 ];
 
-const mobileMenuItems: Array<{ label: string; image: string; action?: "inbox" }> = [
+type ActiveView = "dashboard" | "inbox" | "classes" | "chat" | "admin" | PostBoard;
+
+const mobileMenuItems: Array<{ label: string; image: string; action?: Exclude<ActiveView, "dashboard"> }> = [
   { label: "To-Do List", image: "/menu-todo.webp" },
-  { label: "Classes", image: "/menu-classes.webp" },
+  { label: "Classes", image: "/menu-classes.webp", action: "classes" },
   { label: "Inbox", image: "/menu-inbox.webp", action: "inbox" },
   { label: "Calendar", image: "/menu-calendar.webp" },
   { label: "Notes", image: "/menu-notes.webp" },
-  { label: "Chat", image: "/menu-chat.webp" },
-  { label: "Inspiration", image: "/menu-inspiration.webp" },
-  { label: "Resources", image: "/menu-resources.webp" },
-  { label: "Admin", image: "/menu-admin.webp" },
+  { label: "Chat", image: "/menu-chat.webp", action: "chat" },
+  { label: "Inspiration", image: "/menu-inspiration.webp", action: "inspiration" },
+  { label: "Resources", image: "/menu-resources.webp", action: "resources" },
+  { label: "Stats", image: "/menu-stats.webp" },
+  { label: "Admin", image: "/menu-admin.webp", action: "admin" },
 ];
 
 const gradeArtwork = [
@@ -561,22 +1009,42 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const mobileMenuLayerRef = useRef<HTMLDivElement>(null);
   const mobileMenuPanelRef = useRef<HTMLDivElement>(null);
   const homeContentRef = useRef<HTMLDivElement>(null);
-  const inboxViewRef = useRef<HTMLDivElement>(null);
+  const featureViewRef = useRef<HTMLDivElement>(null);
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [focusMode, setFocusMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeView, setActiveView] = useState<"dashboard" | "inbox">("dashboard");
+  const [activeView, setActiveView] = useState<ActiveView>("dashboard");
   const [inboxConversations, setInboxConversations] = useState<InboxConversation[]>([]);
   const [inboxLoading, setInboxLoading] = useState(false);
   const [inboxError, setInboxError] = useState<string | null>(null);
   const [threadLoadingId, setThreadLoadingId] = useState<string | null>(null);
   const [selectedThread, setSelectedThread] = useState<InboxThread | null>(null);
+  const [postsByBoard, setPostsByBoard] = useState<Record<PostBoard, FamilyPost[]>>({ inspiration: [], resources: [] });
+  const [postBoardLoading, setPostBoardLoading] = useState(false);
+  const [postBoardError, setPostBoardError] = useState<string | null>(null);
+  const [composerBoard, setComposerBoard] = useState<PostBoard | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatOlderLoading, setChatOlderLoading] = useState(false);
+  const [chatHasMore, setChatHasMore] = useState(false);
+  const [chatNextBefore, setChatNextBefore] = useState<string | null>(null);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const chatLatestIdRef = useRef<string | null>(null);
+  const [dashboardPreferences, setDashboardPreferences] = useState<DashboardPreferences>({ showDueTodayWhenEmpty: true, showDueTomorrowWhenEmpty: true, showDueWeekWhenEmpty: true });
+  const [gradeOverrides, setGradeOverrides] = useState<GradeOverride[]>([]);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminError, setAdminError] = useState<string | null>(null);
   const [greetingIndex] = useState(() => Math.floor(Math.random() * familyGreetings.length));
   const [selectedAction, setSelectedAction] = useState<ActionItem | null>(null);
   const closeAssignment = useCallback(() => setSelectedAction(null), []);
   const closeThread = useCallback(() => setSelectedThread(null), []);
+  const closeComposer = useCallback(() => setComposerBoard(null), []);
+
+  useEffect(() => {
+    chatLatestIdRef.current = chatMessages.at(-1)?.id ?? null;
+  }, [chatMessages]);
 
   const loadInbox = useCallback(async () => {
     setInboxLoading(true);
@@ -618,6 +1086,201 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     }
   }, [onExit]);
 
+  const loadPostBoard = useCallback(async (board: PostBoard) => {
+    setPostBoardLoading(true);
+    setPostBoardError(null);
+    try {
+      const response = await fetch(appPath(`/api/posts?board=${board}`), { cache: "no-store", credentials: "same-origin" });
+      const body = await response.json();
+      if (response.status === 401) {
+        if (onExit) onExit();
+        else window.location.replace(appPath("/"));
+        return;
+      }
+      if (!response.ok) throw new Error(body.error || "The family post board could not be loaded.");
+      setPostsByBoard((current) => ({ ...current, [board]: body.posts ?? [] }));
+    } catch (caught) {
+      setPostBoardError(caught instanceof Error ? caught.message : "The family post board could not be loaded.");
+    } finally {
+      setPostBoardLoading(false);
+    }
+  }, [onExit]);
+
+  const createPost = useCallback(async (board: PostBoard, payload: { title: string; body: string; url: string }) => {
+    const response = await fetch(appPath(`/api/posts?board=${board}`), {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const body = await response.json();
+    if (response.status === 401) {
+      if (onExit) onExit();
+      else window.location.replace(appPath("/"));
+      throw new Error("Your family session has expired.");
+    }
+    if (!response.ok) throw new Error(body.error || "The post could not be saved.");
+    setPostsByBoard((current) => ({ ...current, [board]: [body.post, ...current[board]] }));
+    setComposerBoard(null);
+  }, [onExit]);
+
+  const loadChat = useCallback(async () => {
+    setChatLoading(true);
+    setChatError(null);
+    try {
+      const response = await fetch(appPath("/api/chat"), { cache: "no-store", credentials: "same-origin" });
+      const body = await response.json();
+      if (response.status === 401) {
+        if (onExit) onExit();
+        else window.location.replace(appPath("/"));
+        return;
+      }
+      if (!response.ok) throw new Error(body.error || "Family chat could not be loaded.");
+      setChatMessages(body.messages ?? []);
+      setChatHasMore(Boolean(body.hasMore));
+      setChatNextBefore(body.nextBefore ?? null);
+    } catch (caught) {
+      setChatError(caught instanceof Error ? caught.message : "Family chat could not be loaded.");
+    } finally {
+      setChatLoading(false);
+    }
+  }, [onExit]);
+
+  const loadOlderChat = useCallback(async () => {
+    if (!chatNextBefore || chatOlderLoading) return;
+    setChatOlderLoading(true);
+    setChatError(null);
+    try {
+      const response = await fetch(appPath(`/api/chat?before=${encodeURIComponent(chatNextBefore)}`), { cache: "no-store", credentials: "same-origin" });
+      const body = await response.json();
+      if (response.status === 401) {
+        if (onExit) onExit();
+        else window.location.replace(appPath("/"));
+        return;
+      }
+      if (!response.ok) throw new Error(body.error || "Older messages could not be loaded.");
+      setChatMessages((current) => {
+        const existing = new Set(current.map((message) => message.id));
+        return [...(body.messages ?? []).filter((message: ChatMessage) => !existing.has(message.id)), ...current];
+      });
+      setChatHasMore(Boolean(body.hasMore));
+      setChatNextBefore(body.nextBefore ?? null);
+    } catch (caught) {
+      setChatError(caught instanceof Error ? caught.message : "Older messages could not be loaded.");
+    } finally {
+      setChatOlderLoading(false);
+    }
+  }, [chatNextBefore, chatOlderLoading, onExit]);
+
+  const sendChatMessage = useCallback(async (message: string) => {
+    setChatError(null);
+    const response = await fetch(appPath("/api/chat"), {
+      method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body: message }),
+    });
+    const body = await response.json();
+    if (response.status === 401) {
+      if (onExit) onExit();
+      else window.location.replace(appPath("/"));
+      throw new Error("Your family session has expired.");
+    }
+    if (!response.ok) {
+      const messageText = body.error || "The chat message could not be sent.";
+      setChatError(messageText);
+      throw new Error(messageText);
+    }
+    setChatMessages((current) => current.some((item) => item.id === body.message.id) ? current : [...current, body.message]);
+  }, [onExit]);
+
+  const editChatMessage = useCallback(async (id: string, message: string) => {
+    setChatError(null);
+    const response = await fetch(appPath("/api/chat"), {
+      method: "PATCH", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, body: message }),
+    });
+    const body = await response.json();
+    if (!response.ok) {
+      const messageText = body.error || "The chat message could not be edited.";
+      setChatError(messageText);
+      throw new Error(messageText);
+    }
+    setChatMessages((current) => current.map((item) => item.id === id ? body.message : item));
+  }, []);
+
+  const deleteChatMessage = useCallback(async (id: string) => {
+    setChatError(null);
+    const response = await fetch(appPath("/api/chat"), {
+      method: "DELETE", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }),
+    });
+    const body = await response.json();
+    if (!response.ok) {
+      const messageText = body.error || "The chat message could not be deleted.";
+      setChatError(messageText);
+      throw new Error(messageText);
+    }
+    setChatMessages((current) => current.filter((item) => item.id !== id));
+  }, []);
+
+  const loadAdmin = useCallback(async () => {
+    setAdminLoading(true);
+    setAdminError(null);
+    try {
+      const response = await fetch(appPath("/api/admin"), { cache: "no-store", credentials: "same-origin" });
+      const body = await response.json();
+      if (response.status === 401) {
+        if (onExit) onExit();
+        else window.location.replace(appPath("/"));
+        return;
+      }
+      if (!response.ok) throw new Error(body.error || "Admin settings could not be loaded.");
+      setDashboardPreferences(body.settings);
+      setGradeOverrides(body.grades ?? []);
+    } catch (caught) {
+      setAdminError(caught instanceof Error ? caught.message : "Admin settings could not be loaded.");
+    } finally {
+      setAdminLoading(false);
+    }
+  }, [onExit]);
+
+  const saveAdmin = useCallback(async (settings: DashboardPreferences, grades: GradeOverride[]) => {
+    setAdminError(null);
+    const response = await fetch(appPath("/api/admin"), {
+      method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ settings, grades }),
+    });
+    const body = await response.json();
+    if (response.status === 401) {
+      if (onExit) onExit();
+      else window.location.replace(appPath("/"));
+      throw new Error("Your family session has expired.");
+    }
+    if (!response.ok) {
+      const messageText = body.error || "Admin settings could not be saved.";
+      setAdminError(messageText);
+      throw new Error(messageText);
+    }
+    setDashboardPreferences(body.settings);
+    setGradeOverrides(body.grades ?? []);
+  }, [onExit]);
+
+  useEffect(() => {
+    if (activeView !== "chat") return;
+    const refresh = async () => {
+      const after = chatLatestIdRef.current;
+      if (!after) return;
+      try {
+        const response = await fetch(appPath(`/api/chat?after=${encodeURIComponent(after)}`), { cache: "no-store", credentials: "same-origin" });
+        if (!response.ok) return;
+        const body = await response.json();
+        if (body.messages?.length) {
+          setChatMessages((current) => {
+            const existing = new Set(current.map((message) => message.id));
+            return [...current, ...body.messages.filter((message: ChatMessage) => !existing.has(message.id))];
+          });
+        }
+      } catch { /* A later chat refresh will retry quietly. */ }
+    };
+    const interval = window.setInterval(() => void refresh(), 8_000);
+    return () => window.clearInterval(interval);
+  }, [activeView]);
+
   const sync = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -640,12 +1303,14 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
   useEffect(() => {
     const initialSync = window.setTimeout(() => void sync(), 0);
+    const initialAdminLoad = window.setTimeout(() => void loadAdmin(), 0);
     const autoRefresh = window.setInterval(() => void sync(), AUTO_REFRESH_MS);
     return () => {
       window.clearTimeout(initialSync);
+      window.clearTimeout(initialAdminLoad);
       window.clearInterval(autoRefresh);
     };
-  }, [sync]);
+  }, [loadAdmin, sync]);
 
   useLayoutEffect(() => {
     const layer = mobileMenuLayerRef.current;
@@ -673,17 +1338,16 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       .to(backdrop, { autoAlpha: 0, y: 28, duration: 0.1, ease: "power2.in" }, "<");
   }, [mobileMenuOpen]);
 
-  const showInbox = useCallback(() => {
+  const transitionToView = useCallback((nextView: ActiveView) => {
     setMobileMenuOpen(false);
-    if (activeView === "inbox") return;
-    void loadInbox();
-    const home = homeContentRef.current;
-    const finish = () => setActiveView("inbox");
-    if (!home) {
+    if (activeView === nextView) return;
+    const current = activeView === "dashboard" ? homeContentRef.current : featureViewRef.current;
+    const finish = () => setActiveView(nextView);
+    if (!current) {
       finish();
       return;
     }
-    gsap.to(Array.from(home.children), {
+    gsap.to(Array.from(current.children), {
       autoAlpha: 0,
       y: 30,
       duration: 0.24,
@@ -691,20 +1355,28 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       ease: "power2.in",
       onComplete: finish,
     });
-  }, [activeView, loadInbox]);
+  }, [activeView]);
+
+  const showSection = useCallback((nextView: Exclude<ActiveView, "dashboard">) => {
+    if (nextView === "inbox") void loadInbox();
+    if (nextView === "inspiration" || nextView === "resources") void loadPostBoard(nextView);
+    if (nextView === "chat") void loadChat();
+    if (nextView === "admin") void loadAdmin();
+    transitionToView(nextView);
+  }, [loadAdmin, loadChat, loadInbox, loadPostBoard, transitionToView]);
 
   const returnToDashboard = useCallback(() => {
     setSelectedThread(null);
-    setActiveView("dashboard");
-  }, []);
+    transitionToView("dashboard");
+  }, [transitionToView]);
 
-  const chooseMobileMenuItem = useCallback((action?: string) => {
-    if (action === "inbox") showInbox();
+  const chooseMobileMenuItem = useCallback((action?: Exclude<ActiveView, "dashboard">) => {
+    if (action) showSection(action);
     else setMobileMenuOpen(false);
-  }, [showInbox]);
+  }, [showSection]);
 
   useLayoutEffect(() => {
-    const root = activeView === "inbox" ? inboxViewRef.current : homeContentRef.current;
+    const root = activeView === "dashboard" ? homeContentRef.current : featureViewRef.current;
     if (!root) return;
     gsap.fromTo(Array.from(root.children), { autoAlpha: 0, y: 28 }, {
       autoAlpha: 1,
@@ -717,8 +1389,8 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   }, [activeView]);
 
   useLayoutEffect(() => {
-    if (activeView !== "inbox" || inboxLoading || !inboxViewRef.current) return;
-    const rows = inboxViewRef.current.querySelectorAll(".inbox-conversation");
+    if (activeView !== "inbox" || inboxLoading || !featureViewRef.current) return;
+    const rows = featureViewRef.current.querySelectorAll(".inbox-conversation");
     gsap.fromTo(rows, { autoAlpha: 0, y: 24, scale: 0.985 }, {
       autoAlpha: 1,
       y: 0,
@@ -729,6 +1401,25 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       clearProps: "transform,opacity,visibility",
     });
   }, [activeView, inboxConversations, inboxLoading]);
+
+  useLayoutEffect(() => {
+    if (!featureViewRef.current) return;
+    const isPostBoard = activeView === "inspiration" || activeView === "resources";
+    const isChat = activeView === "chat";
+    const isAdmin = activeView === "admin";
+    if ((isPostBoard && postBoardLoading) || (isChat && chatLoading) || (isAdmin && adminLoading) || (activeView !== "classes" && !isPostBoard && !isChat && !isAdmin)) return;
+    const selector = activeView === "classes" ? ".class-box" : isChat ? ".chat-message" : isAdmin ? ".admin-section" : ".family-post";
+    const items = featureViewRef.current.querySelectorAll(selector);
+    gsap.fromTo(items, { autoAlpha: 0, y: 26, scale: 0.98 }, {
+      autoAlpha: 1,
+      y: 0,
+      scale: 1,
+      duration: 0.4,
+      stagger: 0.065,
+      ease: "power2.out",
+      clearProps: "transform,opacity,visibility",
+    });
+  }, [activeView, adminLoading, chatLoading, chatMessages, postBoardLoading, postsByBoard]);
 
   useLayoutEffect(() => {
     const app = appRef.current;
@@ -873,15 +1564,15 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
         </header>
 
         <div className="featured-due-stack">
-          <div className="today-featured-slot due-featured-slot" aria-label="Assignments due today">
+          {dueToday.length || dashboardPreferences.showDueTodayWhenEmpty ? <div className="today-featured-slot due-featured-slot" aria-label="Assignments due today">
             <MobileDueCard title="Due today" items={dueToday} empty="Nothing is due today." onSelectAssignment={setSelectedAction} featured tone="today" summary={todaySummary} />
-          </div>
-          <div className="tomorrow-featured-slot due-featured-slot" aria-label="Assignments due tomorrow">
+          </div> : null}
+          {dueTomorrow.length || dashboardPreferences.showDueTomorrowWhenEmpty ? <div className="tomorrow-featured-slot due-featured-slot" aria-label="Assignments due tomorrow">
             <MobileDueCard title="Due tomorrow" items={dueTomorrow} empty="Nothing is due tomorrow." onSelectAssignment={setSelectedAction} featured banner="/due-tomorrow-banner.webp" tone="tomorrow" summary={tomorrowSummary} />
-          </div>
-          <div className="week-featured-slot due-featured-slot" aria-label="Assignments due this week">
+          </div> : null}
+          {dueThisWeek.length || dashboardPreferences.showDueWeekWhenEmpty ? <div className="week-featured-slot due-featured-slot" aria-label="Assignments due this week">
             <MobileDueCard title="Due this week" items={dueThisWeek} empty="Nothing else is due this week." onSelectAssignment={setSelectedAction} featured banner="/this-week-banner.webp" tone="week" summary={weekSummary} />
-          </div>
+          </div> : null}
         </div>
 
         <section className="overview-hero" aria-labelledby="dashboard-title">
@@ -934,30 +1625,62 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="grades-banner" src={appPath("/grades-banner.webp")} alt="Grades" />
           <div className="grade-artwork-grid">
-            {gradeArtwork.map((item) => (
-              <article className="grade-artwork-card" key={item.label} aria-label={item.label}>
+            {gradeArtwork.map((item, index) => {
+              const course = data.courses[index];
+              const grade = course ? gradeOverrides.find((entry) => entry.courseKey === String(course.id)) : null;
+              return <article className="grade-artwork-card" key={item.label} aria-label={course?.name ?? item.label}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={appPath(item.image)} alt={item.label} />
-              </article>
-            ))}
+                <img src={appPath(item.image)} alt={course?.name ?? item.label} />
+                {grade ? <div className="grade-artwork-value"><strong>{letterGrade(grade.percentage)}</strong><span>{grade.percentage.toFixed(grade.percentage % 1 ? 1 : 0)}%</span></div> : null}
+              </article>;
+            })}
           </div>
         </section>
         </div>
         ) : (
-          <div className="inbox-view-shell" ref={inboxViewRef}>
-            <InboxView
+          <div className="feature-view-shell" ref={featureViewRef}>
+            {activeView === "inbox" ? <InboxView
               conversations={inboxConversations}
               loading={inboxLoading}
               error={inboxError}
               threadLoadingId={threadLoadingId}
               onRead={(conversation) => void openThread(conversation)}
               onBack={returnToDashboard}
-            />
+            /> : activeView === "classes" ? <ClassesView courses={data.courses} week={data.week} onBack={returnToDashboard} /> : activeView === "chat" ? <ChatView
+              messages={chatMessages}
+              viewer={data.viewer}
+              loading={chatLoading}
+              olderLoading={chatOlderLoading}
+              hasMore={chatHasMore}
+              error={chatError}
+              onBack={returnToDashboard}
+              onLoadOlder={loadOlderChat}
+              onSend={sendChatMessage}
+              onEdit={editChatMessage}
+              onDelete={deleteChatMessage}
+            /> : activeView === "admin" ? <AdminView
+              key={`admin-${adminLoading}-${dashboardPreferences.showDueTodayWhenEmpty}-${dashboardPreferences.showDueTomorrowWhenEmpty}-${dashboardPreferences.showDueWeekWhenEmpty}-${gradeOverrides.map((grade) => `${grade.courseKey}:${grade.percentage}`).join("|")}`}
+              courses={data.courses}
+              settings={dashboardPreferences}
+              grades={gradeOverrides}
+              loading={adminLoading}
+              error={adminError}
+              onBack={returnToDashboard}
+              onSave={saveAdmin}
+            /> : <PostBoardView
+              board={activeView}
+              posts={postsByBoard[activeView]}
+              loading={postBoardLoading}
+              error={postBoardError}
+              onBack={returnToDashboard}
+              onNewPost={() => setComposerBoard(activeView)}
+            />}
           </div>
         )}
       </section>
       {selectedAction ? <AssignmentModal item={selectedAction} onClose={closeAssignment} /> : null}
       {selectedThread ? <InboxThreadModal thread={selectedThread} onClose={closeThread} /> : null}
+      {composerBoard ? <PostComposerModal board={composerBoard} onClose={closeComposer} onSubmit={(payload) => createPost(composerBoard, payload)} /> : null}
     </main>
   );
 }

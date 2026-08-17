@@ -1,0 +1,159 @@
+import { ensureFamilyChatSchema, getD1 } from "../../../db";
+import { familyUnauthorizedResponse, readFamilySession } from "../../../lib/family-auth";
+import { isAuthorizedAppRequest, unauthorizedAppResponse } from "../../../lib/request-auth";
+
+type ChatRecord = {
+  id: number;
+  body: string;
+  author_username: string;
+  author_name: string;
+  created_at: string;
+  updated_at: string;
+};
+
+const responseHeaders = {
+  "Cache-Control": "no-store, max-age=0",
+  "Referrer-Policy": "no-referrer",
+  "X-Content-Type-Options": "nosniff",
+};
+
+function json(body: unknown, init?: ResponseInit) {
+  return Response.json(body, { ...init, headers: { ...responseHeaders, ...init?.headers } });
+}
+
+function publicMessage(record: ChatRecord) {
+  return {
+    id: String(record.id),
+    body: record.body,
+    author: { username: record.author_username, name: record.author_name },
+    createdAt: record.created_at,
+    updatedAt: record.updated_at,
+  };
+}
+
+async function authorize(request: Request) {
+  if (!isAuthorizedAppRequest(request)) return { response: unauthorizedAppResponse(), user: null };
+  const user = await readFamilySession(request);
+  return user ? { response: null, user } : { response: familyUnauthorizedResponse(), user: null };
+}
+
+function positiveId(value: string | null) {
+  if (!value || !/^\d+$/.test(value)) return null;
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+function messageBody(value: unknown) {
+  const body = typeof value === "string" ? value.trim() : "";
+  if (!body) throw new Error("Write a message first.");
+  if (body.length > 2_000) throw new Error("Keep family chat messages under 2,000 characters.");
+  return body;
+}
+
+export async function GET(request: Request) {
+  const auth = await authorize(request);
+  if (auth.response) return auth.response;
+  await ensureFamilyChatSchema();
+
+  const url = new URL(request.url);
+  const before = positiveId(url.searchParams.get("before"));
+  const after = positiveId(url.searchParams.get("after"));
+  if (url.searchParams.has("before") && !before) return json({ error: "The older-message cursor is invalid." }, { status: 400 });
+  if (url.searchParams.has("after") && !after) return json({ error: "The new-message cursor is invalid." }, { status: 400 });
+  if (before && after) return json({ error: "Choose either older or newer messages." }, { status: 400 });
+
+  if (after) {
+    const result = await getD1().prepare(`
+      SELECT id, body, author_username, author_name, created_at, updated_at
+      FROM family_chat_messages
+      WHERE id > ?
+      ORDER BY id ASC
+      LIMIT 50
+    `).bind(after).all<ChatRecord>();
+    return json({ messages: (result.results ?? []).map(publicMessage), hasMore: false, nextBefore: null });
+  }
+
+  const query = before
+    ? getD1().prepare(`
+        SELECT id, body, author_username, author_name, created_at, updated_at
+        FROM family_chat_messages
+        WHERE id < ?
+        ORDER BY id DESC
+        LIMIT 16
+      `).bind(before)
+    : getD1().prepare(`
+        SELECT id, body, author_username, author_name, created_at, updated_at
+        FROM family_chat_messages
+        ORDER BY id DESC
+        LIMIT 16
+      `);
+  const result = await query.all<ChatRecord>();
+  const records = result.results ?? [];
+  const hasMore = records.length > 15;
+  const page = records.slice(0, 15).reverse();
+  return json({ messages: page.map(publicMessage), hasMore, nextBefore: page.length ? String(page[0].id) : null });
+}
+
+export async function POST(request: Request) {
+  const auth = await authorize(request);
+  if (auth.response || !auth.user) return auth.response ?? familyUnauthorizedResponse();
+  try {
+    const payload = await request.json() as { body?: unknown };
+    const body = messageBody(payload.body);
+    await ensureFamilyChatSchema();
+    const now = new Date().toISOString();
+    const insert = await getD1().prepare(`
+      INSERT INTO family_chat_messages (body, author_username, author_name, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).bind(body, auth.user.username, auth.user.displayName, now, now).run();
+    return json({ message: publicMessage({
+      id: Number(insert.meta.last_row_id), body,
+      author_username: auth.user.username, author_name: auth.user.displayName,
+      created_at: now, updated_at: now,
+    }) }, { status: 201 });
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : "The message could not be sent." }, { status: 400 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  const auth = await authorize(request);
+  if (auth.response || !auth.user) return auth.response ?? familyUnauthorizedResponse();
+  try {
+    const payload = await request.json() as { id?: unknown; body?: unknown };
+    const id = positiveId(typeof payload.id === "string" ? payload.id : String(payload.id ?? ""));
+    if (!id) return json({ error: "That chat message is invalid." }, { status: 400 });
+    const body = messageBody(payload.body);
+    await ensureFamilyChatSchema();
+    const existing = await getD1().prepare(`SELECT author_username FROM family_chat_messages WHERE id = ?`).bind(id).first<{ author_username: string }>();
+    if (!existing) return json({ error: "That chat message no longer exists." }, { status: 404 });
+    if (existing.author_username !== auth.user.username) return json({ error: "Only the sender can edit this message." }, { status: 403 });
+    const now = new Date().toISOString();
+    await getD1().prepare(`UPDATE family_chat_messages SET body = ?, updated_at = ? WHERE id = ?`).bind(body, now, id).run();
+    const updated = await getD1().prepare(`
+      SELECT id, body, author_username, author_name, created_at, updated_at
+      FROM family_chat_messages WHERE id = ?
+    `).bind(id).first<ChatRecord>();
+    return json({ message: updated ? publicMessage(updated) : null });
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : "The message could not be edited." }, { status: 400 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  const auth = await authorize(request);
+  if (auth.response || !auth.user) return auth.response ?? familyUnauthorizedResponse();
+  try {
+    const payload = await request.json() as { id?: unknown };
+    const id = positiveId(typeof payload.id === "string" ? payload.id : String(payload.id ?? ""));
+    if (!id) return json({ error: "That chat message is invalid." }, { status: 400 });
+    await ensureFamilyChatSchema();
+    const existing = await getD1().prepare(`SELECT author_username FROM family_chat_messages WHERE id = ?`).bind(id).first<{ author_username: string }>();
+    if (!existing) return json({ error: "That chat message no longer exists." }, { status: 404 });
+    if (existing.author_username !== auth.user.username) return json({ error: "Only the sender can delete this message." }, { status: 403 });
+    await getD1().prepare(`DELETE FROM family_chat_messages WHERE id = ?`).bind(id).run();
+    return json({ deleted: String(id) });
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : "The message could not be deleted." }, { status: 400 });
+  }
+}

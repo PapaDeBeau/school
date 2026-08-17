@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const canvasConnections = sqliteTable("canvas_connections", {
   id: integer("id").primaryKey(),
@@ -19,5 +19,47 @@ export const familyLoginAttempts = sqliteTable("family_login_attempts", {
   attemptCount: integer("attempt_count").notNull().default(0),
   windowStartedAt: text("window_started_at").notNull(),
   lockedUntil: text("locked_until"),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const familyPosts = sqliteTable("family_posts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  board: text("board").notNull(),
+  title: text("title").notNull(),
+  body: text("body").notNull().default(""),
+  url: text("url"),
+  authorUsername: text("author_username").notNull(),
+  authorName: text("author_name").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  index("idx_family_posts_board_created_at").on(table.board, table.createdAt),
+]);
+
+export const familyChatMessages = sqliteTable("family_chat_messages", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  body: text("body").notNull(),
+  authorUsername: text("author_username").notNull(),
+  authorName: text("author_name").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  index("idx_family_chat_messages_created_at").on(table.createdAt),
+]);
+
+export const familyDashboardSettings = sqliteTable("family_dashboard_settings", {
+  id: integer("id").primaryKey(),
+  showDueTodayWhenEmpty: integer("show_due_today_when_empty", { mode: "boolean" }).notNull().default(true),
+  showDueTomorrowWhenEmpty: integer("show_due_tomorrow_when_empty", { mode: "boolean" }).notNull().default(true),
+  showDueWeekWhenEmpty: integer("show_due_week_when_empty", { mode: "boolean" }).notNull().default(true),
+  updatedBy: text("updated_by").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const familyCourseGrades = sqliteTable("family_course_grades", {
+  courseKey: text("course_key").primaryKey(),
+  courseName: text("course_name").notNull(),
+  percentage: real("percentage").notNull(),
+  updatedBy: text("updated_by").notNull(),
   updatedAt: text("updated_at").notNull(),
 });

@@ -274,6 +274,7 @@ export async function GET(request: Request) {
       courses: courses.map((course) => ({
         id: course.id,
         name: course.name,
+        sourceUrl: `${CANVAS_BASE_URL}/courses/${course.id}`,
         grade: course.enrollments?.[0]?.computed_current_grade ?? null,
         score: course.enrollments?.[0]?.computed_current_score ?? null,
       })),

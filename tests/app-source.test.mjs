@@ -98,6 +98,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
     "menu-chat.webp",
     "menu-inspiration.webp",
     "menu-resources.webp",
+    "menu-stats.webp",
     "menu-admin.webp",
   ].map((file) => stat(new URL(`public/${file}`, root))));
   const gradeArtwork = await Promise.all([
@@ -139,6 +140,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(layout, /rel="preload" as="image" href="\/school\/menu-chat\.webp"/);
   assert.match(layout, /rel="preload" as="image" href="\/school\/menu-inspiration\.webp"/);
   assert.match(layout, /rel="preload" as="image" href="\/school\/menu-resources\.webp"/);
+  assert.match(layout, /rel="preload" as="image" href="\/school\/menu-stats\.webp"/);
   assert.match(layout, /rel="preload" as="image" href="\/school\/menu-admin\.webp"/);
   assert.match(styles, /var\(--font-chalk\)/);
   assert.match(styles, /\.school-portal-shell\.dashboard-active \{ padding: 12px 16px; overflow: visible; \}/);
@@ -152,6 +154,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(dashboard, /menu-chat\.webp/);
   assert.match(dashboard, /menu-inspiration\.webp/);
   assert.match(dashboard, /menu-resources\.webp/);
+  assert.match(dashboard, /menu-stats\.webp/);
   assert.match(dashboard, /menu-admin\.webp/);
   assert.ok(mobileMenuArtwork.every((asset) => asset.size < 70_000));
   assert.match(dashboard, /grade-artwork-grid/);
@@ -232,4 +235,65 @@ test("Canvas Inbox loads the ten newest conversations and full message threads",
   assert.match(styles, /menu-popup-bg\.webp/);
   assert.match(styles, /\.inbox-conversation-list \{[^}]*overflow-y: auto/);
   assert.match(styles, /\.mobile-menu-backdrop/);
+});
+
+test("Classes and family boards use the shared animated feature view", async () => {
+  const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
+  const postsRoute = await readFile(new URL("app/api/posts/route.ts", root), "utf8");
+  const styles = await readFile(new URL("app/globals.css", root), "utf8");
+
+  assert.match(dashboard, /function ClassesView/);
+  assert.match(dashboard, /Canvas courses &amp; weekly times/);
+  assert.match(dashboard, /function PostBoardView/);
+  assert.match(dashboard, /Make a new post/);
+  assert.match(dashboard, /youtube-nocookie\.com\/embed/);
+  assert.match(dashboard, /action: "inspiration"/);
+  assert.match(dashboard, /action: "resources"/);
+  assert.match(postsRoute, /isAuthorizedAppRequest/);
+  assert.match(postsRoute, /readFamilySession/);
+  assert.match(postsRoute, /ensureFamilyPostsSchema/);
+  assert.match(styles, /\.portal-feature-view/);
+  assert.match(styles, /menu-popup-bg\.webp/);
+  assert.match(styles, /\.post-board-create-bar \{ position: sticky/);
+});
+
+test("family chat is persistent, paginated, link-aware, and sender controlled", async () => {
+  const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
+  const chatRoute = await readFile(new URL("app/api/chat/route.ts", root), "utf8");
+  const schema = await readFile(new URL("db/schema.ts", root), "utf8");
+  const styles = await readFile(new URL("app/globals.css", root), "utf8");
+
+  assert.match(dashboard, /action: "chat"/);
+  assert.match(dashboard, /function ChatView/);
+  assert.match(dashboard, /Load 15 older messages/);
+  assert.match(dashboard, /https\?:\\\/\\\/\[\^\\s\]\+/);
+  assert.match(dashboard, /target="_blank" rel="noreferrer"/);
+  assert.match(dashboard, /Only the sender|onDelete/);
+  assert.match(chatRoute, /LIMIT 16/);
+  assert.match(chatRoute, /WHERE id < \?/);
+  assert.match(chatRoute, /existing\.author_username !== auth\.user\.username/);
+  assert.match(chatRoute, /export async function PATCH/);
+  assert.match(chatRoute, /export async function DELETE/);
+  assert.match(schema, /family_chat_messages/);
+  assert.match(styles, /\.chat-message\.is-mine/);
+  assert.match(styles, /\.chat-message\.tone-girl/);
+});
+
+test("admin stores percentages and controls empty due-card visibility", async () => {
+  const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
+  const adminRoute = await readFile(new URL("app/api/admin/route.ts", root), "utf8");
+  const schema = await readFile(new URL("db/schema.ts", root), "utf8");
+
+  assert.match(dashboard, /action: "admin"/);
+  assert.match(dashboard, /function AdminView/);
+  assert.match(dashboard, /showDueTodayWhenEmpty/);
+  assert.match(dashboard, /showDueTomorrowWhenEmpty/);
+  assert.match(dashboard, /showDueWeekWhenEmpty/);
+  assert.match(dashboard, /function letterGrade/);
+  assert.match(dashboard, /grade-artwork-value/);
+  assert.match(adminRoute, /isAuthorizedAppRequest/);
+  assert.match(adminRoute, /readFamilySession/);
+  assert.match(adminRoute, /ON CONFLICT\(course_key\) DO UPDATE/);
+  assert.match(schema, /family_dashboard_settings/);
+  assert.match(schema, /family_course_grades/);
 });

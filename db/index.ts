@@ -59,3 +59,74 @@ export async function ensureFamilyAuthSchema() {
     `)
     .run();
 }
+
+export async function ensureFamilyPostsSchema() {
+  const d1 = getD1();
+  await d1.batch([
+    d1.prepare(`
+      CREATE TABLE IF NOT EXISTS family_posts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        board TEXT NOT NULL,
+        title TEXT NOT NULL,
+        body TEXT NOT NULL DEFAULT '',
+        url TEXT,
+        author_username TEXT NOT NULL,
+        author_name TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    `),
+    d1.prepare(`
+      CREATE INDEX IF NOT EXISTS idx_family_posts_board_created_at
+      ON family_posts(board, created_at)
+    `),
+  ]);
+  await d1.prepare("PRAGMA optimize").run();
+}
+
+export async function ensureFamilyChatSchema() {
+  const d1 = getD1();
+  await d1.batch([
+    d1.prepare(`
+      CREATE TABLE IF NOT EXISTS family_chat_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        body TEXT NOT NULL,
+        author_username TEXT NOT NULL,
+        author_name TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    `),
+    d1.prepare(`
+      CREATE INDEX IF NOT EXISTS idx_family_chat_messages_created_at
+      ON family_chat_messages(created_at)
+    `),
+  ]);
+  await d1.prepare("PRAGMA optimize").run();
+}
+
+export async function ensureFamilyAdminSchema() {
+  const d1 = getD1();
+  await d1.batch([
+    d1.prepare(`
+      CREATE TABLE IF NOT EXISTS family_dashboard_settings (
+        id INTEGER PRIMARY KEY,
+        show_due_today_when_empty INTEGER NOT NULL DEFAULT 1,
+        show_due_tomorrow_when_empty INTEGER NOT NULL DEFAULT 1,
+        show_due_week_when_empty INTEGER NOT NULL DEFAULT 1,
+        updated_by TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    `),
+    d1.prepare(`
+      CREATE TABLE IF NOT EXISTS family_course_grades (
+        course_key TEXT PRIMARY KEY,
+        course_name TEXT NOT NULL,
+        percentage REAL NOT NULL,
+        updated_by TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    `),
+  ]);
+  await d1.prepare("PRAGMA optimize").run();
+}
