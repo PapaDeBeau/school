@@ -293,7 +293,10 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
       <section className="school-workspace">
         <div className="mobile-dashboard-bar">
-          <button className="mobile-menu-button" type="button" onClick={() => setMobileMenuOpen((open) => !open)} aria-expanded={mobileMenuOpen} aria-controls="mobile-school-menu" aria-label="Open school menu"><span aria-hidden="true">☰</span></button>
+          <button className="mobile-menu-button" type="button" onClick={() => setMobileMenuOpen((open) => !open)} aria-expanded={mobileMenuOpen} aria-controls="mobile-school-menu" aria-label="Open school menu">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={appPath("/menu-button.webp")} alt="" aria-hidden="true" />
+          </button>
           <strong>{ordinalDate(data.generatedAt)}</strong>
           <div>
             <button className="mobile-sync-button" type="button" onClick={() => void sync()} disabled={loading} aria-label={loading ? "Syncing Canvas" : "Sync Canvas"}>

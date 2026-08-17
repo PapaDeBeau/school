@@ -86,10 +86,12 @@ test("login artwork uses lightweight WebP assets", async () => {
 test("mobile dashboard uses the compact action bar and due-date sections", async () => {
   const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
   const styles = await readFile(new URL("app/globals.css", root), "utf8");
+  const menuArtwork = await stat(new URL("public/menu-button.webp", root));
   const syncArtwork = await stat(new URL("public/sync-button.webp", root));
   const logoutArtwork = await stat(new URL("public/logout-button.webp", root));
 
   assert.match(dashboard, /mobile-dashboard-bar/);
+  assert.match(dashboard, /menu-button\.webp/);
   assert.match(dashboard, /sync-button\.webp/);
   assert.match(dashboard, /logout-button\.webp/);
   assert.match(dashboard, /mobile-school-menu/);
@@ -102,6 +104,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(styles, /\.school-app \.critical-strip\.is-clear \{ display: none; \}/);
   assert.match(styles, /\.school-app \.schedule-panel,/);
   assert.match(styles, /\.school-app \.quick-panel \{ display: none; \}/);
+  assert.ok(menuArtwork.size < 30_000);
   assert.ok(syncArtwork.size < 60_000);
   assert.ok(logoutArtwork.size < 30_000);
 });

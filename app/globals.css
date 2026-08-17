@@ -1198,26 +1198,32 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
     cursor: pointer;
   }
   .mobile-menu-button {
-    width: 42px;
+    width: 38px;
     padding: 0;
-    border: 1px solid rgba(115, 180, 255, .52);
-    color: #82c3ff;
-    background: rgba(24, 100, 190, .22);
-    font-size: 20px;
+    border: 0;
+    background: transparent;
+  }
+  .mobile-menu-button img {
+    width: 38px;
+    height: 38px;
+    display: block;
+    object-fit: contain;
+    filter: drop-shadow(0 0 7px rgba(31, 130, 255, .5));
   }
   .mobile-sync-button {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 76px;
+    width: 114px;
     padding: 0;
     border: 0;
     background: transparent;
   }
   .mobile-sync-button img {
-    width: 76px;
-    height: auto;
+    width: 114px;
+    height: 38px;
     display: block;
+    object-fit: contain;
     filter: drop-shadow(0 0 7px rgba(31, 130, 255, .48));
   }
   .mobile-sync-button:disabled { opacity: .7; cursor: wait; }
@@ -1249,7 +1255,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
     padding: 12px;
     border: 1px solid rgba(181, 220, 255, .38);
     border-radius: 16px;
-    background: rgba(2, 19, 43, .88);
+    background: rgba(2, 19, 43, .68);
     box-shadow: 0 22px 65px rgba(0, 5, 20, .46), inset 0 1px 0 rgba(255, 255, 255, .1);
     -webkit-backdrop-filter: blur(18px) saturate(120%);
     backdrop-filter: blur(18px) saturate(120%);
@@ -1269,7 +1275,19 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
     text-decoration: none;
   }
   .mobile-school-menu a > span { width: 20px; color: #75baff; text-align: center; }
-  .school-app .overview-hero { margin-top: 12px; }
+  .school-app .overview-hero {
+    margin-top: 12px;
+    background:
+      radial-gradient(circle at 16% 12%, rgba(255, 255, 255, .62), transparent 22rem),
+      linear-gradient(115deg, rgba(243, 248, 255, .64), rgba(222, 235, 255, .56));
+  }
+  .immersive-dashboard .summary-card,
+  .immersive-dashboard .critical-strip,
+  .immersive-dashboard .dash-panel { background: rgba(253, 254, 255, .64); }
+  .immersive-dashboard .focus-card,
+  .immersive-dashboard .student-card,
+  .immersive-dashboard .course-card,
+  .immersive-dashboard .quick-actions a { background: rgba(251, 253, 255, .58); }
   .school-app .summary-grid { grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 10px; }
   .school-app .summary-card.is-zero,
   .school-app .course-stat { display: none; }
@@ -1281,7 +1299,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
     border: 1px solid rgba(207, 225, 244, .58);
     border-radius: 14px;
     color: var(--dash-ink);
-    background: rgba(253, 254, 255, .85);
+    background: rgba(253, 254, 255, .65);
     box-shadow: 0 16px 42px rgba(0, 12, 34, .2), inset 0 1px 0 rgba(255, 255, 255, .42);
     -webkit-backdrop-filter: blur(14px) saturate(112%);
     backdrop-filter: blur(14px) saturate(112%);
@@ -1314,9 +1332,10 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   }
   .mobile-dashboard-bar > strong { font-size: 12px; }
   .mobile-dashboard-bar button { min-height: 36px; }
-  .mobile-menu-button { width: 38px; }
+  .mobile-menu-button,
+  .mobile-menu-button img { width: 36px; height: 36px; }
   .mobile-sync-button,
-  .mobile-sync-button img { width: 70px; }
+  .mobile-sync-button img { width: 108px; height: 36px; }
   .mobile-close-button,
   .mobile-close-button img { width: 36px; height: 36px; }
   .mobile-school-menu { top: 66px; left: 14px; right: 14px; }
