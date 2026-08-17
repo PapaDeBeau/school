@@ -93,6 +93,9 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
     "menu-todo.webp",
     "menu-classes.webp",
     "menu-inbox.webp",
+    "menu-notes.webp",
+    "menu-chat.webp",
+    "menu-admin.webp",
   ].map((file) => stat(new URL(`public/${file}`, root))));
   const gradeArtwork = await Promise.all([
     "grades-banner.webp",
@@ -126,6 +129,9 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(layout, /rel="preload" as="image" href="\/school\/menu-todo\.webp"/);
   assert.match(layout, /rel="preload" as="image" href="\/school\/menu-classes\.webp"/);
   assert.match(layout, /rel="preload" as="image" href="\/school\/menu-inbox\.webp"/);
+  assert.match(layout, /rel="preload" as="image" href="\/school\/menu-notes\.webp"/);
+  assert.match(layout, /rel="preload" as="image" href="\/school\/menu-chat\.webp"/);
+  assert.match(layout, /rel="preload" as="image" href="\/school\/menu-admin\.webp"/);
   assert.match(styles, /var\(--font-chalk\)/);
   assert.match(styles, /\.school-portal-shell\.dashboard-active \{ padding: 12px 16px; overflow: visible; \}/);
   assert.match(styles, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
@@ -133,6 +139,9 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(dashboard, /menu-todo\.webp/);
   assert.match(dashboard, /menu-classes\.webp/);
   assert.match(dashboard, /menu-inbox\.webp/);
+  assert.match(dashboard, /menu-notes\.webp/);
+  assert.match(dashboard, /menu-chat\.webp/);
+  assert.match(dashboard, /menu-admin\.webp/);
   assert.ok(mobileMenuArtwork.every((asset) => asset.size < 70_000));
   assert.match(dashboard, /grade-artwork-grid/);
   assert.ok(gradeArtwork.every((asset) => asset.size < 90_000));

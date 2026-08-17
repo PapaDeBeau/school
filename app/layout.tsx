@@ -35,6 +35,9 @@ export default function RootLayout({
         <link rel="preload" as="image" href="/school/menu-todo.webp" type="image/webp" />
         <link rel="preload" as="image" href="/school/menu-classes.webp" type="image/webp" />
         <link rel="preload" as="image" href="/school/menu-inbox.webp" type="image/webp" />
+        <link rel="preload" as="image" href="/school/menu-notes.webp" type="image/webp" />
+        <link rel="preload" as="image" href="/school/menu-chat.webp" type="image/webp" />
+        <link rel="preload" as="image" href="/school/menu-admin.webp" type="image/webp" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${schoolbell.variable} antialiased`}

@@ -282,6 +282,9 @@ const mobileMenuItems = [
   { label: "To-Do List", image: "/menu-todo.webp" },
   { label: "Classes", image: "/menu-classes.webp" },
   { label: "Inbox", image: "/menu-inbox.webp" },
+  { label: "Notes", image: "/menu-notes.webp" },
+  { label: "Chat", image: "/menu-chat.webp" },
+  { label: "Admin", image: "/menu-admin.webp" },
 ];
 
 const gradeArtwork = [
