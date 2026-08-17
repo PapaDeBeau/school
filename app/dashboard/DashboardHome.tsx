@@ -1405,7 +1405,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     const scrollRoot = showcase.closest<HTMLElement>(".school-workspace");
     const observerTargets = new Map<HTMLElement, HTMLElement>();
     values.forEach((value) => {
-      observerTargets.set(value.closest<HTMLElement>(".grade-artwork-card") ?? value, value);
+      observerTargets.set(value.querySelector<HTMLElement>(".grade-artwork-letter") ?? value, value);
     });
 
     const visible = new Set<HTMLElement>();
@@ -1498,7 +1498,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       observerTargets.forEach((value, target) => {
         const rect = target.getBoundingClientRect();
         const visibleHeight = Math.min(rect.bottom, rootRect.bottom) - Math.max(rect.top, rootRect.top);
-        const isOnScreen = visibleHeight >= Math.min(rect.height * 0.08, 24);
+        const isOnScreen = visibleHeight >= Math.min(rect.height * 0.35, 40);
         if (isOnScreen) {
           if (!visible.has(value)) {
             visible.add(value);

@@ -303,9 +303,9 @@ test("admin stores percentages and controls empty due-card visibility", async ()
   assert.match(dashboard, /function letterGrade/);
   assert.match(dashboard, /grade-artwork-value/);
   assert.match(dashboard, /const scrollRoot = showcase\.closest<HTMLElement>\("\.school-workspace"\)/);
-  assert.match(dashboard, /observerTargets\.set\(value\.closest<HTMLElement>\("\.grade-artwork-card"\)/);
+  assert.match(dashboard, /observerTargets\.set\(value\.querySelector<HTMLElement>\("\.grade-artwork-letter"\)/);
   assert.match(dashboard, /scrollRoot\?\.addEventListener\("scroll", scheduleVisibilityCheck/);
-  assert.match(dashboard, /visibleHeight >= Math\.min\(rect\.height \* 0\.08, 24\)/);
+  assert.match(dashboard, /visibleHeight >= Math\.min\(rect\.height \* 0\.35, 40\)/);
   assert.match(dashboard, /elastic\.out\(1\.25, 0\.24\)/);
   assert.match(dashboard, /scale: 0\.001, x: 0/);
   assert.doesNotMatch(dashboard, /flyFromX/);
