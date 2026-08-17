@@ -301,7 +301,10 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={appPath("/sync-button.webp")} alt="" aria-hidden="true" />
             </button>
-            <button className="mobile-close-button" type="button" onClick={() => void signOut()} aria-label={`Sign out ${data.viewer.displayName}`}>×</button>
+            <button className="mobile-close-button" type="button" onClick={() => void signOut()} aria-label={`Sign out ${data.viewer.displayName}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={appPath("/logout-button.webp")} alt="" aria-hidden="true" />
+            </button>
           </div>
         </div>
         {mobileMenuOpen ? (

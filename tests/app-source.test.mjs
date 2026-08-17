@@ -87,9 +87,11 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
   const styles = await readFile(new URL("app/globals.css", root), "utf8");
   const syncArtwork = await stat(new URL("public/sync-button.webp", root));
+  const logoutArtwork = await stat(new URL("public/logout-button.webp", root));
 
   assert.match(dashboard, /mobile-dashboard-bar/);
   assert.match(dashboard, /sync-button\.webp/);
+  assert.match(dashboard, /logout-button\.webp/);
   assert.match(dashboard, /mobile-school-menu/);
   assert.match(dashboard, /Due today/);
   assert.match(dashboard, /Due tomorrow/);
@@ -101,4 +103,5 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(styles, /\.school-app \.schedule-panel,/);
   assert.match(styles, /\.school-app \.quick-panel \{ display: none; \}/);
   assert.ok(syncArtwork.size < 60_000);
+  assert.ok(logoutArtwork.size < 30_000);
 });
