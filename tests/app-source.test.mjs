@@ -232,7 +232,7 @@ test("Canvas Inbox loads the ten newest conversations and full message threads",
   assert.match(inboxRoute, /conversation_id/);
   assert.match(inboxRoute, /conversation\.messages/);
   assert.match(dashboard, /InboxThreadModal/);
-  assert.match(dashboard, /The 10 most recent conversations/);
+  assert.match(dashboard, /Canvas Inbox: the 10 most recent conversations/);
   assert.match(dashboard, /: "Read"/);
   assert.match(styles, /menu-popup-bg\.webp/);
   assert.match(styles, /\.inbox-conversation-list \{[^}]*overflow-y: auto/);
@@ -245,7 +245,7 @@ test("Classes and family boards use the shared animated feature view", async () 
   const styles = await readFile(new URL("app/globals.css", root), "utf8");
 
   assert.match(dashboard, /function ClassesView/);
-  assert.match(dashboard, /Canvas courses &amp; weekly times/);
+  assert.match(dashboard, /Classes: \$\{classes\.length\} classes and course spaces/);
   assert.match(dashboard, /function PostBoardView/);
   assert.match(dashboard, /Make a new post/);
   assert.match(dashboard, /youtube-nocookie\.com\/embed/);
@@ -261,6 +261,9 @@ test("Classes and family boards use the shared animated feature view", async () 
   assert.match(styles, /menu-popup-bg\.webp/);
   assert.match(styles, /\.post-board-create-bar \{ position: sticky/);
   assert.match(styles, /\.feature-back-bar \{/);
+  assert.match(styles, /justify-content: center/);
+  assert.doesNotMatch(dashboard, /className="portal-feature-header"/);
+  assert.doesNotMatch(dashboard, /className="inbox-view-header"/);
   assert.match(styles, /margin: 0 calc\(var\(--feature-pad\) \* -1\) calc\(var\(--feature-pad\) \* -1\)/);
 });
 

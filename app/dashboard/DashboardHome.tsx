@@ -331,12 +331,7 @@ function InboxView({ conversations, loading, error, threadLoadingId, onRead }: {
   onRead: (conversation: InboxConversation) => void;
 }) {
   return (
-    <section className="inbox-view" aria-labelledby="inbox-view-title">
-      <header className="inbox-view-header">
-        <div><p>Canvas messages</p><h1 id="inbox-view-title">Inbox</h1><small>The 10 most recent conversations</small></div>
-        <span aria-hidden="true">✉</span>
-      </header>
-
+    <section className="inbox-view" aria-label="Canvas Inbox: the 10 most recent conversations">
       {loading ? <div className="inbox-loading" role="status"><i aria-hidden="true" /><p>Loading the latest Canvas messages…</p></div> : null}
       {error ? <div className="inbox-error" role="alert"><strong>Inbox could not be loaded.</strong><p>{error}</p></div> : null}
       {!loading && !error && !conversations.length ? <div className="inbox-empty"><span aria-hidden="true">✓</span><p>No Canvas conversations were found.</p></div> : null}
@@ -380,11 +375,7 @@ function ClassesView({ courses, week }: { courses: Course[]; week: WeekItem[] })
   const classes = [...scheduled, ...unscheduled];
 
   return (
-    <section className="portal-feature-view classes-view" aria-labelledby="classes-view-title">
-      <header className="portal-feature-header">
-        <div><p>Canvas courses &amp; weekly times</p><h1 id="classes-view-title">Classes</h1><small>{classes.length} classes and course spaces</small></div>
-        <span aria-hidden="true">▤</span>
-      </header>
+    <section className="portal-feature-view classes-view" aria-label={`Classes: ${classes.length} classes and course spaces`}>
       <div className="classes-grid" role="list">
         {classes.map((course) => (
           <article className="class-box" role="listitem" key={course.key}>
@@ -432,15 +423,11 @@ function PostBoardView({ board, posts, loading, error, onNewPost }: {
   const title = board === "inspiration" ? "Inspiration" : "Resources";
   const description = board === "inspiration" ? "Ideas, videos, and sparks worth remembering" : "Useful lessons, links, and learning tools";
   return (
-    <section className="portal-feature-view post-board-view" aria-labelledby={`${board}-view-title`}>
-      <header className="portal-feature-header">
-        <div><p>Family learning board</p><h1 id={`${board}-view-title`}>{title}</h1><small>{description}</small></div>
-        <span aria-hidden="true">{board === "inspiration" ? "✦" : "▱"}</span>
-      </header>
-      {loading ? <div className="post-board-state" role="status"><i aria-hidden="true" /><p>Loading {title.toLocaleLowerCase("en-US")}…</p></div> : null}
-      {error ? <div className="post-board-state is-error" role="alert"><strong>{title} could not be loaded.</strong><p>{error}</p></div> : null}
-      {!loading && !error && !posts.length ? <div className="post-board-state"><span aria-hidden="true">✦</span><strong>Start the {title} board.</strong><p>Add the first idea, video, or useful link.</p></div> : null}
+    <section className="portal-feature-view post-board-view" aria-label={`${title}: ${description}`}>
       <div className="post-board-list" role="feed" aria-busy={loading}>
+        {loading ? <div className="post-board-state" role="status"><i aria-hidden="true" /><p>Loading {title.toLocaleLowerCase("en-US")}…</p></div> : null}
+        {error ? <div className="post-board-state is-error" role="alert"><strong>{title} could not be loaded.</strong><p>{error}</p></div> : null}
+        {!loading && !error && !posts.length ? <div className="post-board-state"><span aria-hidden="true">✦</span><strong>Start the {title} board.</strong><p>Add the first idea, video, or useful link.</p></div> : null}
         {posts.map((post) => {
           const embedUrl = youtubeEmbedUrl(post.url);
           const profilePhoto = familyProfilePhoto[post.author.username];
@@ -619,14 +606,9 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onL
   }
 
   return (
-    <section className="portal-feature-view chat-view" aria-labelledby="chat-view-title">
-      <header className="portal-feature-header">
-        <div><p>Private family conversation</p><h1 id="chat-view-title">Chat</h1><small>The newest 15 messages appear first</small></div>
-        <span aria-hidden="true">•••</span>
-      </header>
-
-      {error ? <div className="chat-error" role="alert">{error}</div> : null}
+    <section className="portal-feature-view chat-view" aria-label="Private family Chat: the newest 15 messages appear first">
       <div className="chat-message-scroll" ref={scrollRef} onScroll={(event) => { if (event.currentTarget.scrollTop < 24) void loadOlder(); }}>
+        {error ? <div className="chat-error" role="alert">{error}</div> : null}
         {hasMore || olderLoading ? <button className="chat-load-older" type="button" onClick={() => void loadOlder()} disabled={olderLoading}>{olderLoading ? "Loading older messages…" : "Load 15 older messages"}</button> : messages.length ? <p className="chat-beginning">Beginning of the family chat</p> : null}
         {loading ? <div className="chat-loading" role="status"><i aria-hidden="true" /><p>Loading family chat…</p></div> : null}
         {!loading && !messages.length ? <div className="chat-empty"><span aria-hidden="true">✦</span><strong>Start the family chat.</strong><p>Send the first message below.</p></div> : null}
@@ -727,13 +709,9 @@ function AdminView({ courses, settings, grades, loading, error, onSave }: {
   ];
 
   return (
-    <section className="portal-feature-view admin-view" aria-labelledby="admin-view-title">
-      <header className="portal-feature-header">
-        <div><p>Family dashboard controls</p><h1 id="admin-view-title">Admin</h1><small>Grades and empty due-card display</small></div>
-        <span aria-hidden="true">⚙</span>
-      </header>
-      {loading ? <div className="admin-state" role="status"><i aria-hidden="true" /><p>Loading dashboard settings…</p></div> : null}
+    <section className="portal-feature-view admin-view" aria-label="Admin: grades and empty due-card display">
       <form className="admin-form" onSubmit={(event) => void save(event)}>
+        {loading ? <div className="admin-state" role="status"><i aria-hidden="true" /><p>Loading dashboard settings…</p></div> : null}
         <section className="admin-section">
           <header><p>Dashboard display</p><h2>Show empty due cards</h2></header>
           <div className="admin-toggle-list">

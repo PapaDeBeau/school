@@ -611,23 +611,23 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   z-index: 24;
   top: 0;
   width: min(920px, 100%);
-  min-height: 34px;
+  min-height: 44px;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
+  justify-content: center;
+  gap: 10px;
   margin: 0 auto;
-  padding: 6px 13px;
+  padding: 9px 16px;
   border: 1px solid rgba(121, 190, 255, .9);
   border-radius: 8px;
   color: #fff;
   background: linear-gradient(135deg, #268cff, #153f9f);
   box-shadow: 0 9px 25px rgba(18, 91, 198, .3), inset 0 1px 0 rgba(255, 255, 255, .2);
-  font: 900 10px/1 system-ui, sans-serif;
-  text-align: left;
+  font: 900 12px/1 system-ui, sans-serif;
+  text-align: center;
   cursor: pointer;
 }
-.feature-back-bar > span { font-size: 17px; line-height: .8; }
+.feature-back-bar > span { font-size: 20px; line-height: .8; }
 .feature-back-bar:focus-visible { outline: 3px solid rgba(108, 190, 255, .9); outline-offset: 2px; }
 .portal-feature-view {
   --feature-pad: clamp(14px, 2.5vw, 24px);
@@ -647,12 +647,6 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   background-size: cover;
   box-shadow: 0 24px 70px rgba(0, 5, 20, .48), inset 0 1px 0 rgba(255, 255, 255, .1);
 }
-.portal-feature-header { display: grid; grid-template-columns: minmax(0, 1fr) 46px; align-items: center; gap: 14px; padding: 16px; border: 1px solid rgba(225, 238, 255, .32); border-radius: 17px; background: rgba(0, 7, 20, .76); box-shadow: 0 15px 38px rgba(0, 0, 0, .34); }
-.portal-feature-header > div { min-width: 0; }
-.portal-feature-header p { margin: 0 0 3px; color: #8fc9ff; font-size: 9px; font-weight: 900; letter-spacing: .15em; text-transform: uppercase; }
-.portal-feature-header h1 { margin: 0; color: #fff; font-family: var(--font-chalk), "Segoe Print", cursive; font-size: clamp(29px, 5vw, 42px); font-weight: 400; letter-spacing: .015em; text-shadow: 0 0 13px rgba(62, 159, 255, .55); }
-.portal-feature-header small { display: block; margin-top: 3px; color: rgba(225, 239, 255, .76); font-size: 10px; }
-.portal-feature-header > span { color: #fff; font-size: 29px; text-align: center; filter: drop-shadow(0 0 9px rgba(67, 160, 255, .75)); }
 .classes-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
 .class-box { min-width: 0; display: grid; align-content: start; padding: 18px; overflow: hidden; border: 1px solid rgba(219, 234, 252, .38); border-radius: 17px; background: rgba(0, 9, 25, .82); box-shadow: 0 13px 32px rgba(0, 0, 0, .34), inset 0 1px 0 rgba(255, 255, 255, .07); }
 .class-box > p { margin: 0 0 4px; color: #77baff; font-size: 8px; font-weight: 900; letter-spacing: .17em; text-transform: uppercase; }
@@ -666,8 +660,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .class-box > a:hover { color: #fff; }
 .class-box button:focus-visible,
 .class-box a:focus-visible,
-.portal-feature-header button:focus-visible { outline: 3px solid rgba(108, 190, 255, .88); outline-offset: 2px; }
-.post-board-view { max-height: calc(100dvh - 74px); grid-template-rows: auto auto minmax(0, 1fr) auto; }
+.post-board-view { max-height: calc(100dvh - 74px); grid-template-rows: minmax(0, 1fr) auto; }
 .post-board-list { min-height: 0; display: grid; align-content: start; gap: 13px; overflow-y: auto; padding: 2px 4px 18px; overscroll-behavior: contain; scrollbar-color: #6aaeff rgba(0, 0, 0, .24); }
 .family-post { display: grid; gap: 13px; padding: clamp(16px, 2.5vw, 23px); border: 1px solid rgba(214, 232, 253, .38); border-radius: 17px; color: #fff; background: rgba(0, 9, 25, .86); box-shadow: 0 14px 38px rgba(0, 0, 0, .38), inset 0 1px 0 rgba(255, 255, 255, .08); }
 .family-post > header { display: flex; align-items: center; gap: 10px; }
@@ -714,7 +707,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .post-composer-cancel:disabled,
 .post-composer-x:disabled { opacity: .58; cursor: wait; }
 .post-composer-error { margin: 0; padding: 10px 12px; border: 1px solid rgba(255, 92, 121, .5); border-radius: 10px; color: #ffdbe1; background: rgba(103, 0, 19, .36); font-size: 10px; }
-.chat-view { height: calc(100dvh - 82px); min-height: 620px; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; }
+.chat-view { height: calc(100dvh - 82px); min-height: 620px; grid-template-rows: minmax(0, 1fr) auto; overflow: hidden; }
 .chat-error { padding: 10px 14px; border: 1px solid rgba(255, 91, 121, .58); border-radius: 11px; color: #ffe1e7; background: rgba(102, 0, 20, .46); font-size: 10px; }
 .chat-message-scroll { min-height: 0; overflow-y: auto; padding: 18px 0 24px; overscroll-behavior: contain; scrollbar-color: #5da8ff rgba(0, 0, 0, .28); }
 .chat-message-list { display: grid; gap: 18px; overflow: visible; }
@@ -769,7 +762,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .chat-composer textarea:focus { border-color: var(--chat-tone); box-shadow: 0 0 0 3px rgba(var(--chat-tone-rgb), .18); }
 .chat-composer > button { width: 48px; height: 48px; padding: 0; border: 1px solid var(--chat-tone); border-radius: 50%; color: #fff; background: rgba(var(--chat-tone-rgb), .32); box-shadow: 0 0 19px rgba(var(--chat-tone-rgb), .27); font-size: 21px; cursor: pointer; }
 .chat-composer > button:disabled { opacity: .42; cursor: default; }
-.admin-view { max-height: calc(100dvh - 74px); grid-template-rows: auto minmax(0, 1fr); overflow: hidden; }
+.admin-view { max-height: calc(100dvh - 74px); grid-template-rows: minmax(0, 1fr); overflow: hidden; }
 .admin-form { min-height: 0; display: grid; align-content: start; gap: 14px; overflow-y: auto; padding: 2px 4px 16px; scrollbar-color: #6aaeff rgba(0, 0, 0, .24); }
 .admin-section { padding: 18px; border: 1px solid rgba(211, 230, 251, .4); border-radius: 17px; background: rgba(0, 9, 25, .87); box-shadow: 0 13px 34px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .07); }
 .admin-section > header { margin-bottom: 13px; }
@@ -812,25 +805,6 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .chat-view textarea:focus-visible,
 .chat-view a:focus-visible { outline: 3px solid rgba(108, 190, 255, .9); outline-offset: 2px; }
 .inbox-view { width: min(780px, 100%); display: grid; gap: 14px; margin: 18px auto 28px; color: #10213b; }
-.inbox-view-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px;
-  align-items: center;
-  gap: 13px;
-  padding: 18px;
-  border: 1px solid rgba(193, 214, 237, .86);
-  border-radius: 17px;
-  background-color: #fff;
-  background-image: url("/school/panel-pattern-4.webp");
-  background-position: center;
-  background-size: cover;
-  box-shadow: 0 16px 42px rgba(0, 12, 34, .18);
-}
-.inbox-view-header > div { min-width: 0; }
-.inbox-view-header p { margin: 0 0 3px; color: #2874d7; font-size: 9px; font-weight: 900; letter-spacing: .15em; text-transform: uppercase; }
-.inbox-view-header h1 { margin: 0; color: #0f2d56; font-size: clamp(25px, 5vw, 35px); letter-spacing: -.035em; }
-.inbox-view-header small { display: block; margin-top: 3px; color: #55779f; font-size: 10px; }
-.inbox-view-header > span { color: #1979e8; font-size: 29px; text-align: center; filter: drop-shadow(0 3px 8px rgba(23, 112, 222, .25)); }
 .inbox-conversation-list { max-height: calc(100dvh - 190px); display: grid; gap: 10px; overflow-y: auto; padding: 2px 3px 18px; overscroll-behavior: contain; scrollbar-color: #69a6ed transparent; }
 .inbox-conversation {
   min-width: 0;
@@ -1899,13 +1873,11 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   .mobile-close-button,
   .mobile-close-button img { width: 36px; height: 36px; }
   .mobile-school-menu { top: 66px; left: 14px; right: 14px; }
-  .feature-back-bar { top: 54px; width: calc(100% + 32px); margin: 0 -16px; padding-inline: 18px; border-right: 0; border-left: 0; border-radius: 0; }
+  .feature-back-bar { top: 54px; width: calc(100% + 32px); min-height: 48px; margin: 0 -16px; padding-inline: 18px; border-right: 0; border-left: 0; border-radius: 0; font-size: 13px; }
   .portal-feature-view { --feature-pad: 10px; min-height: calc(100dvh - 88px); margin: 0 auto 18px; padding: var(--feature-pad); border-radius: 0 0 17px 17px; }
-  .portal-feature-header { grid-template-columns: minmax(0, 1fr) 34px; gap: 10px; padding: 13px 11px; }
-  .portal-feature-header h1 { font-size: 30px; }
   .classes-grid { grid-template-columns: 1fr; gap: 10px; }
   .class-box { padding: 15px; border-radius: 14px; }
-  .post-board-view { height: calc(100dvh - 88px); max-height: none; grid-template-rows: auto minmax(0, 1fr) auto; }
+  .post-board-view { height: calc(100dvh - 88px); max-height: none; grid-template-rows: minmax(0, 1fr) auto; }
   .post-board-list { gap: 10px; padding-inline: 1px; }
   .family-post { gap: 10px; padding: 15px 13px; border-radius: 14px; }
   .family-post h2 { font-size: 25px; }
@@ -1918,7 +1890,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   .post-composer-modal form { gap: 11px; padding: 15px 16px 18px; }
   .post-composer-modal textarea { min-height: 110px; }
   .post-composer-x { top: 10px; right: 10px; width: 40px; height: 40px; }
-  .chat-view { height: calc(100dvh - 88px); min-height: 540px; grid-template-rows: auto minmax(0, 1fr) auto; }
+  .chat-view { height: calc(100dvh - 88px); min-height: 540px; grid-template-rows: minmax(0, 1fr) auto; }
   .chat-message-scroll { padding: 14px 0 18px; }
   .chat-message-list { gap: 16px; }
   .chat-message { width: 100%; padding-top: 19px; overflow: visible; }
@@ -1952,8 +1924,6 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   .assignment-detail-grid { grid-template-columns: 1fr; }
   .assignment-modal-actions { padding: 13px 17px 17px; }
   .inbox-view { margin-top: 0; }
-  .inbox-view-header { grid-template-columns: minmax(0, 1fr) 34px; gap: 10px; padding: 14px 12px; }
-  .inbox-view-header h1 { font-size: 26px; }
   .inbox-conversation-list { max-height: none; overflow-y: visible; }
   .inbox-conversation { grid-template-columns: 44px minmax(0, 1fr); gap: 10px; padding: 12px 10px; }
   .inbox-avatar { width: 42px; height: 42px; }
