@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { appPath } from "../lib/app-paths";
+import { DashboardHome } from "./dashboard/DashboardHome";
 
 type LoginResponse = {
   authenticated?: boolean;
@@ -24,10 +25,10 @@ const profiles: FamilyProfile[] = [
 const pinDigits = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
 
 const profilePhotoByUsername: Partial<Record<FamilyProfile["username"], string>> = {
-  beau: "/beau-profile.png",
-  cathy: "/cathy-profile.png",
-  dad: "/dad-profile.png",
-  mom: "/mom-profile.png",
+  beau: "/beau-profile.webp",
+  cathy: "/cathy-profile.webp",
+  dad: "/dad-profile.webp",
+  mom: "/mom-profile.webp",
 };
 
 function FamilyAvatar({ profile, large = false }: { profile: FamilyProfile; large?: boolean }) {
@@ -56,22 +57,25 @@ function CanvasStarterLogo() {
   return (
     // This supplied artwork is cropped by the circular starter-logo treatment.
     // eslint-disable-next-line @next/next/no-img-element
-    <img className="canvas-starter-logo" src={appPath("/canvas-starter-logo.jpeg")} alt="" aria-hidden="true" />
+    <img className="canvas-starter-logo" src={appPath("/canvas-starter-logo.webp")} alt="" aria-hidden="true" />
   );
 }
 
 export function FamilyLogin() {
   const shellRef = useRef<HTMLElement>(null);
   const cardRef = useRef<HTMLElement>(null);
+  const hasShownLoginRef = useRef(false);
   const [selectedProfile, setSelectedProfile] = useState<FamilyProfile | null>(null);
   const [pin, setPin] = useState("");
   const [status, setStatus] = useState<"checking" | "idle" | "submitting">("checking");
   const [message, setMessage] = useState("");
+  const [view, setView] = useState<"checking" | "login" | "dashboard">("checking");
   const selectedTheme = selectedProfile
     ? selectedProfile.username === "beau" || selectedProfile.username === "dad" ? "boy" : "girl"
     : null;
 
   useLayoutEffect(() => {
+    if (view !== "login") return;
     const card = cardRef.current;
     const shell = shellRef.current;
     if (!card || !shell) return;
@@ -93,17 +97,22 @@ export function FamilyLogin() {
       if (image.complete) resolve();
     });
 
+    const backgroundSource = window.matchMedia("(max-width: 900px)").matches
+      ? appPath("/login-mobile.webp")
+      : appPath("/login-desktop.webp");
+
     Promise.all([
-      preload(appPath("/login-desktop.png")),
-      preload(appPath("/login-mobile.png")),
-      preload(appPath("/canvas-starter-logo.jpeg")),
-      preload(appPath("/beau-profile.png")),
-      preload(appPath("/cathy-profile.png")),
-      preload(appPath("/dad-profile.png")),
-      preload(appPath("/mom-profile.png")),
+      preload(backgroundSource),
+      preload(appPath("/canvas-starter-logo.webp")),
+      preload(appPath("/beau-profile.webp")),
+      preload(appPath("/cathy-profile.webp")),
+      preload(appPath("/dad-profile.webp")),
+      preload(appPath("/mom-profile.webp")),
     ]).then(() => {
       if (cancelled) return;
-      timeline = gsap.timeline({ delay: 1 })
+      const entranceDelay = hasShownLoginRef.current ? 0.2 : 1;
+      hasShownLoginRef.current = true;
+      timeline = gsap.timeline({ delay: entranceDelay })
         .to(card, { autoAlpha: 1, y: 0, scale: 1, duration: 0.85, ease: "bounce.out" })
         .to(card.querySelector(".selected-profile-circle"), { autoAlpha: 1, scale: 1, duration: 0.48, ease: "back.out(2)" }, "-=0.35")
         .to(card.querySelectorAll(".selected-profile > strong, .pin-progress"), { autoAlpha: 1, scale: 1, duration: 0.32, stagger: 0.08 }, "-=0.2")
@@ -116,7 +125,7 @@ export function FamilyLogin() {
       timeline?.kill();
       context.revert();
     };
-  }, []);
+  }, [view]);
 
   useEffect(() => {
     let active = true;
@@ -124,13 +133,17 @@ export function FamilyLogin() {
       .then((response) => {
         if (!active) return;
         if (response.ok) {
-          window.location.replace(appPath("/dashboard"));
+          setView("dashboard");
           return;
         }
         setStatus("idle");
+        setView("login");
       })
       .catch(() => {
-        if (active) setStatus("idle");
+        if (active) {
+          setStatus("idle");
+          setView("login");
+        }
       });
     return () => { active = false; };
   }, []);
@@ -158,7 +171,21 @@ export function FamilyLogin() {
         setStatus("idle");
         return;
       }
-      window.location.assign(appPath("/dashboard"));
+      const card = cardRef.current;
+      if (!card) {
+        setView("dashboard");
+        return;
+      }
+      gsap.to(card, {
+        autoAlpha: 0,
+        x: Math.max(window.innerWidth * 0.9, card.offsetWidth + 120),
+        y: -90,
+        rotation: 11,
+        scale: 0.86,
+        duration: 0.86,
+        ease: "power4.in",
+        onComplete: () => setView("dashboard"),
+      });
     } catch {
       setPin("");
       setMessage("The family login is temporarily unavailable. Please try again.");
@@ -179,9 +206,21 @@ export function FamilyLogin() {
     if (nextPin.length === 4) void verifyPin(selectedProfile, nextPin);
   }
 
+  function returnToLogin() {
+    setSelectedProfile(null);
+    setPin("");
+    setMessage("");
+    setStatus("idle");
+    setView("login");
+  }
+
   return (
-    <main className="family-login-shell" ref={shellRef}>
-      <section className={`family-login-card${selectedTheme ? ` theme-${selectedTheme}` : ""}`} aria-label="Family login" ref={cardRef}>
+    <div className={`family-login-shell school-portal-shell${view === "dashboard" ? " dashboard-active" : ""}`} ref={shellRef}>
+      {view === "checking" ? (
+        <div className="portal-session-check" role="status"><span aria-hidden="true" />Checking family session…</div>
+      ) : null}
+
+      {view === "login" ? <section className={`family-login-card${selectedTheme ? ` theme-${selectedTheme}` : ""}`} aria-label="Family login" ref={cardRef}>
         <div className={`selected-profile${selectedProfile ? " has-profile" : ""}`} aria-live="polite">
           <div className="selected-profile-circle">
             {selectedProfile ? <FamilyAvatar profile={selectedProfile} large /> : <CanvasStarterLogo />}
@@ -228,7 +267,9 @@ export function FamilyLogin() {
             {status === "submitting" ? "Checking your PIN…" : selectedProfile ? "Enter your four-digit PIN" : "Choose a profile to begin"}
           </p>
         </div>
-      </section>
-    </main>
+      </section> : null}
+
+      {view === "dashboard" ? <DashboardHome immersive onExit={returnToLogin} /> : null}
+    </div>
   );
 }

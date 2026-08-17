@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { gsap } from "gsap";
 import { appPath } from "../../lib/app-paths";
 
 type ActionItem = {
@@ -110,7 +111,13 @@ const canvasLinks = [
   { label: "Settings", icon: "⚙", href: appPath("/settings"), local: true },
 ];
 
-export function DashboardHome() {
+type DashboardHomeProps = {
+  immersive?: boolean;
+  onExit?: () => void;
+};
+
+export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps = {}) {
+  const appRef = useRef<HTMLElement>(null);
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -124,7 +131,8 @@ export function DashboardHome() {
       const response = await fetch(appPath("/api/dashboard"), { cache: "no-store", credentials: "same-origin" });
       const body = await response.json();
       if (response.status === 401) {
-        window.location.replace(appPath("/"));
+        if (onExit) onExit();
+        else window.location.replace(appPath("/"));
         return;
       }
       if (!response.ok) throw new Error(body.error || "Canvas could not be synced.");
@@ -134,29 +142,54 @@ export function DashboardHome() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [onExit]);
 
   useEffect(() => {
     const initialSync = window.setTimeout(() => void sync(), 0);
     return () => window.clearTimeout(initialSync);
   }, [sync]);
 
+  useLayoutEffect(() => {
+    const app = appRef.current;
+    if (!immersive || !data || !app) return;
+
+    const context = gsap.context(() => {
+      const panels = app.querySelectorAll(
+        ".school-sidebar, .workspace-header, .overview-hero, .summary-card, .critical-strip, .primary-dashboard-grid > .dash-panel, .secondary-dashboard-grid > .dash-panel, .dashboard-footer"
+      );
+      gsap.set(panels, { autoAlpha: 0, y: 34, scale: 0.975 });
+      gsap.timeline({ delay: 0.08 })
+        .to(panels, {
+          autoAlpha: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.58,
+          stagger: 0.075,
+          ease: "back.out(1.35)",
+          clearProps: "transform,opacity,visibility",
+        });
+    }, app);
+
+    return () => context.revert();
+  }, [data, immersive]);
+
   async function signOut() {
     await fetch(appPath("/api/auth/logout"), { method: "POST", credentials: "same-origin" });
-    window.location.assign(appPath("/"));
+    if (onExit) onExit();
+    else window.location.assign(appPath("/"));
   }
 
   if (!data && loading) {
     return (
-      <main className="dashboard-shell dashboard-centered">
-        <div className="sync-loader" role="status"><span aria-hidden="true" /><strong>Checking Canvas…</strong><p>Gathering assignments, messages, classes, and grades.</p></div>
+      <main className={immersive ? "immersive-dashboard-state" : "dashboard-shell dashboard-centered"}>
+        <div className="sync-loader" role="status"><span aria-hidden="true" /><strong>Refreshing Canvas…</strong><p>Gathering assignments, messages, classes, and grades.</p></div>
       </main>
     );
   }
 
   if (!data) {
     return (
-      <main className="dashboard-shell dashboard-centered">
+      <main className={immersive ? "immersive-dashboard-state" : "dashboard-shell dashboard-centered"}>
         <div className="dashboard-error" role="alert">
           <p className="section-kicker">Connection needed</p><h1>Canvas could not be loaded.</h1><p>{error}</p>
           <div className="error-actions"><button type="button" onClick={() => void sync()}>Try again</button><a href={appPath("/settings")}>Check connection</a></div>
@@ -171,14 +204,14 @@ export function DashboardHome() {
   const viewerInitials = data.viewer.displayName.slice(0, 2).toUpperCase();
 
   return (
-    <main className={`school-app${focusMode ? " is-focus-mode" : ""}`}>
+    <main className={`school-app${immersive ? " immersive-dashboard" : ""}${focusMode ? " is-focus-mode" : ""}`} ref={appRef}>
       <aside className="school-sidebar">
         <a className="sidebar-brand" href={appPath("/dashboard")} aria-label="Beau School dashboard">
           <span className="sidebar-logo">B</span><span><strong>Beau School</strong><small>Private family workspace</small></span>
         </a>
         <nav className="school-nav" aria-label="School navigation">
           {canvasLinks.map((item) => (
-            <a className={item.label === "Dashboard" ? "active" : ""} href={item.href} key={item.label} {...(!item.local ? { target: "_blank", rel: "noreferrer" } : {})}>
+            <a className={item.label === "Dashboard" ? "active" : ""} href={item.label === "Dashboard" && immersive ? appPath("/") : item.href} key={item.label} onClick={item.label === "Dashboard" && immersive ? (event) => event.preventDefault() : undefined} {...(!item.local ? { target: "_blank", rel: "noreferrer" } : {})}>
               <span aria-hidden="true">{item.icon}</span>{item.label}
             </a>
           ))}

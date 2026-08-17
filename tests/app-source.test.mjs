@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
 
 const root = new URL("../", import.meta.url);
@@ -53,4 +53,32 @@ test("family login uses server-side sessions and never commits PIN values", asyn
   assert.doesNotMatch(source, /pinHash\s*:\s*["'][^"']+/);
   assert.doesNotMatch(login, /value=["']\d{4}["']/);
   assert.doesNotMatch(source, /localStorage|sessionStorage/);
+});
+
+test("successful login changes scenes without navigating away from the school URL", async () => {
+  const login = await readFile(new URL("app/FamilyLogin.tsx", root), "utf8");
+  const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
+  const styles = await readFile(new URL("app/globals.css", root), "utf8");
+
+  assert.match(login, /gsap\.to\(card/);
+  assert.match(login, /setView\("dashboard"\)/);
+  assert.match(login, /<DashboardHome immersive onExit={returnToLogin}/);
+  assert.doesNotMatch(login, /window\.location\.(?:assign|replace)\(appPath\("\/dashboard"\)\)/);
+  assert.match(dashboard, /className={`school-app\$\{immersive \? " immersive-dashboard"/);
+  assert.match(styles, /\.school-portal-shell\.dashboard-active/);
+  assert.match(styles, /\.school-app\.immersive-dashboard/);
+});
+
+test("login artwork uses lightweight WebP assets", async () => {
+  const login = await readFile(new URL("app/FamilyLogin.tsx", root), "utf8");
+  const styles = await readFile(new URL("app/globals.css", root), "utf8");
+  const desktop = await stat(new URL("public/login-desktop.webp", root));
+  const mobile = await stat(new URL("public/login-mobile.webp", root));
+
+  assert.match(login, /login-mobile\.webp/);
+  assert.match(login, /beau-profile\.webp/);
+  assert.match(styles, /login-desktop\.webp/);
+  assert.doesNotMatch(`${login}\n${styles}`, /login-(?:desktop|mobile)\.png/);
+  assert.ok(desktop.size < 150_000);
+  assert.ok(mobile.size < 200_000);
 });
