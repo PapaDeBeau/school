@@ -55,16 +55,12 @@ export function FamilyLogin() {
     const shell = shellRef.current;
     if (!card || !shell) return;
 
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const context = gsap.context(() => {
-      if (reducedMotion) return;
       gsap.set(card, { autoAlpha: 0, y: -170, scale: 0.92 });
       gsap.set(".selected-profile-circle, .selected-profile > strong, .pin-progress", { autoAlpha: 0, scale: 0.72 });
       gsap.set(".profile-options > button", { autoAlpha: 0, x: -28, scale: 0.84 });
       gsap.set(".pin-keypad", { autoAlpha: 0, y: 18 });
     }, shell);
-
-    if (reducedMotion) return () => context.revert();
 
     let cancelled = false;
     let timeline: gsap.core.Timeline | null = null;
