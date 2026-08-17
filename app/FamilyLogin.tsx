@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { gsap } from "gsap";
 import { appPath } from "../lib/app-paths";
 
 type LoginResponse = {
@@ -20,6 +21,8 @@ const profiles: FamilyProfile[] = [
   { username: "dad", displayName: "Dad" },
 ];
 
+const pinDigits = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
+
 function FamilyAvatar({ profile, large = false }: { profile: FamilyProfile; large?: boolean }) {
   return (
     <span className={`family-avatar avatar-${profile.username}${large ? " avatar-large" : ""}`} aria-hidden="true">
@@ -33,20 +36,66 @@ function FamilyAvatar({ profile, large = false }: { profile: FamilyProfile; larg
 
 function SpiderEmblem() {
   return (
-    <span className="spider-emblem" aria-hidden="true">
-      <i className="spider-body" />
-      <i className="spider-legs spider-legs-left" />
-      <i className="spider-legs spider-legs-right" />
-    </span>
+    // This supplied artwork is already cropped for the circular starter-logo treatment.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img className="spider-starter-logo" src={appPath("/login-spider-logo.png")} alt="" aria-hidden="true" />
   );
 }
 
 export function FamilyLogin() {
+  const shellRef = useRef<HTMLElement>(null);
+  const cardRef = useRef<HTMLElement>(null);
   const [selectedProfile, setSelectedProfile] = useState<FamilyProfile | null>(null);
   const [pin, setPin] = useState("");
-  const [showPin, setShowPin] = useState(false);
   const [status, setStatus] = useState<"checking" | "idle" | "submitting">("checking");
   const [message, setMessage] = useState("");
+
+  useLayoutEffect(() => {
+    const card = cardRef.current;
+    const shell = shellRef.current;
+    if (!card || !shell) return;
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const context = gsap.context(() => {
+      if (reducedMotion) return;
+      gsap.set(card, { autoAlpha: 0, y: -170, scale: 0.92 });
+      gsap.set(".selected-profile-circle, .selected-profile > strong, .pin-progress", { autoAlpha: 0, scale: 0.72 });
+      gsap.set(".profile-options > button", { autoAlpha: 0, x: -28, scale: 0.84 });
+      gsap.set(".pin-keypad", { autoAlpha: 0, y: 18 });
+    }, shell);
+
+    if (reducedMotion) return () => context.revert();
+
+    let cancelled = false;
+    let timeline: gsap.core.Timeline | null = null;
+    const preload = (source: string) => new Promise<void>((resolve) => {
+      const image = new Image();
+      image.onload = () => resolve();
+      image.onerror = () => resolve();
+      image.src = source;
+      if (image.complete) resolve();
+    });
+
+    Promise.all([
+      preload(appPath("/login-desktop.png")),
+      preload(appPath("/login-mobile.png")),
+      preload(appPath("/login-spider-logo.png")),
+    ]).then(() => {
+      if (cancelled) return;
+      timeline = gsap.timeline({ delay: 1 })
+        .to(card, { autoAlpha: 1, y: 0, scale: 1, duration: 0.85, ease: "bounce.out" })
+        .to(card.querySelector(".selected-profile-circle"), { autoAlpha: 1, scale: 1, duration: 0.48, ease: "back.out(2)" }, "-=0.35")
+        .to(card.querySelectorAll(".selected-profile > strong, .pin-progress"), { autoAlpha: 1, scale: 1, duration: 0.32, stagger: 0.08 }, "-=0.2")
+        .to(card.querySelectorAll(".profile-options > button"), { autoAlpha: 1, x: 0, scale: 1, duration: 0.4, stagger: 0.14, ease: "back.out(1.8)" }, "+=0.05")
+        .to(card.querySelector(".pin-keypad"), { autoAlpha: 1, y: 0, duration: 0.42, ease: "power2.out" }, "-=0.08");
+    });
+
+    return () => {
+      cancelled = true;
+      timeline?.kill();
+      context.revert();
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -71,17 +120,7 @@ export function FamilyLogin() {
     setMessage("");
   }
 
-  async function signIn(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!selectedProfile) {
-      setMessage("Choose your profile first.");
-      return;
-    }
-    if (!/^\d{4}$/.test(pin)) {
-      setMessage("Enter your four-digit PIN.");
-      return;
-    }
-
+  async function verifyPin(profile: FamilyProfile, enteredPin: string) {
     setStatus("submitting");
     setMessage("");
     try {
@@ -89,12 +128,12 @@ export function FamilyLogin() {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: selectedProfile.username, pin }),
+        body: JSON.stringify({ username: profile.username, pin: enteredPin }),
       });
       const body = await response.json() as LoginResponse;
       setPin("");
       if (!response.ok || !body.authenticated) {
-        setMessage(body.error ?? "That PIN does not match this profile.");
+        setMessage(response.status === 401 ? "Wrong PIN. Try again." : body.error ?? "The family login is temporarily unavailable.");
         setStatus("idle");
         return;
       }
@@ -106,12 +145,28 @@ export function FamilyLogin() {
     }
   }
 
+  function pressDigit(digit: string) {
+    if (!selectedProfile) {
+      setMessage("Choose your profile first.");
+      return;
+    }
+    if (status !== "idle" || pin.length >= 4) return;
+
+    const nextPin = `${pin}${digit}`;
+    setPin(nextPin);
+    setMessage("");
+    if (nextPin.length === 4) void verifyPin(selectedProfile, nextPin);
+  }
+
   return (
-    <main className="family-login-shell">
-      <section className="family-login-card" aria-label="Family login">
+    <main className="family-login-shell" ref={shellRef}>
+      <section className="family-login-card" aria-label="Family login" ref={cardRef}>
         <div className={`selected-profile${selectedProfile ? " has-profile" : ""}`} aria-live="polite">
           <div className="selected-profile-circle">
             {selectedProfile ? <FamilyAvatar profile={selectedProfile} large /> : <SpiderEmblem />}
+          </div>
+          <div className="pin-progress" aria-label={`${pin.length} of 4 PIN digits entered`}>
+            {[0, 1, 2, 3].map((index) => <i className={index < pin.length ? "is-filled" : ""} key={index} />)}
           </div>
           <strong>{selectedProfile?.displayName ?? "Choose your profile"}</strong>
         </div>
@@ -132,32 +187,25 @@ export function FamilyLogin() {
           ))}
         </div>
 
-        <form className="family-login-form" onSubmit={signIn} noValidate>
+        <div className="pin-keypad" role="group" aria-label="Enter four-digit PIN">
           {message ? <div className="login-message" role="alert">{message}</div> : null}
-
-          <div className="login-field pin-field">
-            <span aria-hidden="true">◆</span>
-            <input
-              id="family-pin"
-              name="pin"
-              aria-label="Four-digit PIN"
-              type={showPin ? "text" : "password"}
-              inputMode="numeric"
-              pattern="[0-9]{4}"
-              autoComplete="current-password"
-              placeholder="Enter 4-digit PIN"
-              value={pin}
-              onChange={(event) => setPin(event.target.value.replace(/\D/g, "").slice(0, 4))}
-              disabled={status !== "idle" || !selectedProfile}
-              maxLength={4}
-            />
-            <button type="button" onClick={() => setShowPin((visible) => !visible)} aria-label={showPin ? "Hide PIN" : "Show PIN"}>{showPin ? "Hide" : "Show"}</button>
+          <div className="pin-number-grid">
+            {pinDigits.map((digit) => (
+              <button
+                type="button"
+                key={digit}
+                onClick={() => pressDigit(digit)}
+                disabled={status !== "idle" || !selectedProfile}
+                aria-label={`PIN digit ${digit}`}
+              >
+                {digit}
+              </button>
+            ))}
           </div>
-
-          <button className="family-login-button" type="submit" disabled={status !== "idle" || !selectedProfile}>
-            {status === "checking" ? "Loading The Zone…" : status === "submitting" ? "Entering The Zone…" : "Enter The Zone"}
-          </button>
-        </form>
+          <p className="pin-status" aria-live="polite">
+            {status === "submitting" ? "Checking your PIN…" : selectedProfile ? "Enter your four-digit PIN" : "Choose a profile to begin"}
+          </p>
+        </div>
       </section>
     </main>
   );

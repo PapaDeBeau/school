@@ -46,7 +46,9 @@ test("family login uses server-side sessions and never commits PIN values", asyn
   assert.match(auth, /HttpOnly; SameSite=Lax/);
   assert.match(auth, /MAX_LOGIN_ATTEMPTS = 5/);
   assert.match(auth, /FAMILY_AUTH_USERS/);
-  assert.match(login, /inputMode="numeric"/);
+  assert.match(login, /const pinDigits = \["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"\]/);
+  assert.match(login, /if \(nextPin\.length === 4\) void verifyPin/);
+  assert.doesNotMatch(login, /<input/);
   assert.match(dashboardRoute, /readFamilySession/);
   assert.doesNotMatch(source, /pinHash\s*:\s*["'][^"']+/);
   assert.doesNotMatch(login, /value=["']\d{4}["']/);
