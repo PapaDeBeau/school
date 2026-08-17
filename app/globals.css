@@ -867,7 +867,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .family-login-card .family-login-button:hover:not(:disabled) { filter: brightness(1.12) saturate(1.07); box-shadow: 0 16px 38px rgba(7, 93, 145, .42); }
 .family-login-card .family-login-button:disabled { filter: grayscale(.35); opacity: .52; }
 
-@media (max-width: 700px) {
+@media (max-width: 900px) {
   .family-login-shell { min-height: 100svh; place-items: center; padding: 18px 12px; }
   .family-login-shell::before {
     position: fixed;
