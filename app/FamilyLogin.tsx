@@ -23,13 +23,19 @@ const profiles: FamilyProfile[] = [
 
 const pinDigits = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
 
+const profilePhotoByUsername: Partial<Record<FamilyProfile["username"], string>> = {
+  beau: "/beau-profile.png",
+  cathy: "/cathy-profile.png",
+};
+
 function FamilyAvatar({ profile, large = false }: { profile: FamilyProfile; large?: boolean }) {
-  if (profile.username === "cathy") {
+  const profilePhoto = profilePhotoByUsername[profile.username];
+  if (profilePhoto) {
     return (
-      <span className={`family-avatar avatar-cathy${large ? " avatar-large" : ""}`} aria-hidden="true">
-        {/* Cathy supplied this finished profile artwork for her login tile. */}
+      <span className={`family-avatar avatar-${profile.username}${large ? " avatar-large" : ""}`} aria-hidden="true">
+        {/* These finished profile artworks are supplied for the family login tiles. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="family-profile-photo" src={appPath("/cathy-profile.png")} alt="" />
+        <img className="family-profile-photo" src={appPath(profilePhoto)} alt="" />
       </span>
     );
   }
@@ -86,6 +92,7 @@ export function FamilyLogin() {
       preload(appPath("/login-desktop.png")),
       preload(appPath("/login-mobile.png")),
       preload(appPath("/login-spider-logo.png")),
+      preload(appPath("/beau-profile.png")),
       preload(appPath("/cathy-profile.png")),
     ]).then(() => {
       if (cancelled) return;
@@ -181,7 +188,7 @@ export function FamilyLogin() {
         <div className="profile-options" role="group" aria-label="Choose a family profile">
           {profiles.map((profile) => (
             <button
-              className={`${selectedProfile?.username === profile.username ? "is-selected" : ""}${profile.username === "cathy" ? " has-profile-photo" : ""}`.trim()}
+              className={`${selectedProfile?.username === profile.username ? "is-selected" : ""}${profilePhotoByUsername[profile.username] ? " has-profile-photo" : ""}`.trim()}
               type="button"
               key={profile.username}
               onClick={() => chooseProfile(profile)}
@@ -190,7 +197,7 @@ export function FamilyLogin() {
               disabled={status !== "idle"}
             >
               <FamilyAvatar profile={profile} />
-              {profile.username === "cathy" ? null : <span>{profile.displayName}</span>}
+              {profilePhotoByUsername[profile.username] ? null : <span>{profile.displayName}</span>}
             </button>
           ))}
         </div>
