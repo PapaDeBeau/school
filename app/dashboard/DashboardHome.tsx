@@ -1405,7 +1405,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     const scrollRoot = showcase.closest<HTMLElement>(".school-workspace");
     const observerTargets = new Map<HTMLElement, HTMLElement>();
     values.forEach((value) => {
-      observerTargets.set(value.querySelector<HTMLElement>(".grade-artwork-letter") ?? value, value);
+      observerTargets.set(value.closest<HTMLElement>(".grade-artwork-card") ?? value, value);
     });
 
     const visible = new Set<HTMLElement>();
@@ -1493,12 +1493,22 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     };
 
     const checkVisibility = () => {
-      visibilityFrame = null;
-      const rootRect = scrollRoot?.getBoundingClientRect() ?? { top: 0, bottom: window.innerHeight };
+      const visualViewport = window.visualViewport;
+      const viewportTop = visualViewport?.offsetTop ?? 0;
+      const viewportHeight = visualViewport?.height
+        ?? document.documentElement.clientHeight
+        ?? window.innerHeight;
+      const viewportBottom = viewportTop + viewportHeight;
+      const scrollBounds = scrollRoot?.getBoundingClientRect();
+      const rootTop = Math.max(scrollBounds?.top ?? viewportTop, viewportTop);
+      const rootBottom = Math.min(scrollBounds?.bottom ?? viewportBottom, viewportBottom);
       observerTargets.forEach((value, target) => {
         const rect = target.getBoundingClientRect();
-        const visibleHeight = Math.min(rect.bottom, rootRect.bottom) - Math.max(rect.top, rootRect.top);
-        const isOnScreen = visibleHeight >= Math.min(rect.height * 0.35, 40);
+        const triggerTop = rect.top + rect.height * 0.34;
+        const triggerBottom = rect.top + rect.height * 0.7;
+        const triggerHeight = Math.max(triggerBottom - triggerTop, 1);
+        const visibleHeight = Math.min(triggerBottom, rootBottom) - Math.max(triggerTop, rootTop);
+        const isOnScreen = visibleHeight >= Math.min(triggerHeight * 0.35, 40);
         if (isOnScreen) {
           if (!visible.has(value)) {
             visible.add(value);
@@ -1513,18 +1523,35 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       if (pending.size && batchTimer === null) batchTimer = window.setTimeout(flushPending, 40);
     };
 
+    const runScheduledVisibilityCheck = () => {
+      visibilityFrame = null;
+      checkVisibility();
+    };
+
     const scheduleVisibilityCheck = () => {
       if (visibilityFrame !== null) return;
-      visibilityFrame = window.requestAnimationFrame(checkVisibility);
+      visibilityFrame = window.requestAnimationFrame(runScheduledVisibilityCheck);
     };
 
     values.forEach(resetValue);
     scrollRoot?.addEventListener("scroll", scheduleVisibilityCheck, { passive: true });
+    window.addEventListener("scroll", scheduleVisibilityCheck, { passive: true });
+    document.addEventListener("scroll", scheduleVisibilityCheck, { passive: true, capture: true });
     window.addEventListener("resize", scheduleVisibilityCheck);
-    scheduleVisibilityCheck();
+    window.addEventListener("orientationchange", scheduleVisibilityCheck);
+    window.visualViewport?.addEventListener("scroll", scheduleVisibilityCheck);
+    window.visualViewport?.addEventListener("resize", scheduleVisibilityCheck);
+    const visibilityPoll = window.setInterval(checkVisibility, 240);
+    checkVisibility();
     return () => {
       scrollRoot?.removeEventListener("scroll", scheduleVisibilityCheck);
+      window.removeEventListener("scroll", scheduleVisibilityCheck);
+      document.removeEventListener("scroll", scheduleVisibilityCheck, true);
       window.removeEventListener("resize", scheduleVisibilityCheck);
+      window.removeEventListener("orientationchange", scheduleVisibilityCheck);
+      window.visualViewport?.removeEventListener("scroll", scheduleVisibilityCheck);
+      window.visualViewport?.removeEventListener("resize", scheduleVisibilityCheck);
+      window.clearInterval(visibilityPoll);
       if (visibilityFrame !== null) window.cancelAnimationFrame(visibilityFrame);
       if (batchTimer !== null) window.clearTimeout(batchTimer);
       values.forEach(resetValue);
