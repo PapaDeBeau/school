@@ -26,6 +26,7 @@ const pinDigits = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
 const profilePhotoByUsername: Partial<Record<FamilyProfile["username"], string>> = {
   beau: "/beau-profile.png",
   cathy: "/cathy-profile.png",
+  dad: "/dad-profile.png",
 };
 
 function FamilyAvatar({ profile, large = false }: { profile: FamilyProfile; large?: boolean }) {
@@ -94,6 +95,7 @@ export function FamilyLogin() {
       preload(appPath("/login-spider-logo.png")),
       preload(appPath("/beau-profile.png")),
       preload(appPath("/cathy-profile.png")),
+      preload(appPath("/dad-profile.png")),
     ]).then(() => {
       if (cancelled) return;
       timeline = gsap.timeline({ delay: 1 })
