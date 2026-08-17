@@ -1429,6 +1429,11 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     const values = Array.from(showcase.querySelectorAll<HTMLElement>(".grade-artwork-value"));
     if (!values.length) return;
 
+    const observerTargets = new Map<Element, HTMLElement>();
+    values.forEach((value) => {
+      observerTargets.set(value.closest<HTMLElement>(".grade-artwork-card") ?? value, value);
+    });
+
     const visible = new Set<HTMLElement>();
     const pending = new Set<HTMLElement>();
     const persistentMotion = new Map<HTMLElement, gsap.core.Animation>();
@@ -1494,7 +1499,8 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
-        const value = entry.target as HTMLElement;
+        const value = observerTargets.get(entry.target);
+        if (!value) return;
         if (entry.isIntersecting) {
           visible.add(value);
           pending.add(value);
@@ -1507,7 +1513,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       if (pending.size && batchTimer === null) batchTimer = window.setTimeout(flushPending, 40);
     }, { threshold: 0.28, rootMargin: "0px 0px -4% 0px" });
 
-    values.forEach((value) => observer.observe(value));
+    observerTargets.forEach((_value, target) => observer.observe(target));
     return () => {
       observer.disconnect();
       if (batchTimer !== null) window.clearTimeout(batchTimer);

@@ -293,6 +293,7 @@ test("admin stores percentages and controls empty due-card visibility", async ()
   assert.match(dashboard, /function letterGrade/);
   assert.match(dashboard, /grade-artwork-value/);
   assert.match(dashboard, /IntersectionObserver/);
+  assert.match(dashboard, /observerTargets\.set\(value\.closest<HTMLElement>\("\.grade-artwork-card"\)/);
   assert.match(dashboard, /elastic\.out/);
   assert.match(dashboard, /value\.dataset\.grade === "D"/);
   assert.match(dashboard, /value\.dataset\.grade === "F"/);
