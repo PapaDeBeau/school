@@ -870,12 +870,15 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 @media (max-width: 700px) {
   .family-login-shell { min-height: 100svh; place-items: center; padding: 18px 12px; }
   .family-login-shell::before {
-    inset: -8px;
+    position: fixed;
+    inset: 0;
     background-image: url("/school/login-mobile.png");
     background-position: center center;
-    filter: blur(3px) brightness(.45) saturate(.9);
-    transform: scale(1.018);
+    background-size: cover;
+    filter: brightness(.6) saturate(.96);
+    transform: none;
   }
+  .family-login-shell::after { background: linear-gradient(180deg, rgba(0, 7, 18, .08), rgba(0, 7, 18, .35)); }
   .family-login-card { width: min(440px, 100%); padding: 22px 18px; border-radius: 23px; }
   .selected-profile { margin-bottom: 18px; }
   .selected-profile-circle { width: 104px; height: 104px; }
