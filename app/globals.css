@@ -1173,13 +1173,13 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
     align-items: center;
     gap: 10px;
     padding: 7px 8px;
-    border: 1px solid rgba(174, 215, 255, .34);
-    border-radius: 15px;
+    border: 0;
+    border-radius: 0;
     color: white;
-    background: rgba(1, 15, 35, .66);
-    box-shadow: 0 12px 34px rgba(0, 5, 20, .28), inset 0 1px 0 rgba(255, 255, 255, .12);
-    -webkit-backdrop-filter: blur(13px) saturate(115%);
-    backdrop-filter: blur(13px) saturate(115%);
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
   .mobile-dashboard-bar > strong {
     overflow: hidden;
