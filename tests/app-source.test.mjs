@@ -158,6 +158,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(dashboard, /menu-admin\.webp/);
   assert.ok(mobileMenuArtwork.every((asset) => asset.size < 70_000));
   assert.match(dashboard, /grade-artwork-grid/);
+  assert.match(styles, /\.grade-artwork-percentage \{[^}]*left: 48%;[^}]*font-size: clamp\(24px, 4\.65vw, 54px\)/);
   assert.ok(gradeArtwork.every((asset) => asset.size < 90_000));
   assert.match(dashboard, /Due today/);
   assert.match(dashboard, /today-featured-slot/);
