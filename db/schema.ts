@@ -13,3 +13,11 @@ export const canvasConnections = sqliteTable("canvas_connections", {
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
+
+export const familyLoginAttempts = sqliteTable("family_login_attempts", {
+  keyHash: text("key_hash").primaryKey(),
+  attemptCount: integer("attempt_count").notNull().default(0),
+  windowStartedAt: text("window_started_at").notNull(),
+  lockedUntil: text("locked_until"),
+  updatedAt: text("updated_at").notNull(),
+});

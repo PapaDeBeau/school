@@ -32,6 +32,10 @@ type Course = {
 
 type DashboardData = {
   generatedAt: string;
+  viewer: {
+    username: string;
+    displayName: string;
+  };
   student: string;
   courseCount: number;
   unreadCount: number;
@@ -103,7 +107,7 @@ const canvasLinks = [
   { label: "Grades", icon: "▥", href: "https://sequoiagrove.instructure.com/grades" },
   { label: "Inbox", icon: "✉", href: "https://sequoiagrove.instructure.com/conversations#filter=type=inbox" },
   { label: "Files", icon: "▱", href: "https://sequoiagrove.instructure.com/files" },
-  { label: "Settings", icon: "⚙", href: appPath("/"), local: true },
+  { label: "Settings", icon: "⚙", href: appPath("/settings"), local: true },
 ];
 
 export function DashboardHome() {
@@ -119,6 +123,10 @@ export function DashboardHome() {
     try {
       const response = await fetch(appPath("/api/dashboard"), { cache: "no-store", credentials: "same-origin" });
       const body = await response.json();
+      if (response.status === 401) {
+        window.location.replace(appPath("/"));
+        return;
+      }
       if (!response.ok) throw new Error(body.error || "Canvas could not be synced.");
       setData(body);
     } catch (caught) {
@@ -133,6 +141,11 @@ export function DashboardHome() {
     return () => window.clearTimeout(initialSync);
   }, [sync]);
 
+  async function signOut() {
+    await fetch(appPath("/api/auth/logout"), { method: "POST", credentials: "same-origin" });
+    window.location.assign(appPath("/"));
+  }
+
   if (!data && loading) {
     return (
       <main className="dashboard-shell dashboard-centered">
@@ -146,7 +159,7 @@ export function DashboardHome() {
       <main className="dashboard-shell dashboard-centered">
         <div className="dashboard-error" role="alert">
           <p className="section-kicker">Connection needed</p><h1>Canvas could not be loaded.</h1><p>{error}</p>
-          <div className="error-actions"><button type="button" onClick={() => void sync()}>Try again</button><a href={appPath("/")}>Check connection</a></div>
+          <div className="error-actions"><button type="button" onClick={() => void sync()}>Try again</button><a href={appPath("/settings")}>Check connection</a></div>
         </div>
       </main>
     );
@@ -155,11 +168,12 @@ export function DashboardHome() {
   const allClear = data.critical.length === 0;
   const visibleUpcoming = showAllUpcoming ? data.upcoming : data.upcoming.slice(0, 5);
   const firstName = data.student.split(" ")[0] || "Beau";
+  const viewerInitials = data.viewer.displayName.slice(0, 2).toUpperCase();
 
   return (
     <main className={`school-app${focusMode ? " is-focus-mode" : ""}`}>
       <aside className="school-sidebar">
-        <a className="sidebar-brand" href={appPath("/")} aria-label="Beau School connection settings">
+        <a className="sidebar-brand" href={appPath("/dashboard")} aria-label="Beau School dashboard">
           <span className="sidebar-logo">B</span><span><strong>Beau School</strong><small>Private family workspace</small></span>
         </a>
         <nav className="school-nav" aria-label="School navigation">
@@ -173,7 +187,11 @@ export function DashboardHome() {
           <p><span aria-hidden="true">◆</span> Focus Mode</p><small>Keep the next assignment front and center.</small>
           <button type="button" onClick={() => setFocusMode((active) => !active)}>{focusMode ? "Exit session" : "Start session"}</button>
         </section>
-        <div className="student-card"><span>BV</span><div><strong>{data.student}</strong><small>{data.courseCount} active courses</small></div><i aria-hidden="true">⌄</i></div>
+        <div className="student-card">
+          <span>{viewerInitials}</span>
+          <div><strong>{data.viewer.displayName}</strong><small>Family dashboard</small></div>
+          <button type="button" onClick={() => void signOut()} aria-label={`Sign out ${data.viewer.displayName}`}>↪</button>
+        </div>
       </aside>
 
       <section className="school-workspace">

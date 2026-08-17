@@ -3,6 +3,7 @@ import { ensureCanvasConnectionSchema, getDb } from "../../../db";
 import { canvasConnections } from "../../../db/schema";
 import { CANVAS_BASE_URL, canvasGet } from "../../../lib/canvas-client";
 import { decryptCanvasToken } from "../../../lib/canvas-vault";
+import { familyUnauthorizedResponse, readFamilySession } from "../../../lib/family-auth";
 import { isAuthorizedAppRequest, unauthorizedAppResponse } from "../../../lib/request-auth";
 
 type CanvasCourse = {
@@ -140,6 +141,8 @@ function classSchedule() {
 
 export async function GET(request: Request) {
   if (!isAuthorizedAppRequest(request)) return unauthorizedAppResponse();
+  const familyUser = await readFamilySession(request);
+  if (!familyUser) return familyUnauthorizedResponse();
   try {
     await ensureCanvasConnectionSchema();
     const [connection] = await getDb()
@@ -149,7 +152,7 @@ export async function GET(request: Request) {
       .limit(1);
 
     if (!connection) {
-      return json({ error: "Canvas is not connected." }, { status: 401 });
+      return json({ error: "Canvas is not connected." }, { status: 409 });
     }
 
     const token = await decryptCanvasToken(connection.encryptedToken, connection.tokenIv);
@@ -203,6 +206,7 @@ export async function GET(request: Request) {
 
     return json({
       generatedAt: new Date().toISOString(),
+      viewer: familyUser,
       student: connection.displayName,
       courseCount: courses.length,
       unreadCount: unreadConversations.length,

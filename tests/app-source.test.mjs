@@ -32,7 +32,23 @@ test("internal navigation stays under the school base path", async () => {
   const form = await readFile(new URL("app/CanvasConnectionForm.tsx", root), "utf8");
   const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
   assert.match(form, /<a className="primary-link" href={appPath\("\/dashboard"\)}/);
-  assert.match(dashboard, /<a href={appPath\("\/"\)}/);
+  assert.match(dashboard, /href: appPath\("\/settings"\)/);
   assert.doesNotMatch(form, /href="\/dashboard"/);
   assert.doesNotMatch(form, /next\/link/);
+});
+
+test("family login uses server-side sessions and never commits PIN values", async () => {
+  const auth = await readFile(new URL("lib/family-auth.ts", root), "utf8");
+  const login = await readFile(new URL("app/FamilyLogin.tsx", root), "utf8");
+  const dashboardRoute = await readFile(new URL("app/api/dashboard/route.ts", root), "utf8");
+  const source = `${auth}\n${login}`;
+
+  assert.match(auth, /HttpOnly; SameSite=Lax/);
+  assert.match(auth, /MAX_LOGIN_ATTEMPTS = 5/);
+  assert.match(auth, /FAMILY_AUTH_USERS/);
+  assert.match(login, /inputMode="numeric"/);
+  assert.match(dashboardRoute, /readFamilySession/);
+  assert.doesNotMatch(source, /pinHash\s*:\s*["'][^"']+/);
+  assert.doesNotMatch(login, /value=["']\d{4}["']/);
+  assert.doesNotMatch(source, /localStorage|sessionStorage/);
 });

@@ -6,6 +6,8 @@ type AppEnv = {
   DB?: D1Database;
   CANVAS_TOKEN_WRAP_KEY?: string;
   BEAU_PROXY_ACCESS_KEY?: string;
+  FAMILY_AUTH_SIGNING_KEY?: string;
+  FAMILY_AUTH_USERS?: string;
 };
 
 export function getAppEnv() {
@@ -38,6 +40,20 @@ export async function ensureCanvasConnectionSchema() {
         course_count INTEGER NOT NULL DEFAULT 0,
         verified_at TEXT NOT NULL,
         created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    `)
+    .run();
+}
+
+export async function ensureFamilyAuthSchema() {
+  await getD1()
+    .prepare(`
+      CREATE TABLE IF NOT EXISTS family_login_attempts (
+        key_hash TEXT PRIMARY KEY,
+        attempt_count INTEGER NOT NULL DEFAULT 0,
+        window_started_at TEXT NOT NULL,
+        locked_until TEXT,
         updated_at TEXT NOT NULL
       )
     `)

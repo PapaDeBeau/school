@@ -33,8 +33,12 @@ export function CanvasConnectionForm() {
       });
     }
 
-    fetch(appPath("/api/canvas/connection"), { cache: "no-store" })
+    fetch(appPath("/api/canvas/connection"), { cache: "no-store", credentials: "same-origin" })
       .then(async (response) => {
+        if (response.status === 401) {
+          window.location.replace(appPath("/"));
+          return;
+        }
         const data = (await response.json()) as {
           connected?: boolean;
           connection?: Connection;
@@ -61,6 +65,7 @@ export function CanvasConnectionForm() {
     try {
       const response = await fetch(appPath("/api/canvas/connection"), {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ baseUrl: CANVAS_BASE_URL, token }),
       });
@@ -69,6 +74,10 @@ export function CanvasConnectionForm() {
         connection?: Connection;
         error?: string;
       };
+      if (response.status === 401) {
+        window.location.replace(appPath("/"));
+        return;
+      }
       setToken("");
       setShowToken(false);
 
@@ -93,7 +102,11 @@ export function CanvasConnectionForm() {
     );
     if (!approved) return;
 
-    const response = await fetch(appPath("/api/canvas/connection"), { method: "DELETE" });
+    const response = await fetch(appPath("/api/canvas/connection"), { method: "DELETE", credentials: "same-origin" });
+    if (response.status === 401) {
+      window.location.replace(appPath("/"));
+      return;
+    }
     if (response.ok) {
       setConnection(null);
       setStatus("idle");
