@@ -1221,6 +1221,53 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .immersive-dashboard .course-card,
 .immersive-dashboard .quick-actions a { background: rgba(251, 253, 255, .78); }
 
+/* Opaque white dashboard cards rotate through the supplied light spider patterns. */
+.immersive-dashboard .summary-card,
+.immersive-dashboard .critical-strip,
+.immersive-dashboard .dash-panel,
+.immersive-dashboard .focus-card,
+.immersive-dashboard .student-card,
+.immersive-dashboard .course-card,
+.immersive-dashboard .quick-actions a,
+.due-featured-slot .mobile-due-card {
+  background-color: #fff;
+  background-image: var(--panel-pattern, url("/school/panel-pattern-1.webp"));
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+.today-featured-slot { --panel-pattern: url("/school/panel-pattern-1.webp"); }
+.tomorrow-featured-slot { --panel-pattern: url("/school/panel-pattern-2.webp"); }
+.week-featured-slot { --panel-pattern: url("/school/panel-pattern-3.webp"); }
+.summary-grid .summary-card:nth-child(5n + 1),
+.primary-dashboard-grid .dash-panel:nth-child(5n + 1),
+.secondary-dashboard-grid .dash-panel:nth-child(5n + 1),
+.course-grid .course-card:nth-child(5n + 1),
+.quick-actions a:nth-child(5n + 1) { --panel-pattern: url("/school/panel-pattern-1.webp"); }
+.summary-grid .summary-card:nth-child(5n + 2),
+.primary-dashboard-grid .dash-panel:nth-child(5n + 2),
+.secondary-dashboard-grid .dash-panel:nth-child(5n + 2),
+.course-grid .course-card:nth-child(5n + 2),
+.quick-actions a:nth-child(5n + 2) { --panel-pattern: url("/school/panel-pattern-2.webp"); }
+.summary-grid .summary-card:nth-child(5n + 3),
+.primary-dashboard-grid .dash-panel:nth-child(5n + 3),
+.secondary-dashboard-grid .dash-panel:nth-child(5n + 3),
+.course-grid .course-card:nth-child(5n + 3),
+.quick-actions a:nth-child(5n + 3) { --panel-pattern: url("/school/panel-pattern-3.webp"); }
+.summary-grid .summary-card:nth-child(5n + 4),
+.primary-dashboard-grid .dash-panel:nth-child(5n + 4),
+.secondary-dashboard-grid .dash-panel:nth-child(5n + 4),
+.course-grid .course-card:nth-child(5n + 4),
+.quick-actions a:nth-child(5n + 4) { --panel-pattern: url("/school/panel-pattern-4.webp"); }
+.summary-grid .summary-card:nth-child(5n),
+.primary-dashboard-grid .dash-panel:nth-child(5n),
+.secondary-dashboard-grid .dash-panel:nth-child(5n),
+.course-grid .course-card:nth-child(5n),
+.quick-actions a:nth-child(5n) { --panel-pattern: url("/school/panel-pattern-5.webp"); }
+.critical-strip { --panel-pattern: url("/school/panel-pattern-5.webp"); }
+.focus-card { --panel-pattern: url("/school/panel-pattern-3.webp"); }
+.student-card { --panel-pattern: url("/school/panel-pattern-4.webp"); }
+
 .mobile-dashboard-bar,
 .mobile-family-greeting,
 .mobile-school-menu,
@@ -1400,22 +1447,18 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   }
   .mobile-school-menu a > span { width: 20px; color: #75baff; text-align: center; }
   .featured-due-stack { margin-bottom: 0; }
-  .school-app .overview-hero {
-    margin-top: 12px;
-    background:
-      radial-gradient(circle at 16% 12%, rgba(255, 255, 255, .62), transparent 22rem),
-      linear-gradient(115deg, rgba(243, 248, 255, .64), rgba(222, 235, 255, .56));
-  }
+  .school-app .overview-hero { display: none; }
   .immersive-dashboard .summary-card,
   .immersive-dashboard .critical-strip,
-  .immersive-dashboard .dash-panel { background: rgba(253, 254, 255, .64); }
+  .immersive-dashboard .dash-panel { background-color: #fff; }
   .immersive-dashboard .focus-card,
   .immersive-dashboard .student-card,
   .immersive-dashboard .course-card,
-  .immersive-dashboard .quick-actions a { background: rgba(251, 253, 255, .58); }
+  .immersive-dashboard .quick-actions a { background-color: #fff; }
   .school-app .summary-grid { grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 10px; }
   .school-app .summary-card.is-zero,
-  .school-app .course-stat { display: none; }
+  .school-app .course-stat,
+  .school-app .upcoming-stat { display: none; }
   .school-app .critical-strip.is-clear { display: none; }
   .mobile-due-stack { display: grid; gap: 11px; margin-top: 14px; }
   .mobile-due-card {
@@ -1424,7 +1467,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
     border: 1px solid rgba(207, 225, 244, .58);
     border-radius: 14px;
     color: var(--dash-ink);
-    background: rgba(253, 254, 255, .65);
+    background-color: #fff;
     box-shadow: 0 16px 42px rgba(0, 12, 34, .2), inset 0 1px 0 rgba(255, 255, 255, .42);
     -webkit-backdrop-filter: blur(14px) saturate(112%);
     backdrop-filter: blur(14px) saturate(112%);

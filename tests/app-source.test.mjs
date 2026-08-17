@@ -91,6 +91,8 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   const logoutArtwork = await stat(new URL("public/logout-button.webp", root));
   const dueTodayArtwork = await stat(new URL("public/due-today-banner.webp", root));
   const dueTomorrowArtwork = await stat(new URL("public/due-tomorrow-banner.webp", root));
+  const thisWeekArtwork = await stat(new URL("public/this-week-banner.webp", root));
+  const panelPatterns = await Promise.all(Array.from({ length: 5 }, (_, index) => stat(new URL(`public/panel-pattern-${index + 1}.webp`, root))));
 
   assert.match(dashboard, /mobile-dashboard-bar/);
   assert.match(dashboard, /mobile-family-greeting/);
@@ -105,22 +107,29 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(dashboard, /due-today-banner\.webp/);
   assert.match(dashboard, /tomorrow-featured-slot/);
   assert.match(dashboard, /due-tomorrow-banner\.webp/);
+  assert.match(dashboard, /week-featured-slot/);
+  assert.match(dashboard, /this-week-banner\.webp/);
   assert.match(dashboard, /spider-count-badge/);
   assert.match(dashboard, /Due tomorrow/);
   assert.match(dashboard, /Due this week/);
   assert.match(styles, /\.school-app \.school-sidebar \{ display: none; \}/);
   assert.match(styles, /\.school-app \.summary-card\.is-zero/);
-  assert.match(styles, /\.school-app \.course-stat \{ display: none; \}/);
+  assert.match(styles, /\.school-app \.course-stat,\s*\.school-app \.upcoming-stat \{ display: none; \}/);
   assert.match(styles, /\.school-app \.critical-strip\.is-clear \{ display: none; \}/);
   assert.match(styles, /\.school-app \.schedule-panel,/);
   assert.match(styles, /\.school-app \.quick-panel \{ display: none; \}/);
   assert.match(styles, /\.featured-due-stack \{ width: 100%/);
   assert.match(styles, /\.due-featured-slot \{ width: 100%/);
+  assert.match(styles, /background-color: #fff;/);
+  assert.match(styles, /panel-pattern-5\.webp/);
+  assert.match(styles, /\.school-app \.overview-hero \{ display: none; \}/);
   assert.ok(menuArtwork.size < 30_000);
   assert.ok(syncArtwork.size < 60_000);
   assert.ok(logoutArtwork.size < 30_000);
   assert.ok(dueTodayArtwork.size < 100_000);
   assert.ok(dueTomorrowArtwork.size < 100_000);
+  assert.ok(thisWeekArtwork.size < 100_000);
+  assert.ok(panelPatterns.every((pattern) => pattern.size < 15_000));
 });
 
 test("assignments open a detailed accessible modal before leaving for Canvas", async () => {

@@ -478,6 +478,9 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           <div className="tomorrow-featured-slot due-featured-slot" aria-label="Assignments due tomorrow">
             <MobileDueCard title="Due tomorrow" items={dueTomorrow} empty="Nothing is due tomorrow." onSelectAssignment={setSelectedAction} featured banner="/due-tomorrow-banner.webp" period="tomorrow" />
           </div>
+          <div className="week-featured-slot due-featured-slot" aria-label="Assignments due this week">
+            <MobileDueCard title="Due this week" items={dueThisWeek} empty="Nothing else is due this week." onSelectAssignment={setSelectedAction} featured banner="/this-week-banner.webp" period="this week" />
+          </div>
         </div>
 
         <section className="overview-hero" aria-labelledby="dashboard-title">
@@ -503,10 +506,6 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           <span className="critical-chevron" aria-hidden="true">›</span>
           {!allClear ? <ActionList items={data.critical} empty="Nothing needs attention." onSelectAssignment={setSelectedAction} /> : null}
         </section>
-
-        <div className="mobile-due-stack" aria-label="Assignment due dates">
-          <MobileDueCard title="Due this week" items={dueThisWeek} empty="Nothing else is due this week." onSelectAssignment={setSelectedAction} />
-        </div>
 
         <div className="primary-dashboard-grid">
           <section className="dash-panel upcoming-panel">
