@@ -117,7 +117,7 @@ export function CanvasConnectionForm() {
           <div><span>Active courses found</span><strong>{connection.courseCount}</strong></div>
           <div><span>Verified</span><strong>{new Date(connection.verifiedAt).toLocaleString()}</strong></div>
         </div>
-        <Link className="primary-link" href="/dashboard">Open school dashboard</Link>
+        <Link className="primary-link" href={appPath("/dashboard")}>Open school dashboard</Link>
         <button className="text-button" type="button" onClick={disconnect}>Remove secure connection</button>
       </section>
     );
