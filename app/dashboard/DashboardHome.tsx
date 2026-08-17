@@ -296,7 +296,11 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           <button className="mobile-menu-button" type="button" onClick={() => setMobileMenuOpen((open) => !open)} aria-expanded={mobileMenuOpen} aria-controls="mobile-school-menu" aria-label="Open school menu"><span aria-hidden="true">☰</span></button>
           <strong>{ordinalDate(data.generatedAt)}</strong>
           <div>
-            <button className="mobile-sync-button" type="button" onClick={() => void sync()} disabled={loading}><span aria-hidden="true">↻</span>{loading ? "Syncing" : "Sync"}</button>
+            <button className="mobile-sync-button" type="button" onClick={() => void sync()} disabled={loading} aria-label={loading ? "Syncing Canvas" : "Sync Canvas"}>
+              {/* Supplied neon artwork replaces the compact mobile text control. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={appPath("/sync-button.webp")} alt="" aria-hidden="true" />
+            </button>
             <button className="mobile-close-button" type="button" onClick={() => void signOut()} aria-label={`Sign out ${data.viewer.displayName}`}>×</button>
           </div>
         </div>

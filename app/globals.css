@@ -1208,14 +1208,20 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   .mobile-sync-button {
     display: flex;
     align-items: center;
-    gap: 5px;
-    padding: 0 10px;
-    border: 1px solid rgba(75, 158, 255, .7);
-    color: #8dc9ff;
-    background: rgba(20, 99, 197, .25);
-    font-size: 11px;
+    justify-content: center;
+    width: 76px;
+    padding: 0;
+    border: 0;
+    background: transparent;
   }
-  .mobile-sync-button:disabled { opacity: .62; cursor: wait; }
+  .mobile-sync-button img {
+    width: 76px;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 0 7px rgba(31, 130, 255, .48));
+  }
+  .mobile-sync-button:disabled { opacity: .7; cursor: wait; }
+  .mobile-sync-button:disabled img { animation: mobile-sync-pulse .7s ease-in-out infinite alternate; }
   .mobile-close-button {
     width: 38px;
     padding: 0;
@@ -1305,10 +1311,15 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   .mobile-dashboard-bar > strong { font-size: 12px; }
   .mobile-dashboard-bar button { min-height: 36px; }
   .mobile-menu-button { width: 38px; }
-  .mobile-sync-button { padding: 0 8px; }
+  .mobile-sync-button,
+  .mobile-sync-button img { width: 70px; }
   .mobile-close-button { width: 36px; }
   .mobile-school-menu { top: 66px; left: 14px; right: 14px; }
   .immersive-dashboard-state { width: calc(100% - 28px); min-height: calc(100svh - 20px); }
   .immersive-dashboard-state .sync-loader,
   .immersive-dashboard-state .dashboard-error { padding: 30px 22px; }
+}
+
+@keyframes mobile-sync-pulse {
+  to { opacity: .5; transform: scale(.96); }
 }
