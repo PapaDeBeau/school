@@ -370,6 +370,23 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   font-size: 12px;
   font-weight: 750;
 }
+.school-app .logout-button {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 14px;
+  border: 1px solid #d5def0;
+  border-radius: 10px;
+  color: #55627d;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: color .18s ease, border-color .18s ease, background .18s ease;
+}
+.school-app .logout-button:hover { color: #b41934; border-color: #edb6c0; background: #fff5f7; }
+.school-app .logout-button:focus-visible { outline: 3px solid rgba(36, 99, 235, .22); outline-offset: 2px; }
 
 .overview-hero {
   position: relative;
@@ -554,6 +571,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   .school-app .dashboard-controls { gap: 7px; }
   .school-app .sync-time { display: none; }
   .school-app .sync-button { min-height: 37px; padding: 0 12px; }
+  .school-app .logout-button { min-height: 37px; padding: 0 10px; }
   .overview-hero { min-height: 220px; padding: 24px 20px; }
   .hero-message { grid-template-columns: 1fr; align-content: center; gap: 15px; }
   .hero-check { width: 52px; height: 52px; border-width: 3px; font-size: 28px; }
@@ -718,11 +736,12 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .family-login-card {
   width: min(500px, 100%);
   padding: 28px;
-  border: 1px solid rgba(83, 159, 220, .43);
+  border: 1px solid rgba(176, 218, 247, .3);
   border-radius: 27px;
-  background: linear-gradient(145deg, rgba(2, 17, 40, .86), rgba(2, 23, 49, .76));
-  box-shadow: 0 35px 100px rgba(0, 4, 17, .7), inset 0 1px 0 rgba(193, 227, 255, .1);
-  backdrop-filter: blur(18px) saturate(120%);
+  background: linear-gradient(145deg, rgba(2, 15, 36, .42), rgba(1, 21, 43, .3));
+  box-shadow: 0 35px 100px rgba(0, 4, 17, .64), inset 0 1px 0 rgba(221, 239, 255, .16);
+  -webkit-backdrop-filter: blur(24px) saturate(130%);
+  backdrop-filter: blur(24px) saturate(130%);
 }
 
 .selected-profile {
@@ -803,7 +822,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   border: 1px solid rgba(100, 154, 202, .27);
   border-radius: 14px;
   color: #dcecff;
-  background: rgba(2, 15, 37, .56);
+  background: rgba(1, 13, 32, .38);
   cursor: pointer;
   transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
 }
@@ -847,7 +866,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   min-height: 54px;
   grid-template-columns: 18px minmax(0, 1fr) auto;
   border-color: rgba(90, 163, 215, .32);
-  background: rgba(0, 11, 28, .72);
+  background: rgba(0, 10, 27, .48);
 }
 .family-login-card .login-field:focus-within { border-color: #158bc6; background: rgba(0, 14, 34, .88); box-shadow: 0 0 0 4px rgba(17, 126, 181, .18); }
 .family-login-card .pin-field input { letter-spacing: .06em; }

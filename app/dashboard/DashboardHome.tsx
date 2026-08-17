@@ -200,6 +200,7 @@ export function DashboardHome() {
           <div className="dashboard-controls">
             <span className="sync-time"><i aria-hidden="true" /> Updated {timeFormat.format(new Date(data.generatedAt))}</span>
             <button type="button" className="sync-button" onClick={() => void sync()} disabled={loading}><span aria-hidden="true">↻</span>{loading ? "Syncing…" : "Sync Canvas"}</button>
+            <button type="button" className="logout-button" onClick={() => void signOut()}><span aria-hidden="true">↪</span>Log out</button>
           </div>
         </header>
 
