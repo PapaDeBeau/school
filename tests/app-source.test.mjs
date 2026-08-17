@@ -187,7 +187,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(styles, /\.due-featured-slot \.mobile-due-card \{ overflow: visible/);
   assert.match(dashboard, /IntersectionObserver/);
   assert.match(dashboard, /play\(hasAnimatedRef\.current \? 0 : 3\.3\)/);
-  assert.match(dashboard, /"\+=0\.7"/);
+  assert.match(dashboard, /"<\+=0\.5"/);
   assert.ok(menuArtwork.size < 30_000);
   assert.ok(menuPopupArtwork.size < 40_000);
   assert.ok(seeInCanvasArtwork.size < 40_000);

@@ -445,7 +445,7 @@ function AnimatedDueBadge({ count, summary }: { count: number; summary: string }
       reset();
       gsap.timeline({ delay })
         .to(web, { autoAlpha: 1, scale: 1, y: 0, duration: 1.05, ease: "elastic.out(1, 0.42)" })
-        .to(number, { autoAlpha: 1, scale: 1, duration: 0.52, ease: "back.out(2.35)", onComplete: () => web.classList.add("is-animated") }, "+=0.7");
+        .to(number, { autoAlpha: 1, scale: 1, duration: 0.52, ease: "back.out(2.35)", onComplete: () => web.classList.add("is-animated") }, "<+=0.5");
     };
 
     reset();
