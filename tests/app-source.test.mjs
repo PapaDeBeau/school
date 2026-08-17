@@ -88,6 +88,11 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   const styles = await readFile(new URL("app/globals.css", root), "utf8");
   const layout = await readFile(new URL("app/layout.tsx", root), "utf8");
   const menuArtwork = await stat(new URL("public/menu-button.webp", root));
+  const mobileMenuArtwork = await Promise.all([
+    "menu-todo.webp",
+    "menu-classes.webp",
+    "menu-inbox.webp",
+  ].map((file) => stat(new URL(`public/${file}`, root))));
   const logoutArtwork = await stat(new URL("public/logout-button.webp", root));
   const dueTodayArtwork = await stat(new URL("public/due-today-banner.webp", root));
   const dueTomorrowArtwork = await stat(new URL("public/due-tomorrow-banner.webp", root));
@@ -107,6 +112,10 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(layout, /Schoolbell/);
   assert.match(styles, /var\(--font-chalk\)/);
   assert.match(dashboard, /mobile-school-menu/);
+  assert.match(dashboard, /menu-todo\.webp/);
+  assert.match(dashboard, /menu-classes\.webp/);
+  assert.match(dashboard, /menu-inbox\.webp/);
+  assert.ok(mobileMenuArtwork.every((asset) => asset.size < 70_000));
   assert.match(dashboard, /Due today/);
   assert.match(dashboard, /today-featured-slot/);
   assert.match(dashboard, /due-today-banner\.webp/);

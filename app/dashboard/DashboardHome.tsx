@@ -274,6 +274,12 @@ const canvasLinks = [
   { label: "Settings", icon: "⚙", href: appPath("/settings"), local: true },
 ];
 
+const mobileMenuItems = [
+  { label: "To-Do List", image: "/menu-todo.webp" },
+  { label: "Classes", image: "/menu-classes.webp" },
+  { label: "Inbox", image: "/menu-inbox.webp" },
+];
+
 const familyProfilePhoto: Record<string, string> = {
   beau: "/beau-profile.webp",
   cathy: "/cathy-profile.webp",
@@ -451,13 +457,14 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           </button>
         </div>
         {mobileMenuOpen ? (
-          <nav className="mobile-school-menu" id="mobile-school-menu" aria-label="Mobile school navigation">
-            {canvasLinks.map((item) => (
-              <a href={item.label === "Dashboard" && immersive ? appPath("/") : item.href} key={item.label} onClick={(event) => { setMobileMenuOpen(false); if (item.label === "Dashboard" && immersive) event.preventDefault(); }} {...(!item.local ? { target: "_blank", rel: "noreferrer" } : {})}>
-                <span aria-hidden="true">{item.icon}</span>{item.label}
-              </a>
+          <div className="mobile-school-menu" id="mobile-school-menu" role="list" aria-label="School menu options">
+            {mobileMenuItems.map((item) => (
+              <div className="mobile-menu-option" role="listitem" key={item.label}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={appPath(item.image)} alt={item.label} />
+              </div>
             ))}
-          </nav>
+          </div>
         ) : null}
 
         <div className={`mobile-family-greeting greeting-${data.viewer.username}`}>
