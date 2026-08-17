@@ -158,6 +158,21 @@ const canvasLinks = [
   { label: "Settings", icon: "⚙", href: appPath("/settings"), local: true },
 ];
 
+const familyProfilePhoto: Record<string, string> = {
+  beau: "/beau-profile.webp",
+  cathy: "/cathy-profile.webp",
+  mom: "/mom-profile.webp",
+  dad: "/dad-profile.webp",
+};
+
+const familyGreetings = [
+  (name: string) => `Oh hey, ${name}!`,
+  (name: string) => `Hi, ${name}!`,
+  (name: string) => `Welcome, ${name}!`,
+  (name: string) => `Look, it’s ${name}!`,
+  (name: string) => `Howdy, ${name}!`,
+];
+
 type DashboardHomeProps = {
   immersive?: boolean;
   onExit?: () => void;
@@ -171,6 +186,11 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const [showAllUpcoming, setShowAllUpcoming] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [greetingIndex, setGreetingIndex] = useState(0);
+
+  useEffect(() => {
+    setGreetingIndex(Math.floor(Math.random() * familyGreetings.length));
+  }, []);
 
   const sync = useCallback(async () => {
     setLoading(true);
@@ -203,7 +223,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
     const context = gsap.context(() => {
       const panels = app.querySelectorAll(
-        ".school-sidebar, .mobile-dashboard-bar, .workspace-header, .overview-hero, .summary-card, .critical-strip, .mobile-due-card, .primary-dashboard-grid > .dash-panel, .secondary-dashboard-grid > .dash-panel, .dashboard-footer"
+        ".school-sidebar, .mobile-dashboard-bar, .mobile-family-greeting, .workspace-header, .overview-hero, .summary-card, .critical-strip, .mobile-due-card, .primary-dashboard-grid > .dash-panel, .secondary-dashboard-grid > .dash-panel, .dashboard-footer"
       );
       gsap.set(panels, { autoAlpha: 0, y: 34, scale: 0.975 });
       gsap.timeline({ delay: 0.08 })
@@ -250,6 +270,8 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const visibleUpcoming = showAllUpcoming ? data.upcoming : data.upcoming.slice(0, 5);
   const firstName = data.student.split(" ")[0] || "Beau";
   const viewerInitials = data.viewer.displayName.slice(0, 2).toUpperCase();
+  const viewerPhoto = familyProfilePhoto[data.viewer.username];
+  const familyGreeting = familyGreetings[greetingIndex](data.viewer.displayName);
   const assignmentPool = Array.from(new Map(
     [...data.critical, ...data.upcoming]
       .filter((item) => item.kind === "assignment" && item.dueAt)
@@ -319,6 +341,16 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
             ))}
           </nav>
         ) : null}
+
+        <div className={`mobile-family-greeting greeting-${data.viewer.username}`}>
+          <span className="mobile-family-photo" aria-hidden="true">
+            {viewerPhoto ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={appPath(viewerPhoto)} alt="" />
+            ) : <strong>{viewerInitials}</strong>}
+          </span>
+          <p>{familyGreeting}</p>
+        </div>
 
         <header className="workspace-header">
           <div><h1>Dashboard</h1><p>{dayFormat.format(new Date(data.generatedAt))}</p></div>

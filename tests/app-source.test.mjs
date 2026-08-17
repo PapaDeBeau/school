@@ -91,6 +91,9 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   const logoutArtwork = await stat(new URL("public/logout-button.webp", root));
 
   assert.match(dashboard, /mobile-dashboard-bar/);
+  assert.match(dashboard, /mobile-family-greeting/);
+  assert.match(dashboard, /Oh hey, \$\{name\}!/);
+  assert.match(dashboard, /Look, it’s \$\{name\}!/);
   assert.match(dashboard, /menu-button\.webp/);
   assert.match(dashboard, /sync-button\.webp/);
   assert.match(dashboard, /logout-button\.webp/);
