@@ -1,0 +1,2 @@
+# Generate a private local value with: npm run setup:local
+CANVAS_TOKEN_WRAP_KEY=replace-with-a-32-byte-base64url-key

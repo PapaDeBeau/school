@@ -1,0 +1,10 @@
+{
+  "name": "Beau School Dashboard",
+  "short_name": "Beau School",
+  "description": "A private school command center for Canvas.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#f6f1e8",
+  "theme_color": "#162c35",
+  "icons": []
+}
