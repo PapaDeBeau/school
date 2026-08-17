@@ -730,7 +730,8 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   inset: 0;
   background:
     radial-gradient(circle at 50% 45%, rgba(10, 71, 125, .06), rgba(1, 9, 24, .42) 72%),
-    linear-gradient(180deg, rgba(0, 9, 23, .12), rgba(0, 7, 18, .58));
+    linear-gradient(180deg, rgba(0, 9, 23, .08), rgba(0, 7, 18, .42)),
+    url("/school/login-mobile.png") center / auto 100% no-repeat;
   pointer-events: none;
 }
 .family-login-card {
