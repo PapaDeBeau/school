@@ -299,9 +299,12 @@ test("admin stores percentages and controls empty due-card visibility", async ()
   assert.match(dashboard, /entry\.intersectionRatio >= 0\.08/);
   assert.match(dashboard, /threshold: \[0, 0\.08\]/);
   assert.match(dashboard, /elastic\.out/);
+  assert.match(dashboard, /const flyFromX = cardIndex % 2 === 0 \? -150 : 150/);
+  assert.match(dashboard, /x: flyFromX/);
   assert.match(dashboard, /rotation: "\+=360"/);
   assert.match(dashboard, /scale: 1\.24/);
-  assert.match(styles, /\.grade-tone-b \.grade-artwork-letter,[\s\S]*\.grade-tone-d \.grade-artwork-letter \{ left: 59%; \}/);
+  assert.match(styles, /\.grade-tone-b \.grade-artwork-letter,[\s\S]*\.grade-tone-d \.grade-artwork-letter \{ left: 57%; \}/);
+  assert.match(styles, /\.grade-artwork-value \{[^}]*visibility: hidden; opacity: 0;/);
   assert.doesNotMatch(dashboard, /autoAlpha: 0\.18/);
   assert.match(dashboard, /value\.dataset\.grade === "D"/);
   assert.match(dashboard, /value\.dataset\.grade === "F"/);

@@ -1427,6 +1427,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     const showcase = gradesShowcaseRef.current;
     if (activeView !== "dashboard" || !showcase) return;
     const values = Array.from(showcase.querySelectorAll<HTMLElement>(".grade-artwork-value"));
+    const cards = Array.from(showcase.querySelectorAll<HTMLElement>(".grade-artwork-card"));
     if (!values.length) return;
 
     const observerTargets = new Map<Element, HTMLElement>();
@@ -1452,8 +1453,8 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       value.removeAttribute("data-grade-active");
       gsap.killTweensOf(targets);
       gsap.set(value, { autoAlpha: 0 });
-      if (letter) gsap.set(letter, { autoAlpha: 0, scale: 0, xPercent: -50, yPercent: -50, rotation: -18 });
-      if (percentage) gsap.set(percentage, { autoAlpha: 0, scale: 0, rotation: -12 });
+      if (letter) gsap.set(letter, { autoAlpha: 0, scale: 0, x: 0, xPercent: -50, yPercent: -50, rotation: -18 });
+      if (percentage) gsap.set(percentage, { autoAlpha: 0, scale: 0, x: 0, rotation: -12 });
     };
 
     const startGradeMotion = (value: HTMLElement, letter: HTMLElement) => {
@@ -1474,11 +1475,14 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     const revealValue = (value: HTMLElement, order: number) => {
       const { letter, percentage } = gradeParts(value);
       if (!letter || !percentage || !visible.has(value)) return;
+      const card = value.closest<HTMLElement>(".grade-artwork-card");
+      const cardIndex = card ? cards.indexOf(card) : 0;
+      const flyFromX = cardIndex % 2 === 0 ? -150 : 150;
       gsap.killTweensOf([value, letter, percentage]);
       gsap.set(value, { autoAlpha: 1 });
       gsap.timeline({ delay: order * 0.16, onComplete: () => startGradeMotion(value, letter) })
-        .fromTo(letter, { autoAlpha: 0, scale: 0, xPercent: -50, yPercent: -50, rotation: -18 }, { autoAlpha: 1, scale: 1, xPercent: -50, yPercent: -50, rotation: -2, duration: 1.05, ease: "elastic.out(1, 0.3)" }, 0)
-        .fromTo(percentage, { autoAlpha: 0, scale: 0, rotation: -12 }, { autoAlpha: 1, scale: 1, rotation: -4, duration: 0.82, ease: "elastic.out(1, 0.38)" }, 0.22);
+        .fromTo(letter, { autoAlpha: 0, scale: 0.35, x: flyFromX, xPercent: -50, yPercent: -50, rotation: -18 }, { autoAlpha: 1, scale: 1, x: 0, xPercent: -50, yPercent: -50, rotation: -2, duration: 1.15, ease: "elastic.out(1, 0.3)" }, 0)
+        .fromTo(percentage, { autoAlpha: 0, scale: 0.5, x: flyFromX * 0.65, rotation: -12 }, { autoAlpha: 1, scale: 1, x: 0, rotation: -4, duration: 0.88, ease: "elastic.out(1, 0.38)" }, 0.18);
     };
 
     const flushPending = () => {
