@@ -272,9 +272,11 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 
 .sidebar-brand > span:last-child,
 .student-card div { min-width: 0; display: grid; gap: 3px; }
+.sidebar-brand > span:last-child { overflow: hidden; }
 .sidebar-brand strong { font-size: 15px; letter-spacing: -.02em; }
 .sidebar-brand small,
 .student-card small { color: var(--dash-muted); font-size: 10px; white-space: nowrap; }
+.sidebar-brand small { line-height: 1.25; white-space: normal; }
 
 .school-nav { display: grid; gap: 5px; margin-top: 4px; }
 .school-nav a {
