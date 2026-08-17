@@ -294,6 +294,8 @@ type DashboardHomeProps = {
   onExit?: () => void;
 };
 
+const AUTO_REFRESH_MS = 7 * 60 * 1000;
+
 export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps = {}) {
   const appRef = useRef<HTMLElement>(null);
   const [data, setData] = useState<DashboardData | null>(null);
@@ -331,7 +333,11 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
   useEffect(() => {
     const initialSync = window.setTimeout(() => void sync(), 0);
-    return () => window.clearTimeout(initialSync);
+    const autoRefresh = window.setInterval(() => void sync(), AUTO_REFRESH_MS);
+    return () => {
+      window.clearTimeout(initialSync);
+      window.clearInterval(autoRefresh);
+    };
   }, [sync]);
 
   useLayoutEffect(() => {
@@ -367,7 +373,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   if (!data && loading) {
     return (
       <main className={immersive ? "immersive-dashboard-state" : "dashboard-shell dashboard-centered"}>
-        <div className="sync-loader" role="status"><span aria-hidden="true" /><strong>Refreshing Canvas…</strong><p>Gathering assignments, messages, classes, and grades.</p></div>
+        <p className="visually-hidden" role="status">Loading the latest Canvas information.</p>
       </main>
     );
   }
@@ -438,18 +444,11 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={appPath("/menu-button.webp")} alt="" aria-hidden="true" />
           </button>
-          <strong>{ordinalDate(data.generatedAt)}</strong>
-          <div>
-            <button className="mobile-sync-button" type="button" onClick={() => void sync()} disabled={loading} aria-label={loading ? "Syncing Canvas" : "Sync Canvas"}>
-              {/* Supplied neon artwork replaces the compact mobile text control. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={appPath("/sync-button.webp")} alt="" aria-hidden="true" />
-            </button>
-            <button className="mobile-close-button" type="button" onClick={() => void signOut()} aria-label={`Sign out ${data.viewer.displayName}`}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={appPath("/logout-button.webp")} alt="" aria-hidden="true" />
-            </button>
-          </div>
+          <strong className="mobile-chalk-date">{ordinalDate(data.generatedAt)}</strong>
+          <button className="mobile-close-button" type="button" onClick={() => void signOut()} aria-label={`Sign out ${data.viewer.displayName}`}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={appPath("/logout-button.webp")} alt="" aria-hidden="true" />
+          </button>
         </div>
         {mobileMenuOpen ? (
           <nav className="mobile-school-menu" id="mobile-school-menu" aria-label="Mobile school navigation">
@@ -475,7 +474,6 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           <div><h1>Dashboard</h1><p>{dayFormat.format(new Date(data.generatedAt))}</p></div>
           <div className="dashboard-controls">
             <span className="sync-time"><i aria-hidden="true" /> Updated {timeFormat.format(new Date(data.generatedAt))}</span>
-            <button type="button" className="sync-button" onClick={() => void sync()} disabled={loading}><span aria-hidden="true">↻</span>{loading ? "Syncing…" : "Sync Canvas"}</button>
             <button type="button" className="logout-button" onClick={() => void signOut()}><span aria-hidden="true">↪</span>Log out</button>
           </div>
         </header>

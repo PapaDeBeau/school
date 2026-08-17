@@ -86,8 +86,8 @@ test("login artwork uses lightweight WebP assets", async () => {
 test("mobile dashboard uses the compact action bar and due-date sections", async () => {
   const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
   const styles = await readFile(new URL("app/globals.css", root), "utf8");
+  const layout = await readFile(new URL("app/layout.tsx", root), "utf8");
   const menuArtwork = await stat(new URL("public/menu-button.webp", root));
-  const syncArtwork = await stat(new URL("public/sync-button.webp", root));
   const logoutArtwork = await stat(new URL("public/logout-button.webp", root));
   const dueTodayArtwork = await stat(new URL("public/due-today-banner.webp", root));
   const dueTomorrowArtwork = await stat(new URL("public/due-tomorrow-banner.webp", root));
@@ -99,8 +99,13 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(dashboard, /Oh hey, \$\{name\}!/);
   assert.match(dashboard, /Look, it’s \$\{name\}!/);
   assert.match(dashboard, /menu-button\.webp/);
-  assert.match(dashboard, /sync-button\.webp/);
   assert.match(dashboard, /logout-button\.webp/);
+  assert.doesNotMatch(dashboard, /mobile-sync-button|sync-button\.webp|className="sync-button"/);
+  assert.match(dashboard, /AUTO_REFRESH_MS = 7 \* 60 \* 1000/);
+  assert.match(dashboard, /window\.setInterval\(\(\) => void sync\(\), AUTO_REFRESH_MS\)/);
+  assert.doesNotMatch(dashboard, /className="sync-loader"/);
+  assert.match(layout, /Schoolbell/);
+  assert.match(styles, /var\(--font-chalk\)/);
   assert.match(dashboard, /mobile-school-menu/);
   assert.match(dashboard, /Due today/);
   assert.match(dashboard, /today-featured-slot/);
@@ -130,7 +135,6 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(styles, /@keyframes due-today-circle-pulse/);
   assert.match(styles, /\.due-tone-tomorrow \.spider-count-badge/);
   assert.ok(menuArtwork.size < 30_000);
-  assert.ok(syncArtwork.size < 60_000);
   assert.ok(logoutArtwork.size < 30_000);
   assert.ok(dueTodayArtwork.size < 100_000);
   assert.ok(dueTomorrowArtwork.size < 100_000);
