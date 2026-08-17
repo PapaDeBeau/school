@@ -124,4 +124,5 @@ test("assignments open a detailed accessible modal before leaving for Canvas", a
   assert.match(dashboardRoute, /description: canvasHtmlToText/);
   assert.match(dashboardRoute, /submissionTypes:/);
   assert.match(styles, /\.assignment-modal-scroll \{[^}]*overflow-y: auto/);
+  assert.match(styles, /\.assignment-modal-actions button \{ width: 100%/);
 });
