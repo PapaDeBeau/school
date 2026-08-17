@@ -93,8 +93,11 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
     "menu-todo.webp",
     "menu-classes.webp",
     "menu-inbox.webp",
+    "menu-calendar.webp",
     "menu-notes.webp",
     "menu-chat.webp",
+    "menu-inspiration.webp",
+    "menu-resources.webp",
     "menu-admin.webp",
   ].map((file) => stat(new URL(`public/${file}`, root))));
   const gradeArtwork = await Promise.all([
@@ -111,6 +114,8 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   const dueTodayArtwork = await stat(new URL("public/due-today-banner.webp", root));
   const dueTomorrowArtwork = await stat(new URL("public/due-tomorrow-banner.webp", root));
   const thisWeekArtwork = await stat(new URL("public/this-week-banner.webp", root));
+  const menuPopupArtwork = await stat(new URL("public/menu-popup-bg.webp", root));
+  const seeInCanvasArtwork = await stat(new URL("public/see-in-canvas.webp", root));
   const panelPatterns = await Promise.all(Array.from({ length: 5 }, (_, index) => stat(new URL(`public/panel-pattern-${index + 1}.webp`, root))));
 
   assert.match(dashboard, /mobile-dashboard-bar/);
@@ -129,8 +134,11 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(layout, /rel="preload" as="image" href="\/school\/menu-todo\.webp"/);
   assert.match(layout, /rel="preload" as="image" href="\/school\/menu-classes\.webp"/);
   assert.match(layout, /rel="preload" as="image" href="\/school\/menu-inbox\.webp"/);
+  assert.match(layout, /rel="preload" as="image" href="\/school\/menu-calendar\.webp"/);
   assert.match(layout, /rel="preload" as="image" href="\/school\/menu-notes\.webp"/);
   assert.match(layout, /rel="preload" as="image" href="\/school\/menu-chat\.webp"/);
+  assert.match(layout, /rel="preload" as="image" href="\/school\/menu-inspiration\.webp"/);
+  assert.match(layout, /rel="preload" as="image" href="\/school\/menu-resources\.webp"/);
   assert.match(layout, /rel="preload" as="image" href="\/school\/menu-admin\.webp"/);
   assert.match(styles, /var\(--font-chalk\)/);
   assert.match(styles, /\.school-portal-shell\.dashboard-active \{ padding: 12px 16px; overflow: visible; \}/);
@@ -139,8 +147,11 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(dashboard, /menu-todo\.webp/);
   assert.match(dashboard, /menu-classes\.webp/);
   assert.match(dashboard, /menu-inbox\.webp/);
+  assert.match(dashboard, /menu-calendar\.webp/);
   assert.match(dashboard, /menu-notes\.webp/);
   assert.match(dashboard, /menu-chat\.webp/);
+  assert.match(dashboard, /menu-inspiration\.webp/);
+  assert.match(dashboard, /menu-resources\.webp/);
   assert.match(dashboard, /menu-admin\.webp/);
   assert.ok(mobileMenuArtwork.every((asset) => asset.size < 70_000));
   assert.match(dashboard, /grade-artwork-grid/);
@@ -173,7 +184,13 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(styles, /\.school-app \.overview-hero \{ display: none; \}/);
   assert.match(styles, /@keyframes due-today-circle-pulse/);
   assert.match(styles, /\.due-tone-tomorrow \.spider-count-badge/);
+  assert.match(styles, /\.due-featured-slot \.mobile-due-card \{ overflow: visible/);
+  assert.match(dashboard, /IntersectionObserver/);
+  assert.match(dashboard, /play\(hasAnimatedRef\.current \? 0 : 3\.3\)/);
+  assert.match(dashboard, /"\+=0\.7"/);
   assert.ok(menuArtwork.size < 30_000);
+  assert.ok(menuPopupArtwork.size < 40_000);
+  assert.ok(seeInCanvasArtwork.size < 40_000);
   assert.ok(logoutArtwork.size < 30_000);
   assert.ok(dueTodayArtwork.size < 100_000);
   assert.ok(dueTomorrowArtwork.size < 100_000);
@@ -194,4 +211,25 @@ test("assignments open a detailed accessible modal before leaving for Canvas", a
   assert.match(dashboardRoute, /submissionTypes:/);
   assert.match(styles, /\.assignment-modal-scroll \{[^}]*overflow-y: auto/);
   assert.match(styles, /\.assignment-modal-actions button \{ width: 100%/);
+  assert.match(styles, /panel-pattern-2\.webp/);
+  assert.match(dashboard, /see-in-canvas\.webp/);
+  assert.match(dashboard, /logout-button\.webp/);
+});
+
+test("Canvas Inbox loads the ten newest conversations and full message threads", async () => {
+  const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
+  const inboxRoute = await readFile(new URL("app/api/inbox/route.ts", root), "utf8");
+  const styles = await readFile(new URL("app/globals.css", root), "utf8");
+
+  assert.match(inboxRoute, /isAuthorizedAppRequest/);
+  assert.match(inboxRoute, /readFamilySession/);
+  assert.match(inboxRoute, /per_page=10&include\[\]=participant_avatars/);
+  assert.match(inboxRoute, /conversation_id/);
+  assert.match(inboxRoute, /conversation\.messages/);
+  assert.match(dashboard, /InboxThreadModal/);
+  assert.match(dashboard, /The 10 most recent conversations/);
+  assert.match(dashboard, /: "Read"/);
+  assert.match(styles, /menu-popup-bg\.webp/);
+  assert.match(styles, /\.inbox-conversation-list \{[^}]*overflow-y: auto/);
+  assert.match(styles, /\.mobile-menu-backdrop/);
 });

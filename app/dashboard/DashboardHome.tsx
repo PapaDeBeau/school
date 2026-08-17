@@ -54,6 +54,50 @@ type DashboardData = {
   courses: Course[];
 };
 
+type InboxPerson = {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+};
+
+type InboxConversation = {
+  id: string;
+  subject: string;
+  preview: string;
+  lastMessageAt: string | null;
+  messageCount: number;
+  contextName: string;
+  workflowState: string;
+  from: InboxPerson | null;
+  avatarUrl: string | null;
+};
+
+type InboxAttachment = {
+  id: string;
+  name: string;
+  url: string | null;
+  size: number | null;
+};
+
+type InboxMessage = {
+  id: string;
+  createdAt: string | null;
+  body: string;
+  generated: boolean;
+  author: InboxPerson | null;
+  attachments: InboxAttachment[];
+};
+
+type InboxThread = {
+  id: string;
+  subject: string;
+  contextName: string;
+  workflowState: string;
+  sourceUrl: string;
+  participants: InboxPerson[];
+  messages: InboxMessage[];
+};
+
 const dateFormat = new Intl.DateTimeFormat("en-US", {
   timeZone: "America/Los_Angeles",
   weekday: "short",
@@ -88,6 +132,15 @@ const mobileDateFormat = new Intl.DateTimeFormat("en-US", {
   weekday: "long",
   month: "long",
   day: "numeric",
+});
+
+const inboxDateFormat = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/Los_Angeles",
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
 });
 
 function dayKey(value: string | Date) {
@@ -138,6 +191,19 @@ function assignmentStatus(value: string) {
   return labels[value] ?? readableLabel(value);
 }
 
+function formatInboxDate(value: string | null) {
+  if (!value) return "Date unavailable";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Date unavailable" : inboxDateFormat.format(date);
+}
+
+function fileSizeLabel(value: number | null) {
+  if (!value || value < 1) return "";
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function AssignmentModal({ item, onClose }: { item: ActionItem; onClose: () => void }) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -173,9 +239,13 @@ function AssignmentModal({ item, onClose }: { item: ActionItem; onClose: () => v
   ];
 
   return (
-    <div className="assignment-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <div className="assignment-modal-backdrop">
+      <button className="modal-backdrop-dismiss" type="button" onClick={onClose} aria-label="Close assignment details" />
       <section className="assignment-modal" role="dialog" aria-modal="true" aria-labelledby="assignment-modal-title" aria-describedby="assignment-modal-description">
-        <button className="assignment-modal-x" type="button" onClick={onClose} aria-label="Close assignment details">×</button>
+        <button className="assignment-modal-x" type="button" onClick={onClose} aria-label="Close assignment details">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={appPath("/logout-button.webp")} alt="" aria-hidden="true" />
+        </button>
         <div className="assignment-modal-scroll">
           <header className="assignment-modal-heading">
             <span aria-hidden="true">A</span>
@@ -196,7 +266,121 @@ function AssignmentModal({ item, onClose }: { item: ActionItem; onClose: () => v
         </div>
 
         <footer className="assignment-modal-actions">
-          <a href={item.sourceUrl} target="_blank" rel="noreferrer">See in Canvas <span aria-hidden="true">↗</span></a>
+          <a href={item.sourceUrl} target="_blank" rel="noreferrer">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={appPath("/see-in-canvas.webp")} alt="See in Canvas" />
+          </a>
+          <button type="button" onClick={onClose} ref={closeButtonRef}>Close</button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
+function InboxAvatar({ person, fallbackUrl, label }: { person: InboxPerson | null; fallbackUrl?: string | null; label: string }) {
+  const imageUrl = person?.avatarUrl ?? fallbackUrl ?? null;
+  return (
+    <span className="inbox-avatar" aria-hidden="true">
+      {imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={imageUrl} alt="" referrerPolicy="no-referrer" />
+      ) : <strong>{(person?.name || label).slice(0, 1).toUpperCase()}</strong>}
+    </span>
+  );
+}
+
+function InboxView({ conversations, loading, error, threadLoadingId, onRead, onBack }: {
+  conversations: InboxConversation[];
+  loading: boolean;
+  error: string | null;
+  threadLoadingId: string | null;
+  onRead: (conversation: InboxConversation) => void;
+  onBack: () => void;
+}) {
+  return (
+    <section className="inbox-view" aria-labelledby="inbox-view-title">
+      <header className="inbox-view-header">
+        <button type="button" onClick={onBack} aria-label="Return to dashboard">←</button>
+        <div><p>Canvas messages</p><h1 id="inbox-view-title">Inbox</h1><small>The 10 most recent conversations</small></div>
+        <span aria-hidden="true">✉</span>
+      </header>
+
+      {loading ? <div className="inbox-loading" role="status"><i aria-hidden="true" /><p>Loading the latest Canvas messages…</p></div> : null}
+      {error ? <div className="inbox-error" role="alert"><strong>Inbox could not be loaded.</strong><p>{error}</p></div> : null}
+      {!loading && !error && !conversations.length ? <div className="inbox-empty"><span aria-hidden="true">✓</span><p>No Canvas conversations were found.</p></div> : null}
+
+      <div className="inbox-conversation-list" role="list">
+        {conversations.map((conversation) => (
+          <article className={`inbox-conversation${conversation.workflowState === "unread" ? " is-unread" : ""}`} role="listitem" key={conversation.id}>
+            <InboxAvatar person={conversation.from} fallbackUrl={conversation.avatarUrl} label="Canvas" />
+            <div className="inbox-conversation-copy">
+              <div className="inbox-conversation-meta"><strong>From {conversation.from?.name || "Canvas"}</strong><time dateTime={conversation.lastMessageAt ?? undefined}>{formatInboxDate(conversation.lastMessageAt)}</time></div>
+              <h2>{conversation.subject}</h2>
+              <p>{conversation.preview}</p>
+              <small>{conversation.contextName} · {conversation.messageCount} message{conversation.messageCount === 1 ? "" : "s"}</small>
+            </div>
+            <button className="inbox-read-button" type="button" onClick={() => onRead(conversation)} disabled={threadLoadingId === conversation.id}>
+              {threadLoadingId === conversation.id ? "Opening…" : "Read"}
+            </button>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function InboxThreadModal({ thread, onClose }: { thread: InboxThread; onClose: () => void }) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
+  }, [onClose]);
+
+  return (
+    <div className="inbox-thread-backdrop">
+      <button className="modal-backdrop-dismiss" type="button" onClick={onClose} aria-label="Close Canvas conversation" />
+      <section className="inbox-thread-modal" role="dialog" aria-modal="true" aria-labelledby="inbox-thread-title">
+        <button className="inbox-thread-x" type="button" onClick={onClose} aria-label="Close Canvas conversation">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={appPath("/logout-button.webp")} alt="" aria-hidden="true" />
+        </button>
+        <header className="inbox-thread-header">
+          <p>{thread.contextName}</p><h2 id="inbox-thread-title">{thread.subject}</h2>
+          <small>{thread.messages.length} message{thread.messages.length === 1 ? "" : "s"} · {thread.participants.map((person) => person.name).join(", ")}</small>
+        </header>
+        <div className="inbox-thread-scroll">
+          {thread.messages.map((message) => (
+            <article className="inbox-thread-message" key={message.id}>
+              <InboxAvatar person={message.author} label="Canvas" />
+              <div>
+                <header><strong>{message.author?.name || (message.generated ? "Canvas" : "Unknown sender")}</strong><time dateTime={message.createdAt ?? undefined}>{formatInboxDate(message.createdAt)}</time></header>
+                <p>{message.body}</p>
+                {message.attachments.length ? (
+                  <div className="inbox-attachments" aria-label="Attachments">
+                    {message.attachments.map((attachment) => attachment.url ? (
+                      <a href={attachment.url} target="_blank" rel="noreferrer" key={attachment.id}>↧ {attachment.name}<small>{fileSizeLabel(attachment.size)}</small></a>
+                    ) : <span key={attachment.id}>↧ {attachment.name}<small>{fileSizeLabel(attachment.size)}</small></span>)}
+                  </div>
+                ) : null}
+              </div>
+            </article>
+          ))}
+        </div>
+        <footer className="inbox-thread-actions">
+          <a href={thread.sourceUrl} target="_blank" rel="noreferrer">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={appPath("/see-in-canvas.webp")} alt="See in Canvas" />
+          </a>
           <button type="button" onClick={onClose} ref={closeButtonRef}>Close</button>
         </footer>
       </section>
@@ -235,6 +419,61 @@ function ActionList({ items, empty, onSelectAssignment }: { items: ActionItem[];
   );
 }
 
+function AnimatedDueBadge({ count, summary }: { count: number; summary: string }) {
+  const badgeRef = useRef<HTMLSpanElement>(null);
+  const hasAnimatedRef = useRef(false);
+
+  useLayoutEffect(() => {
+    const badge = badgeRef.current;
+    const web = badge?.querySelector<HTMLImageElement>(".spider-count-web");
+    const number = badge?.querySelector<HTMLElement>("strong");
+    if (!badge || !web || !number) return;
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reducedMotion) {
+      gsap.set([web, number], { autoAlpha: 1, scale: 1, y: 0 });
+      return;
+    }
+
+    const reset = () => {
+      gsap.killTweensOf([web, number]);
+      web.classList.remove("is-animated");
+      gsap.set(web, { autoAlpha: 0, scale: 0, y: 20, transformOrigin: "50% 50%" });
+      gsap.set(number, { autoAlpha: 0, scale: 0, transformOrigin: "50% 50%" });
+    };
+    const play = (delay: number) => {
+      reset();
+      gsap.timeline({ delay })
+        .to(web, { autoAlpha: 1, scale: 1, y: 0, duration: 1.05, ease: "elastic.out(1, 0.42)" })
+        .to(number, { autoAlpha: 1, scale: 1, duration: 0.52, ease: "back.out(2.35)", onComplete: () => web.classList.add("is-animated") }, "+=0.7");
+    };
+
+    reset();
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        play(hasAnimatedRef.current ? 0 : 3.3);
+        hasAnimatedRef.current = true;
+      } else {
+        reset();
+      }
+    }, { threshold: 0.35 });
+    observer.observe(badge);
+    return () => {
+      observer.disconnect();
+      gsap.killTweensOf([web, number]);
+      web.classList.remove("is-animated");
+    };
+  }, []);
+
+  return (
+    <span className="spider-count-badge" aria-label={summary} ref={badgeRef}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="spider-count-web" src={appPath("/due-count-web.webp")} alt="" aria-hidden="true" />
+      <strong>{count}</strong>
+    </span>
+  );
+}
+
 function MobileDueCard({ title, items, empty, onSelectAssignment, featured = false, banner = "/due-today-banner.webp", tone = "week", summary = `${items.length} ${items.length === 1 ? "ITEM" : "ITEMS"} DUE` }: { title: string; items: ActionItem[]; empty: string; onSelectAssignment: (item: ActionItem) => void; featured?: boolean; banner?: string; tone?: "today" | "tomorrow" | "week"; summary?: string }) {
   return (
     <section className={`mobile-due-card due-tone-${tone}${featured ? " is-featured" : ""}${items.length ? " has-items" : ""}`}>
@@ -245,11 +484,7 @@ function MobileDueCard({ title, items, empty, onSelectAssignment, featured = fal
             {/* Supplied due-date artwork forms the full-width top of this card. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img className="mobile-due-banner" src={appPath(banner)} alt="" aria-hidden="true" />
-            <span className="spider-count-badge" aria-label={summary}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={appPath("/due-count-web.webp")} alt="" aria-hidden="true" />
-              <strong>{items.length}</strong>
-            </span>
+            <AnimatedDueBadge count={items.length} summary={summary} />
           </div>
           <p className="mobile-due-summary">{summary}</p>
         </>
@@ -278,12 +513,15 @@ const canvasLinks = [
   { label: "Settings", icon: "⚙", href: appPath("/settings"), local: true },
 ];
 
-const mobileMenuItems = [
+const mobileMenuItems: Array<{ label: string; image: string; action?: "inbox" }> = [
   { label: "To-Do List", image: "/menu-todo.webp" },
   { label: "Classes", image: "/menu-classes.webp" },
-  { label: "Inbox", image: "/menu-inbox.webp" },
+  { label: "Inbox", image: "/menu-inbox.webp", action: "inbox" },
+  { label: "Calendar", image: "/menu-calendar.webp" },
   { label: "Notes", image: "/menu-notes.webp" },
   { label: "Chat", image: "/menu-chat.webp" },
+  { label: "Inspiration", image: "/menu-inspiration.webp" },
+  { label: "Resources", image: "/menu-resources.webp" },
   { label: "Admin", image: "/menu-admin.webp" },
 ];
 
@@ -320,18 +558,65 @@ const AUTO_REFRESH_MS = 7 * 60 * 1000;
 
 export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps = {}) {
   const appRef = useRef<HTMLElement>(null);
+  const mobileMenuLayerRef = useRef<HTMLDivElement>(null);
+  const mobileMenuPanelRef = useRef<HTMLDivElement>(null);
+  const homeContentRef = useRef<HTMLDivElement>(null);
+  const inboxViewRef = useRef<HTMLDivElement>(null);
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [focusMode, setFocusMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [greetingIndex, setGreetingIndex] = useState(0);
+  const [activeView, setActiveView] = useState<"dashboard" | "inbox">("dashboard");
+  const [inboxConversations, setInboxConversations] = useState<InboxConversation[]>([]);
+  const [inboxLoading, setInboxLoading] = useState(false);
+  const [inboxError, setInboxError] = useState<string | null>(null);
+  const [threadLoadingId, setThreadLoadingId] = useState<string | null>(null);
+  const [selectedThread, setSelectedThread] = useState<InboxThread | null>(null);
+  const [greetingIndex] = useState(() => Math.floor(Math.random() * familyGreetings.length));
   const [selectedAction, setSelectedAction] = useState<ActionItem | null>(null);
   const closeAssignment = useCallback(() => setSelectedAction(null), []);
+  const closeThread = useCallback(() => setSelectedThread(null), []);
 
-  useEffect(() => {
-    setGreetingIndex(Math.floor(Math.random() * familyGreetings.length));
-  }, []);
+  const loadInbox = useCallback(async () => {
+    setInboxLoading(true);
+    setInboxError(null);
+    try {
+      const response = await fetch(appPath("/api/inbox"), { cache: "no-store", credentials: "same-origin" });
+      const body = await response.json();
+      if (response.status === 401) {
+        if (onExit) onExit();
+        else window.location.replace(appPath("/"));
+        return;
+      }
+      if (!response.ok) throw new Error(body.error || "Canvas Inbox could not be loaded.");
+      setInboxConversations(body.conversations ?? []);
+    } catch (caught) {
+      setInboxError(caught instanceof Error ? caught.message : "Canvas Inbox could not be loaded.");
+    } finally {
+      setInboxLoading(false);
+    }
+  }, [onExit]);
+
+  const openThread = useCallback(async (conversation: InboxConversation) => {
+    setThreadLoadingId(conversation.id);
+    setInboxError(null);
+    try {
+      const response = await fetch(appPath(`/api/inbox?conversation_id=${encodeURIComponent(conversation.id)}`), { cache: "no-store", credentials: "same-origin" });
+      const body = await response.json();
+      if (response.status === 401) {
+        if (onExit) onExit();
+        else window.location.replace(appPath("/"));
+        return;
+      }
+      if (!response.ok) throw new Error(body.error || "That Canvas conversation could not be opened.");
+      setSelectedThread(body.thread);
+    } catch (caught) {
+      setInboxError(caught instanceof Error ? caught.message : "That Canvas conversation could not be opened.");
+    } finally {
+      setThreadLoadingId(null);
+    }
+  }, [onExit]);
 
   const sync = useCallback(async () => {
     setLoading(true);
@@ -361,6 +646,89 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       window.clearInterval(autoRefresh);
     };
   }, [sync]);
+
+  useLayoutEffect(() => {
+    const layer = mobileMenuLayerRef.current;
+    const panel = mobileMenuPanelRef.current;
+    if (!layer || !panel) return;
+    const backdrop = layer.querySelector<HTMLElement>(".mobile-menu-backdrop");
+    const options = panel.querySelectorAll<HTMLElement>(".mobile-menu-option");
+    gsap.killTweensOf([layer, backdrop, panel, options]);
+
+    if (mobileMenuOpen) {
+      gsap.set(layer, { autoAlpha: 1, pointerEvents: "auto" });
+      gsap.set(backdrop, { autoAlpha: 0, y: 28 });
+      gsap.set(panel, { autoAlpha: 0, y: 24, scale: 0.97 });
+      gsap.set(options, { autoAlpha: 0, y: 24, scale: 0.9 });
+      gsap.timeline()
+        .to(backdrop, { autoAlpha: 1, y: 0, duration: 0.32, ease: "power2.out" })
+        .to(panel, { autoAlpha: 1, y: 0, scale: 1, duration: 0.34, ease: "power2.out" }, "<")
+        .to(options, { autoAlpha: 1, y: 0, scale: 1, duration: 0.36, stagger: 0.075, ease: "back.out(1.7)" }, "-=0.18");
+      return;
+    }
+
+    gsap.timeline({ onComplete: () => gsap.set(layer, { autoAlpha: 0, pointerEvents: "none" }) })
+      .to(options, { autoAlpha: 0, y: 24, scale: 0.9, duration: 0.12, stagger: { each: 0.02, from: "end" }, ease: "power2.in" })
+      .to(panel, { autoAlpha: 0, y: 24, scale: 0.97, duration: 0.1, ease: "power2.in" }, "-=0.06")
+      .to(backdrop, { autoAlpha: 0, y: 28, duration: 0.1, ease: "power2.in" }, "<");
+  }, [mobileMenuOpen]);
+
+  const showInbox = useCallback(() => {
+    setMobileMenuOpen(false);
+    if (activeView === "inbox") return;
+    void loadInbox();
+    const home = homeContentRef.current;
+    const finish = () => setActiveView("inbox");
+    if (!home) {
+      finish();
+      return;
+    }
+    gsap.to(Array.from(home.children), {
+      autoAlpha: 0,
+      y: 30,
+      duration: 0.24,
+      stagger: 0.045,
+      ease: "power2.in",
+      onComplete: finish,
+    });
+  }, [activeView, loadInbox]);
+
+  const returnToDashboard = useCallback(() => {
+    setSelectedThread(null);
+    setActiveView("dashboard");
+  }, []);
+
+  const chooseMobileMenuItem = useCallback((action?: string) => {
+    if (action === "inbox") showInbox();
+    else setMobileMenuOpen(false);
+  }, [showInbox]);
+
+  useLayoutEffect(() => {
+    const root = activeView === "inbox" ? inboxViewRef.current : homeContentRef.current;
+    if (!root) return;
+    gsap.fromTo(Array.from(root.children), { autoAlpha: 0, y: 28 }, {
+      autoAlpha: 1,
+      y: 0,
+      duration: 0.42,
+      stagger: 0.06,
+      ease: "power2.out",
+      clearProps: "transform,opacity,visibility",
+    });
+  }, [activeView]);
+
+  useLayoutEffect(() => {
+    if (activeView !== "inbox" || inboxLoading || !inboxViewRef.current) return;
+    const rows = inboxViewRef.current.querySelectorAll(".inbox-conversation");
+    gsap.fromTo(rows, { autoAlpha: 0, y: 24, scale: 0.985 }, {
+      autoAlpha: 1,
+      y: 0,
+      scale: 1,
+      duration: 0.38,
+      stagger: 0.055,
+      ease: "power2.out",
+      clearProps: "transform,opacity,visibility",
+    });
+  }, [activeView, inboxConversations, inboxLoading]);
 
   useLayoutEffect(() => {
     const app = appRef.current;
@@ -472,17 +840,20 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
             <img src={appPath("/logout-button.webp")} alt="" aria-hidden="true" />
           </button>
         </div>
-        {mobileMenuOpen ? (
-          <div className="mobile-school-menu" id="mobile-school-menu" role="list" aria-label="School menu options">
+        <div className="mobile-menu-layer" ref={mobileMenuLayerRef} aria-hidden={!mobileMenuOpen}>
+          <button className="mobile-menu-backdrop" type="button" onClick={() => setMobileMenuOpen(false)} aria-label="Close school menu" tabIndex={mobileMenuOpen ? 0 : -1} />
+          <div className="mobile-school-menu" id="mobile-school-menu" ref={mobileMenuPanelRef} role="menu" aria-label="School menu options">
             {mobileMenuItems.map((item) => (
-              <div className="mobile-menu-option" role="listitem" key={item.label}>
+              <button className="mobile-menu-option" type="button" role="menuitem" key={item.label} onClick={() => chooseMobileMenuItem(item.action)} tabIndex={mobileMenuOpen ? 0 : -1}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={appPath(item.image)} alt={item.label} />
-              </div>
+              </button>
             ))}
           </div>
-        ) : null}
+        </div>
 
+        {activeView === "dashboard" ? (
+        <div className="dashboard-home-content" ref={homeContentRef}>
         <div className={`mobile-family-greeting greeting-${data.viewer.username}`}>
           <span className="mobile-family-photo" aria-hidden="true">
             {viewerPhoto ? (
@@ -571,9 +942,22 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
             ))}
           </div>
         </section>
-
+        </div>
+        ) : (
+          <div className="inbox-view-shell" ref={inboxViewRef}>
+            <InboxView
+              conversations={inboxConversations}
+              loading={inboxLoading}
+              error={inboxError}
+              threadLoadingId={threadLoadingId}
+              onRead={(conversation) => void openThread(conversation)}
+              onBack={returnToDashboard}
+            />
+          </div>
+        )}
       </section>
       {selectedAction ? <AssignmentModal item={selectedAction} onClose={closeAssignment} /> : null}
+      {selectedThread ? <InboxThreadModal thread={selectedThread} onClose={closeThread} /> : null}
     </main>
   );
 }
