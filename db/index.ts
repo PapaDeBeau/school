@@ -5,6 +5,7 @@ import * as schema from "./schema";
 type AppEnv = {
   DB?: D1Database;
   CANVAS_TOKEN_WRAP_KEY?: string;
+  BEAU_PROXY_ACCESS_KEY?: string;
 };
 
 export function getAppEnv() {

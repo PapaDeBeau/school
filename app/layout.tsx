@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Beau School Dashboard",
   description: "A private dashboard for Beau's Canvas school information.",
-  manifest: "/manifest.webmanifest",
+  manifest: "/school/manifest.webmanifest",
 };
 
 export default function RootLayout({

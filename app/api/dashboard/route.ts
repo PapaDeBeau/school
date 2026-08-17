@@ -3,6 +3,7 @@ import { ensureCanvasConnectionSchema, getDb } from "../../../db";
 import { canvasConnections } from "../../../db/schema";
 import { CANVAS_BASE_URL, canvasGet } from "../../../lib/canvas-client";
 import { decryptCanvasToken } from "../../../lib/canvas-vault";
+import { isAuthorizedAppRequest, unauthorizedAppResponse } from "../../../lib/request-auth";
 
 type CanvasCourse = {
   id: number;
@@ -137,7 +138,8 @@ function classSchedule() {
   ];
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!isAuthorizedAppRequest(request)) return unauthorizedAppResponse();
   try {
     await ensureCanvasConnectionSchema();
     const [connection] = await getDb()

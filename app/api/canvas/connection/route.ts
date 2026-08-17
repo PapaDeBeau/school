@@ -6,6 +6,7 @@ import {
 import { canvasConnections } from "../../../../db/schema";
 import { CANVAS_BASE_URL, canvasGet } from "../../../../lib/canvas-client";
 import { encryptCanvasToken } from "../../../../lib/canvas-vault";
+import { isAuthorizedAppRequest, unauthorizedAppResponse } from "../../../../lib/request-auth";
 
 const MAX_TOKEN_LENGTH = 512;
 
@@ -34,10 +35,16 @@ function json(body: unknown, init?: ResponseInit) {
 
 function isSameOrigin(request: Request) {
   const origin = request.headers.get("origin");
-  return !origin || origin === new URL(request.url).origin;
+  return (
+    !origin ||
+    origin === new URL(request.url).origin ||
+    origin === "https://beauvizenor.com" ||
+    origin === "https://www.beauvizenor.com"
+  );
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!isAuthorizedAppRequest(request)) return unauthorizedAppResponse();
   try {
     await ensureCanvasConnectionSchema();
     const [connection] = await getDb()
@@ -62,6 +69,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!isAuthorizedAppRequest(request)) return unauthorizedAppResponse();
   if (!isSameOrigin(request)) {
     return json({ error: "Cross-origin connection requests are not allowed." }, { status: 403 });
   }
@@ -147,6 +155,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  if (!isAuthorizedAppRequest(request)) return unauthorizedAppResponse();
   if (!isSameOrigin(request)) {
     return json({ error: "Cross-origin requests are not allowed." }, { status: 403 });
   }

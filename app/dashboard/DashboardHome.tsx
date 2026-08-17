@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { appPath } from "../../lib/app-paths";
 
 type ActionItem = {
   id: string;
@@ -115,7 +116,7 @@ export function DashboardHome() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/dashboard", {
+      const response = await fetch(appPath("/api/dashboard"), {
         cache: "no-store",
         credentials: "same-origin",
       });

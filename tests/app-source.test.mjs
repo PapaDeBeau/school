@@ -19,3 +19,11 @@ test("Canvas token routes remain server-only", async () => {
   assert.doesNotMatch(form, /localStorage|sessionStorage/);
   assert.match(vault, /AES-GCM/);
 });
+
+test("production Canvas APIs require the BeauVizenor proxy secret", async () => {
+  const requestAuth = await readFile(new URL("lib/request-auth.ts", root), "utf8");
+  const config = await readFile(new URL("next.config.ts", root), "utf8");
+  assert.match(requestAuth, /x-beau-proxy-key/);
+  assert.match(requestAuth, /BEAU_PROXY_ACCESS_KEY/);
+  assert.match(config, /basePath:\s*"\/school"/);
+});

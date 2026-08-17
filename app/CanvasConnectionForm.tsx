@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
+import { appPath } from "../lib/app-paths";
 
 const CANVAS_BASE_URL = "https://sequoiagrove.instructure.com";
 
@@ -33,7 +34,7 @@ export function CanvasConnectionForm() {
       });
     }
 
-    fetch("/api/canvas/connection", { cache: "no-store" })
+    fetch(appPath("/api/canvas/connection"), { cache: "no-store" })
       .then(async (response) => {
         const data = (await response.json()) as {
           connected?: boolean;
@@ -59,7 +60,7 @@ export function CanvasConnectionForm() {
     setStatus("connecting");
     setMessage("");
     try {
-      const response = await fetch("/api/canvas/connection", {
+      const response = await fetch(appPath("/api/canvas/connection"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ baseUrl: CANVAS_BASE_URL, token }),
@@ -93,7 +94,7 @@ export function CanvasConnectionForm() {
     );
     if (!approved) return;
 
-    const response = await fetch("/api/canvas/connection", { method: "DELETE" });
+    const response = await fetch(appPath("/api/canvas/connection"), { method: "DELETE" });
     if (response.ok) {
       setConnection(null);
       setStatus("idle");
