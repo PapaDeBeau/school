@@ -245,7 +245,11 @@ function MobileDueCard({ title, items, empty, onSelectAssignment, featured = fal
             {/* Supplied due-date artwork forms the full-width top of this card. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img className="mobile-due-banner" src={appPath(banner)} alt="" aria-hidden="true" />
-            <span className="spider-count-badge" aria-label={summary}><strong>{items.length}</strong></span>
+            <span className="spider-count-badge" aria-label={summary}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={appPath("/due-count-web.webp")} alt="" aria-hidden="true" />
+              <strong>{items.length}</strong>
+            </span>
           </div>
           <p className="mobile-due-summary">{summary}</p>
         </>
@@ -361,7 +365,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
     const context = gsap.context(() => {
       const panels = app.querySelectorAll(
-        ".school-sidebar, .mobile-dashboard-bar, .mobile-family-greeting, .workspace-header, .overview-hero, .summary-card, .critical-strip, .mobile-due-card, .primary-dashboard-grid > .dash-panel, .secondary-dashboard-grid > .dash-panel, .grades-showcase, .dashboard-footer"
+        ".school-sidebar, .mobile-dashboard-bar, .mobile-family-greeting, .workspace-header, .overview-hero, .summary-card, .critical-strip, .mobile-due-card, .primary-dashboard-grid > .dash-panel, .secondary-dashboard-grid > .dash-panel, .grades-showcase"
       );
       gsap.set(panels, { autoAlpha: 0, y: 34, scale: 0.975 });
       gsap.timeline({ delay: 0.08 })
@@ -565,7 +569,6 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           </div>
         </section>
 
-        <footer className="dashboard-footer"><span>Canvas data is read-only and source-linked.</span><span>Times shown in Pacific Time.</span></footer>
       </section>
       {selectedAction ? <AssignmentModal item={selectedAction} onClose={closeAssignment} /> : null}
     </main>

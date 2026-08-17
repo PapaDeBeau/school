@@ -104,6 +104,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
     "grade-history.webp",
   ].map((file) => stat(new URL(`public/${file}`, root))));
   const logoutArtwork = await stat(new URL("public/logout-button.webp", root));
+  const dueCountArtwork = await stat(new URL("public/due-count-web.webp", root));
   const dueTodayArtwork = await stat(new URL("public/due-today-banner.webp", root));
   const dueTomorrowArtwork = await stat(new URL("public/due-tomorrow-banner.webp", root));
   const thisWeekArtwork = await stat(new URL("public/this-week-banner.webp", root));
@@ -115,11 +116,16 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(dashboard, /Look, it’s \$\{name\}!/);
   assert.match(dashboard, /menu-button\.webp/);
   assert.match(dashboard, /logout-button\.webp/);
+  assert.match(dashboard, /due-count-web\.webp/);
+  assert.ok(dueCountArtwork.size < 20_000);
   assert.doesNotMatch(dashboard, /mobile-sync-button|sync-button\.webp|className="sync-button"/);
   assert.match(dashboard, /AUTO_REFRESH_MS = 7 \* 60 \* 1000/);
   assert.match(dashboard, /window\.setInterval\(\(\) => void sync\(\), AUTO_REFRESH_MS\)/);
   assert.doesNotMatch(dashboard, /className="sync-loader"/);
   assert.match(layout, /Schoolbell/);
+  assert.match(layout, /rel="preload" as="image" href="\/school\/menu-todo\.webp"/);
+  assert.match(layout, /rel="preload" as="image" href="\/school\/menu-classes\.webp"/);
+  assert.match(layout, /rel="preload" as="image" href="\/school\/menu-inbox\.webp"/);
   assert.match(styles, /var\(--font-chalk\)/);
   assert.match(styles, /\.school-portal-shell\.dashboard-active \{ padding: 12px 16px; overflow: visible; \}/);
   assert.match(styles, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
@@ -143,6 +149,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(dashboard, /shortOrdinalDay\(tomorrow\)/);
   assert.match(dashboard, /tone="today"/);
   assert.match(dashboard, /tone="tomorrow"/);
+  assert.doesNotMatch(dashboard, /className="dashboard-footer"/);
   assert.doesNotMatch(dashboard, /upcoming-stat|upcoming-panel|Important upcoming/);
   assert.match(styles, /\.school-app \.school-sidebar \{ display: none; \}/);
   assert.match(styles, /\.school-app \.summary-card\.is-zero/);
