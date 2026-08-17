@@ -52,11 +52,11 @@ function FamilyAvatar({ profile, large = false }: { profile: FamilyProfile; larg
   );
 }
 
-function SpiderEmblem() {
+function CanvasStarterLogo() {
   return (
-    // This supplied artwork is already cropped for the circular starter-logo treatment.
+    // This supplied artwork is cropped by the circular starter-logo treatment.
     // eslint-disable-next-line @next/next/no-img-element
-    <img className="spider-starter-logo" src={appPath("/login-spider-logo.png")} alt="" aria-hidden="true" />
+    <img className="canvas-starter-logo" src={appPath("/canvas-starter-logo.jpeg")} alt="" aria-hidden="true" />
   );
 }
 
@@ -96,7 +96,7 @@ export function FamilyLogin() {
     Promise.all([
       preload(appPath("/login-desktop.png")),
       preload(appPath("/login-mobile.png")),
-      preload(appPath("/login-spider-logo.png")),
+      preload(appPath("/canvas-starter-logo.jpeg")),
       preload(appPath("/beau-profile.png")),
       preload(appPath("/cathy-profile.png")),
       preload(appPath("/dad-profile.png")),
@@ -184,7 +184,7 @@ export function FamilyLogin() {
       <section className={`family-login-card${selectedTheme ? ` theme-${selectedTheme}` : ""}`} aria-label="Family login" ref={cardRef}>
         <div className={`selected-profile${selectedProfile ? " has-profile" : ""}`} aria-live="polite">
           <div className="selected-profile-circle">
-            {selectedProfile ? <FamilyAvatar profile={selectedProfile} large /> : <SpiderEmblem />}
+            {selectedProfile ? <FamilyAvatar profile={selectedProfile} large /> : <CanvasStarterLogo />}
           </div>
           <div className="pin-progress" aria-label={`${pin.length} of 4 PIN digits entered`}>
             {[0, 1, 2, 3].map((index) => <i className={index < pin.length ? "is-filled" : ""} key={index} />)}
