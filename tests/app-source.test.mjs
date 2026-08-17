@@ -90,6 +90,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   const syncArtwork = await stat(new URL("public/sync-button.webp", root));
   const logoutArtwork = await stat(new URL("public/logout-button.webp", root));
   const dueTodayArtwork = await stat(new URL("public/due-today-banner.webp", root));
+  const dueTomorrowArtwork = await stat(new URL("public/due-tomorrow-banner.webp", root));
 
   assert.match(dashboard, /mobile-dashboard-bar/);
   assert.match(dashboard, /mobile-family-greeting/);
@@ -102,6 +103,8 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(dashboard, /Due today/);
   assert.match(dashboard, /today-featured-slot/);
   assert.match(dashboard, /due-today-banner\.webp/);
+  assert.match(dashboard, /tomorrow-featured-slot/);
+  assert.match(dashboard, /due-tomorrow-banner\.webp/);
   assert.match(dashboard, /spider-count-badge/);
   assert.match(dashboard, /Due tomorrow/);
   assert.match(dashboard, /Due this week/);
@@ -111,11 +114,13 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(styles, /\.school-app \.critical-strip\.is-clear \{ display: none; \}/);
   assert.match(styles, /\.school-app \.schedule-panel,/);
   assert.match(styles, /\.school-app \.quick-panel \{ display: none; \}/);
-  assert.match(styles, /\.today-featured-slot \{ width: 100%/);
+  assert.match(styles, /\.featured-due-stack \{ width: 100%/);
+  assert.match(styles, /\.due-featured-slot \{ width: 100%/);
   assert.ok(menuArtwork.size < 30_000);
   assert.ok(syncArtwork.size < 60_000);
   assert.ok(logoutArtwork.size < 30_000);
   assert.ok(dueTodayArtwork.size < 100_000);
+  assert.ok(dueTomorrowArtwork.size < 100_000);
 });
 
 test("assignments open a detailed accessible modal before leaving for Canvas", async () => {
