@@ -1424,15 +1424,18 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     const values = Array.from(showcase.querySelectorAll<HTMLElement>(".grade-artwork-value"));
     if (!values.length) return;
 
-    const observerTargets = new Map<Element, HTMLElement>();
+    const scrollRoot = showcase.closest<HTMLElement>(".school-workspace");
+    const observerTargets = new Map<HTMLElement, HTMLElement>();
     values.forEach((value) => {
       observerTargets.set(value.closest<HTMLElement>(".grade-artwork-card") ?? value, value);
     });
 
     const visible = new Set<HTMLElement>();
     const pending = new Set<HTMLElement>();
+    const entranceMotion = new Map<HTMLElement, gsap.core.Animation>();
     const persistentMotion = new Map<HTMLElement, gsap.core.Animation>();
     let batchTimer: number | null = null;
+    let visibilityFrame: number | null = null;
 
     const gradeParts = (value: HTMLElement) => ({
       letter: value.querySelector<HTMLElement>(".grade-artwork-letter"),
@@ -1443,36 +1446,63 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     const resetValue = (value: HTMLElement) => {
       const { letter, motion, percentage } = gradeParts(value);
       const targets = [value, letter, motion, percentage].filter((target): target is HTMLElement => Boolean(target));
+      entranceMotion.get(value)?.kill();
+      entranceMotion.delete(value);
       persistentMotion.get(value)?.kill();
       persistentMotion.delete(value);
       value.removeAttribute("data-grade-active");
       gsap.killTweensOf(targets);
       gsap.set(value, { autoAlpha: 0 });
-      if (letter) gsap.set(letter, { autoAlpha: 0, scale: 0, x: 0, xPercent: -50, yPercent: -50, rotation: -18 });
+      if (letter) gsap.set(letter, { autoAlpha: 0, scale: 0.001, x: 0, xPercent: -50, yPercent: -50, rotation: -2, transformOrigin: "50% 58%" });
       if (motion) gsap.set(motion, { autoAlpha: 1, scale: 1, rotation: 0 });
-      if (percentage) gsap.set(percentage, { autoAlpha: 0, scale: 0, x: 0, rotation: -12 });
+      if (percentage) gsap.set(percentage, { autoAlpha: 0, scale: 0.001, x: 0, rotation: -4, transformOrigin: "50% 50%" });
+    };
+
+    const startPersistentMotion = (value: HTMLElement, motion: HTMLElement) => {
+      if (!visible.has(value) || value.dataset.gradeActive !== "true") return;
+      persistentMotion.get(value)?.kill();
+      if (value.dataset.grade === "D") {
+        persistentMotion.set(value, gsap.to(motion, {
+          scale: 1.26,
+          duration: 1.05,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+          transformOrigin: "50% 58%",
+        }));
+      } else if (value.dataset.grade === "F") {
+        persistentMotion.set(value, gsap.timeline({ repeat: -1, repeatDelay: 0.65 })
+          .to(motion, { rotation: "+=360", duration: 1.35, ease: "power2.inOut", transformOrigin: "50% 58%" }, 0)
+          .to(motion, { autoAlpha: 0.06, duration: 0.08, repeat: 7, yoyo: true, ease: "none" }, 0.08)
+          .set(motion, { autoAlpha: 1 }));
+      }
     };
 
     const revealValue = (value: HTMLElement, order: number) => {
       const { letter, motion, percentage } = gradeParts(value);
       if (!letter || !motion || !percentage || !visible.has(value)) return;
+      entranceMotion.get(value)?.kill();
+      persistentMotion.get(value)?.kill();
+      entranceMotion.delete(value);
+      persistentMotion.delete(value);
       gsap.killTweensOf([value, letter, motion, percentage]);
-      gsap.set(value, { autoAlpha: 1 });
+      gsap.set(value, { autoAlpha: 1, perspective: 900 });
+      gsap.set(motion, { autoAlpha: 1, scale: 1, rotation: 0, transformOrigin: "50% 58%" });
       value.dataset.gradeActive = "true";
-      const gradeTimeline = gsap.timeline({ delay: order * 0.16 })
-        .fromTo(letter, { autoAlpha: 0, scale: 0, x: 0, xPercent: -50, yPercent: -50, rotation: -12 }, { autoAlpha: 1, scale: 1, x: 0, xPercent: -50, yPercent: -50, rotation: -2, duration: 1.15, ease: "elastic.out(1, 0.3)" }, 0)
-        .fromTo(percentage, { autoAlpha: 0, scale: 0, x: 0, rotation: -10 }, { autoAlpha: 1, scale: 1, x: 0, rotation: -4, duration: 0.88, ease: "elastic.out(1, 0.38)" }, 0.18);
-
-      if (value.dataset.grade === "D") {
-        gradeTimeline.to(motion, { scale: 1.26, duration: 1.05, repeat: -1, yoyo: true, ease: "sine.inOut" }, 1.15);
-      } else if (value.dataset.grade === "F") {
-        const failMotion = gsap.timeline({ repeat: -1, repeatDelay: 0.65 })
-          .to(motion, { rotation: "+=360", duration: 1.35, ease: "power2.inOut" }, 0)
-          .to(motion, { autoAlpha: 0.06, duration: 0.08, repeat: 7, yoyo: true, ease: "none" }, 0.08)
-          .set(motion, { autoAlpha: 1 });
-        gradeTimeline.add(failMotion, 1.15);
-      }
-      persistentMotion.set(value, gradeTimeline);
+      const gradeTimeline = gsap.timeline({
+        delay: order * 0.14,
+        onComplete: () => {
+          entranceMotion.delete(value);
+          startPersistentMotion(value, motion);
+        },
+      })
+        .fromTo(letter,
+          { autoAlpha: 0, scale: 0.001, x: 0, xPercent: -50, yPercent: -50, rotation: -2, force3D: true },
+          { autoAlpha: 1, scale: 1, x: 0, xPercent: -50, yPercent: -50, rotation: -2, duration: 1.35, ease: "elastic.out(1.25, 0.24)", force3D: true }, 0)
+        .fromTo(percentage,
+          { autoAlpha: 0, scale: 0.001, x: 0, rotation: -4, force3D: true },
+          { autoAlpha: 1, scale: 1, x: 0, rotation: -4, duration: 0.95, ease: "elastic.out(1.15, 0.3)", force3D: true }, 0.2);
+      entranceMotion.set(value, gradeTimeline);
     };
 
     const flushPending = () => {
@@ -1484,23 +1514,18 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       ordered.forEach(revealValue);
     };
 
-    values.forEach(resetValue);
-    if (!("IntersectionObserver" in window)) {
-      values.forEach((value, index) => {
-        visible.add(value);
-        revealValue(value, index);
-      });
-      return () => values.forEach(resetValue);
-    }
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        const value = observerTargets.get(entry.target);
-        if (!value) return;
-        const isOnScreen = entry.isIntersecting && entry.intersectionRatio >= 0.08;
+    const checkVisibility = () => {
+      visibilityFrame = null;
+      const rootRect = scrollRoot?.getBoundingClientRect() ?? { top: 0, bottom: window.innerHeight };
+      observerTargets.forEach((value, target) => {
+        const rect = target.getBoundingClientRect();
+        const visibleHeight = Math.min(rect.bottom, rootRect.bottom) - Math.max(rect.top, rootRect.top);
+        const isOnScreen = visibleHeight >= Math.min(rect.height * 0.08, 24);
         if (isOnScreen) {
-          visible.add(value);
-          pending.add(value);
+          if (!visible.has(value)) {
+            visible.add(value);
+            pending.add(value);
+          }
         } else {
           visible.delete(value);
           pending.delete(value);
@@ -1508,11 +1533,21 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
         }
       });
       if (pending.size && batchTimer === null) batchTimer = window.setTimeout(flushPending, 40);
-    }, { threshold: [0, 0.08], rootMargin: "0px" });
+    };
 
-    observerTargets.forEach((_value, target) => observer.observe(target));
+    const scheduleVisibilityCheck = () => {
+      if (visibilityFrame !== null) return;
+      visibilityFrame = window.requestAnimationFrame(checkVisibility);
+    };
+
+    values.forEach(resetValue);
+    scrollRoot?.addEventListener("scroll", scheduleVisibilityCheck, { passive: true });
+    window.addEventListener("resize", scheduleVisibilityCheck);
+    scheduleVisibilityCheck();
     return () => {
-      observer.disconnect();
+      scrollRoot?.removeEventListener("scroll", scheduleVisibilityCheck);
+      window.removeEventListener("resize", scheduleVisibilityCheck);
+      if (visibilityFrame !== null) window.cancelAnimationFrame(visibilityFrame);
       if (batchTimer !== null) window.clearTimeout(batchTimer);
       values.forEach(resetValue);
     };
