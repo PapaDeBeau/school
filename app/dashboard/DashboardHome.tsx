@@ -1457,21 +1457,6 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       if (percentage) gsap.set(percentage, { autoAlpha: 0, scale: 0, x: 0, rotation: -12 });
     };
 
-    const startGradeMotion = (value: HTMLElement, letter: HTMLElement) => {
-      if (!visible.has(value)) return;
-      value.dataset.gradeActive = "true";
-      gsap.set(letter, { autoAlpha: 1, scale: 1, rotation: -2 });
-      if (value.dataset.grade === "D") {
-        persistentMotion.set(value, gsap.to(letter, { scale: 1.24, duration: 1.25, repeat: -1, yoyo: true, ease: "sine.inOut" }));
-      }
-      if (value.dataset.grade === "F") {
-        persistentMotion.set(value, gsap.timeline({ repeat: -1, repeatDelay: 1.35 })
-          .to(letter, { rotation: "+=360", duration: 1.1, ease: "power2.inOut" }, 0)
-          .to(letter, { autoAlpha: 0.08, duration: 0.09, repeat: 5, yoyo: true, ease: "none" }, 0.05)
-          .set(letter, { autoAlpha: 1 }));
-      }
-    };
-
     const revealValue = (value: HTMLElement, order: number) => {
       const { letter, percentage } = gradeParts(value);
       if (!letter || !percentage || !visible.has(value)) return;
@@ -1480,9 +1465,21 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       const flyFromX = cardIndex % 2 === 0 ? -150 : 150;
       gsap.killTweensOf([value, letter, percentage]);
       gsap.set(value, { autoAlpha: 1 });
-      gsap.timeline({ delay: order * 0.16, onComplete: () => startGradeMotion(value, letter) })
+      value.dataset.gradeActive = "true";
+      const gradeTimeline = gsap.timeline({ delay: order * 0.16 })
         .fromTo(letter, { autoAlpha: 0, scale: 0.35, x: flyFromX, xPercent: -50, yPercent: -50, rotation: -18 }, { autoAlpha: 1, scale: 1, x: 0, xPercent: -50, yPercent: -50, rotation: -2, duration: 1.15, ease: "elastic.out(1, 0.3)" }, 0)
         .fromTo(percentage, { autoAlpha: 0, scale: 0.5, x: flyFromX * 0.65, rotation: -12 }, { autoAlpha: 1, scale: 1, x: 0, rotation: -4, duration: 0.88, ease: "elastic.out(1, 0.38)" }, 0.18);
+
+      if (value.dataset.grade === "D") {
+        gradeTimeline.to(letter, { scale: 1.26, duration: 1.05, repeat: -1, yoyo: true, ease: "sine.inOut" }, 1.15);
+      } else if (value.dataset.grade === "F") {
+        const failMotion = gsap.timeline({ repeat: -1, repeatDelay: 0.65 })
+          .to(letter, { rotation: "+=360", duration: 1.35, ease: "power2.inOut" }, 0)
+          .to(letter, { autoAlpha: 0.06, duration: 0.08, repeat: 7, yoyo: true, ease: "none" }, 0.08)
+          .set(letter, { autoAlpha: 1 });
+        gradeTimeline.add(failMotion, 1.15);
+      }
+      persistentMotion.set(value, gradeTimeline);
     };
 
     const flushPending = () => {

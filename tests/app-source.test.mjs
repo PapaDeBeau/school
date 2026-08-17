@@ -301,8 +301,11 @@ test("admin stores percentages and controls empty due-card visibility", async ()
   assert.match(dashboard, /elastic\.out/);
   assert.match(dashboard, /const flyFromX = cardIndex % 2 === 0 \? -150 : 150/);
   assert.match(dashboard, /x: flyFromX/);
+  assert.match(dashboard, /const gradeTimeline = gsap\.timeline/);
+  assert.match(dashboard, /gradeTimeline\.to\(letter, \{ scale: 1\.26,[^}]*repeat: -1, yoyo: true/);
+  assert.match(dashboard, /const failMotion = gsap\.timeline\(\{ repeat: -1/);
   assert.match(dashboard, /rotation: "\+=360"/);
-  assert.match(dashboard, /scale: 1\.24/);
+  assert.match(dashboard, /gradeTimeline\.add\(failMotion, 1\.15\)/);
   assert.match(styles, /\.grade-tone-b \.grade-artwork-letter,[\s\S]*\.grade-tone-d \.grade-artwork-letter \{ left: 57%; \}/);
   assert.match(styles, /\.grade-artwork-value \{[^}]*visibility: hidden; opacity: 0;/);
   assert.doesNotMatch(dashboard, /autoAlpha: 0\.18/);
