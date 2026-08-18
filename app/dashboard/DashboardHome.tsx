@@ -1159,6 +1159,7 @@ function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect:
               </span>
               <small>{courseLabel(item.course)}</small>
             </span>
+            <time className="announcement-card-date" dateTime={item.dueAt ?? undefined}>{item.dueAt ? formatDate(item.dueAt) : "Date unavailable"}</time>
             <div className="announcement-card-actions" aria-label={`Actions for ${item.title}`}>
               <button type="button" className="announcement-action-view" onClick={() => onSelect(item)} aria-label={`View ${item.title}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1169,7 +1170,6 @@ function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect:
                 <img src={appPath("/announcement-listen.png")} alt="Listen" />
               </button>
             </div>
-            <time className="announcement-card-date" dateTime={item.dueAt ?? undefined}>{item.dueAt ? formatDate(item.dueAt) : "Date unavailable"}</time>
           </article>
         ))}
       </div>
