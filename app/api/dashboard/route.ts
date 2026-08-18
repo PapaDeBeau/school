@@ -166,6 +166,9 @@ function detailIdForPlannerItem(item: PlannerItem, source: string) {
 }
 
 function normalizePlannerItem(item: PlannerItem, courseNames: Map<number, string>): ActionItem | null {
+  const itemType = item.plannable_type?.toLocaleLowerCase("en-US") ?? "";
+  if (itemType === "announcement") return null;
+
   const title = item.plannable?.title?.trim();
   if (!title) return null;
 
@@ -189,7 +192,7 @@ function normalizePlannerItem(item: PlannerItem, courseNames: Map<number, string
   const source = item.html_url ?? item.plannable?.html_url ?? CANVAS_BASE_URL;
   const descriptionHtml = canvasRichContent(item);
   const canvasItemId = detailIdForPlannerItem(item, source);
-  const canvasItemType = item.plannable_type?.toLocaleLowerCase("en-US") ?? null;
+  const canvasItemType = itemType || null;
 
   return {
     id: `assignment-${item.course_id ?? "canvas"}-${item.plannable?.id ?? title}`,

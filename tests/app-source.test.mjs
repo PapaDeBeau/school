@@ -229,6 +229,7 @@ test("assignments open a detailed accessible modal before leaving for Canvas", a
   assert.match(dashboard, /event\.key === "Escape"/);
   assert.match(dashboardRoute, /description: canvasHtmlToText/);
   assert.match(dashboardRoute, /item\.plannable\?\.message/);
+  assert.match(dashboardRoute, /if \(itemType === "announcement"\) return null/);
   assert.match(dashboardRoute, /descriptionHtml/);
   assert.match(dashboardRoute, /submissionTypes:/);
   assert.match(styles, /\.assignment-modal-scroll \{[^}]*overflow-y: auto/);
