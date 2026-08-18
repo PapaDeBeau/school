@@ -1907,11 +1907,12 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
             {gradeArtwork.map((item, index) => {
               const course = data.courses[index];
               const grade = course ? gradeOverrides.find((entry) => entry.courseKey === String(course.id)) : null;
-              const calculatedLetter = grade ? letterGrade(grade.percentage) : null;
+              const percentage = course?.score ?? grade?.percentage ?? null;
+              const calculatedLetter = percentage === null ? null : letterGrade(percentage);
               return <article className="grade-artwork-card" key={item.label} aria-label={course?.name ?? item.label}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={appPath(item.image)} alt={course?.name ?? item.label} />
-                {grade && calculatedLetter ? <div className={`grade-artwork-value grade-tone-${calculatedLetter.toLowerCase()}`} data-grade={calculatedLetter} data-grade-rank={gradeAnimationRank[calculatedLetter]}><strong className="grade-artwork-letter"><span className="grade-artwork-letter-motion">{calculatedLetter}</span></strong><span className="grade-artwork-percentage">{grade.percentage.toFixed(grade.percentage % 1 ? 1 : 0)}</span></div> : null}
+                {percentage !== null && calculatedLetter ? <div className={`grade-artwork-value grade-tone-${calculatedLetter.toLowerCase()}`} data-grade={calculatedLetter} data-grade-rank={gradeAnimationRank[calculatedLetter]}><strong className="grade-artwork-letter"><span className="grade-artwork-letter-motion">{calculatedLetter}</span></strong><span className="grade-artwork-percentage">{percentage.toFixed(percentage % 1 ? 1 : 0)}</span></div> : null}
               </article>;
             })}
           </div>

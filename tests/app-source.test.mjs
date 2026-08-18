@@ -335,7 +335,8 @@ test("admin stores percentages and controls empty due-card visibility", async ()
   assert.match(dashboard, /\.to\(motion, \{ rotation: "\+=360"/);
   assert.match(dashboard, /startPersistentMotion\(value, motion\)/);
   assert.match(dashboard, /\}, \[activeView, data, gradeOverrides\]\);/);
-  assert.match(styles, /\.grade-tone-b \.grade-artwork-letter,[\s\S]*\.grade-tone-d \.grade-artwork-letter \{ left: 54%; \}/);
+  assert.match(dashboard, /const percentage = course\?\.score \?\? grade\?\.percentage \?\? null/);
+  assert.match(styles, /\.grade-tone-b \.grade-artwork-letter,[\s\S]*\.grade-tone-d \.grade-artwork-letter \{ left: 51%; \}/);
   assert.match(styles, /\.grade-artwork-value \{[^}]*visibility: hidden; opacity: 0;/);
   assert.doesNotMatch(dashboard, /autoAlpha: 0\.18/);
   assert.match(dashboard, /value\.dataset\.grade === "D"/);
