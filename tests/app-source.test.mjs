@@ -215,6 +215,9 @@ test("assignments open a detailed accessible modal before leaving for Canvas", a
   assert.match(dashboard, /<h4>\{item\.title\}<\/h4>/);
   assert.match(dashboard, /Open \$\{item\.title\} in Canvas in a new browser window/);
   assert.match(dashboard, /\/api\/assignment-details\?course_id=/);
+  assert.match(dashboard, /function mergeCanvasInstructions\(/);
+  assert.match(dashboard, /Additional Canvas details/);
+  assert.match(dashboard, /return \{ \.\.\.current, \.\.\.body\.item, \.\.\.mergedInstructions \}/);
   assert.match(dashboard, /Loading the full assignment from Canvas/);
   assert.match(dashboard, /canvasCourseId: number \| null/);
   const assignmentDetails = await readFile(new URL("app/api/assignment-details/route.ts", root), "utf8");

@@ -28,6 +28,37 @@ type ActionItem = {
   published: boolean | null;
 };
 
+function plainCanvasText(value: string) {
+  return value
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLocaleLowerCase("en-US");
+}
+
+function mergeCanvasInstructions(primaryHtml: string, primaryText: string, fetchedHtml: string, fetchedText: string) {
+  const primary = primaryHtml.trim() || primaryText.trim();
+  const fetched = fetchedHtml.trim() || fetchedText.trim();
+  if (!primary) return { descriptionHtml: fetchedHtml, description: fetchedText };
+  if (!fetched) return { descriptionHtml: primaryHtml, description: primaryText };
+
+  const normalizedPrimary = plainCanvasText(primary);
+  const normalizedFetched = plainCanvasText(fetched);
+  if (!normalizedFetched || normalizedPrimary.includes(normalizedFetched)) {
+    return { descriptionHtml: primaryHtml, description: primaryText };
+  }
+  if (normalizedFetched.includes(normalizedPrimary)) {
+    return { descriptionHtml: fetchedHtml, description: fetchedText };
+  }
+
+  return {
+    descriptionHtml: `${primaryHtml || `<p>${primaryText}</p>`}<hr><h5>Additional Canvas details</h5>${fetchedHtml || `<p>${fetchedText}</p>`}`,
+    description: `${primaryText}\n\nAdditional Canvas details\n${fetchedText}`.trim(),
+  };
+}
+
 type WeekItem = {
   day: string;
   time: string;
@@ -1151,7 +1182,16 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
         return;
       }
       if (!response.ok) throw new Error(body.error || "Canvas could not load this assignment.");
-      setSelectedAction((current) => current?.id === item.id ? { ...current, ...body.item } : current);
+      setSelectedAction((current) => {
+        if (current?.id !== item.id) return current;
+        const mergedInstructions = mergeCanvasInstructions(
+          current.descriptionHtml,
+          current.description,
+          body.item.descriptionHtml ?? "",
+          body.item.description ?? ""
+        );
+        return { ...current, ...body.item, ...mergedInstructions };
+      });
     } catch (caught) {
       setAssignmentDetailError(caught instanceof Error ? caught.message : "Canvas could not load this assignment.");
     } finally {
