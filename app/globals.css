@@ -464,7 +464,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .grade-artwork-letter { position: absolute; top: 52%; left: 51%; color: var(--grade-tone); font-family: var(--font-chalk), "Segoe Print", cursive; font-size: clamp(66px, 11.5vw, 134px); font-weight: 900; line-height: 1; text-shadow: 0 3px 1px rgba(0, 0, 0, .46), 0 9px 14px rgba(0, 0, 0, .38), 0 12px 22px var(--grade-glow); transform: translate(-50%, -50%) rotate(-2deg); transform-origin: 50% 58%; }
 .grade-tone-b .grade-artwork-letter,
 .grade-tone-c .grade-artwork-letter,
-.grade-tone-d .grade-artwork-letter { left: 57%; }
+.grade-tone-d .grade-artwork-letter { left: 56%; }
 .grade-artwork-letter-motion { display: inline-block; transform-origin: 50% 58%; }
 .grade-artwork-percentage { position: absolute; left: 48%; bottom: 8%; width: 27%; color: var(--grade-tone); font-family: var(--font-chalk), "Segoe Print", cursive; font-size: clamp(24px, 4.65vw, 54px); font-weight: 900; line-height: 1; text-align: center; text-shadow: 0 2px 1px rgba(0, 0, 0, .42), 0 7px 11px rgba(0, 0, 0, .32), 0 9px 16px var(--grade-glow); transform: rotate(-4deg); transform-origin: center; }
 .dash-panel { min-width: 0; overflow: hidden; padding: 16px 18px 13px; border-radius: 15px; background: #fff; }
