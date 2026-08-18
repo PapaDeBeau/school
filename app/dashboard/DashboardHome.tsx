@@ -1145,19 +1145,26 @@ function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect:
       <img className="announcements-title-art" src={appPath("/announcements-title.png")} alt="Announcements" />
       <div className="announcement-card-list">
         {items.map((item) => (
-          <button type="button" className="announcement-card" key={item.id} onClick={() => onSelect(item)}>
-            <span className="announcement-teacher">
-              <span className="announcement-teacher-photo" aria-label={item.authorName ? `Teacher: ${item.authorName}` : "Teacher"}>
-                {item.authorAvatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.authorAvatarUrl} alt={item.authorName || "Teacher"} referrerPolicy="no-referrer" />
-                ) : <strong aria-hidden="true">{(item.authorName || "Teacher").slice(0, 1).toUpperCase()}</strong>}
+          <article className="announcement-card" key={item.id}>
+            <button type="button" className="announcement-card-main" onClick={() => onSelect(item)} aria-label={`View ${item.title}`}>
+              <span className="announcement-teacher">
+                <span className="announcement-teacher-photo" aria-label={item.authorName ? `Teacher: ${item.authorName}` : "Teacher"}>
+                  {item.authorAvatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={item.authorAvatarUrl} alt={item.authorName || "Teacher"} referrerPolicy="no-referrer" />
+                  ) : <strong aria-hidden="true">{(item.authorName || "Teacher").slice(0, 1).toUpperCase()}</strong>}
+                </span>
+                <small>{courseLabel(item.course)}</small>
               </span>
-              <small>{courseLabel(item.course)}</small>
-            </span>
-            <span className="announcement-card-copy"><strong>{item.title}</strong><small>{item.dueAt ? formatDate(item.dueAt) : "Date unavailable"}</small></span>
-            <i aria-hidden="true">›</i>
-          </button>
+              <span className="announcement-card-copy"><strong>{item.title}</strong><small>{item.dueAt ? formatDate(item.dueAt) : "Date unavailable"}</small></span>
+              <i aria-hidden="true">›</i>
+            </button>
+            <div className="announcement-card-actions" aria-label={`Actions for ${item.title}`}>
+              <button type="button" className="announcement-action-view" onClick={() => onSelect(item)}>View</button>
+              <button type="button" className="announcement-action-listen">Listen</button>
+              <button type="button" className="announcement-action-got-it">Got It</button>
+            </div>
+          </article>
         ))}
       </div>
     </section>
