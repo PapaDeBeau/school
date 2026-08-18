@@ -997,23 +997,18 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .dashboard-announcements { width: 100%; display: grid; gap: 10px; justify-items: center; padding: 2px 0 10px; background: transparent; }
 .announcements-title-art { width: 34%; min-width: 190px; max-width: 360px; height: auto; display: block; object-fit: contain; filter: drop-shadow(0 6px 12px rgba(0, 50, 170, .32)); }
 .announcement-card-list { width: 100%; display: grid; gap: 9px; }
-.announcement-card { width: 100%; min-height: 78px; display: grid; gap: 8px; padding: 10px 12px 11px; border: 1px solid rgba(186, 213, 246, .9); border-radius: 13px; color: var(--dash-ink); background: rgba(255, 255, 255, .9); box-shadow: 0 10px 26px rgba(0, 25, 75, .16), inset 0 1px 0 #fff; font: inherit; }
-.announcement-card-main { width: 100%; display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; align-items: center; gap: 13px; padding: 0 4px 0 0; border: 0; color: inherit; background: transparent; font: inherit; text-align: left; cursor: pointer; }
-.announcement-teacher { min-width: 0; display: grid; justify-items: center; gap: 3px; }
-.announcement-teacher-photo { width: 48px; height: 48px; display: grid; place-items: center; overflow: hidden; border: 2px solid #2a82ed; border-radius: 50%; color: #fff; background: linear-gradient(145deg, #1277ee, #071e55); box-shadow: 0 3px 10px rgba(12, 70, 160, .28); }
+.announcement-card { width: 100%; min-height: 64px; display: grid; grid-template-columns: 54px minmax(0, 1fr); grid-template-rows: auto auto; align-items: center; column-gap: 8px; row-gap: 2px; padding: 6px 10px 7px 8px; border: 1px solid rgba(186, 213, 246, .9); border-radius: 13px; color: var(--dash-ink); background: rgba(255, 255, 255, .9); box-shadow: 0 10px 26px rgba(0, 25, 75, .16), inset 0 1px 0 #fff; font: inherit; }
+.announcement-teacher { min-width: 0; grid-row: 1 / 3; display: grid; justify-items: center; gap: 2px; }
+.announcement-teacher-photo { width: 44px; height: 44px; display: grid; place-items: center; overflow: hidden; border: 2px solid #2a82ed; border-radius: 50%; color: #fff; background: linear-gradient(145deg, #1277ee, #071e55); box-shadow: 0 3px 10px rgba(12, 70, 160, .28); }
 .announcement-teacher-photo img { width: 100%; height: 100%; display: block; object-fit: cover; }
 .announcement-teacher-photo strong { font-size: 18px; }
-.announcement-teacher > small { width: 58px; color: #245fba; font-size: clamp(6px, 1.7vw, 8px); font-weight: 900; line-height: 1; letter-spacing: -.025em; text-align: center; white-space: nowrap; }
-.announcement-card-copy { min-width: 0; display: grid; gap: 5px; }
-.announcement-card-copy strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.announcement-card-copy small { color: #687792; font-size: 9px; }
-.announcement-card-main i { color: #1674e8; font-size: 24px; font-style: normal; }
-.announcement-card-main:focus-visible { outline: 3px solid rgba(36, 99, 235, .42); outline-offset: 2px; border-radius: 8px; }
-.announcement-card-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; padding-top: 8px; border-top: 1px solid rgba(194, 214, 240, .72); }
+.announcement-teacher > small { width: 54px; color: #245fba; font-size: clamp(6px, 1.7vw, 8px); font-weight: 900; line-height: 1; letter-spacing: -.025em; text-align: center; white-space: nowrap; }
+.announcement-card-actions { min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: center; gap: 5px; }
 .announcement-card-actions button { width: 100%; min-width: 0; padding: 0; overflow: hidden; border: 0; border-radius: 9px; background: transparent; box-shadow: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.announcement-card-actions button img { width: 100%; height: auto; display: block; }
+.announcement-card-actions button img { width: 100%; height: 44px; display: block; object-fit: contain; }
 .announcement-card-actions button:active { transform: translateY(1px); }
 .announcement-card-actions button:focus-visible { outline: 3px solid rgba(36, 99, 235, .38); outline-offset: 2px; }
+.announcement-card-date { grid-column: 2; color: #78849a; font-size: 7px; line-height: 1; text-align: center; }
 .school-app.is-focus-mode { grid-template-columns: 150px minmax(0, 1fr); }
 .school-app.is-focus-mode .sidebar-brand > span:last-child,
 .school-app.is-focus-mode .school-nav,
