@@ -8,6 +8,8 @@ import { appPath } from "../../lib/app-paths";
 type ActionItem = {
   id: string;
   kind: "assignment" | "message";
+  canvasCourseId: number | null;
+  canvasAssignmentId: number | null;
   title: string;
   course: string;
   dueAt: string | null;
@@ -336,7 +338,7 @@ function CanvasRichContent({ html, fallbackText }: { html: string; fallbackText:
   return <div className="canvas-rich-content" ref={contentRef} />;
 }
 
-function AssignmentModal({ item, onClose }: { item: ActionItem; onClose: () => void }) {
+function AssignmentModal({ item, loading, loadError, onClose }: { item: ActionItem; loading: boolean; loadError: string | null; onClose: () => void }) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -394,6 +396,8 @@ function AssignmentModal({ item, onClose }: { item: ActionItem; onClose: () => v
           <section className="assignment-detail-section assignment-description" id="assignment-modal-description">
             <h3>Instructions &amp; details</h3>
             <h4>{item.title}</h4>
+            {loading ? <p className="assignment-description-fallback">Loading the full assignment from Canvas…</p> : null}
+            {loadError ? <p className="assignment-description-fallback">{loadError}</p> : null}
             <CanvasRichContent
               html={item.descriptionHtml}
               fallbackText={item.description || "Canvas has not included written instructions for this item. Use the Canvas button below to check for files, worksheets, videos, rubrics, or teacher updates."}
@@ -1119,9 +1123,41 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const [adminError, setAdminError] = useState<string | null>(null);
   const [greetingIndex] = useState(() => Math.floor(Math.random() * familyGreetings.length));
   const [selectedAction, setSelectedAction] = useState<ActionItem | null>(null);
-  const closeAssignment = useCallback(() => setSelectedAction(null), []);
+  const [assignmentDetailLoading, setAssignmentDetailLoading] = useState(false);
+  const [assignmentDetailError, setAssignmentDetailError] = useState<string | null>(null);
+  const closeAssignment = useCallback(() => {
+    setSelectedAction(null);
+    setAssignmentDetailLoading(false);
+    setAssignmentDetailError(null);
+  }, []);
   const closeThread = useCallback(() => setSelectedThread(null), []);
   const closeComposer = useCallback(() => setComposerBoard(null), []);
+
+  const openAssignment = useCallback(async (item: ActionItem) => {
+    setSelectedAction(item);
+    setAssignmentDetailError(null);
+    if (item.kind !== "assignment" || !item.canvasCourseId || !item.canvasAssignmentId) return;
+
+    setAssignmentDetailLoading(true);
+    try {
+      const response = await fetch(
+        appPath(`/api/assignment-details?course_id=${encodeURIComponent(item.canvasCourseId)}&assignment_id=${encodeURIComponent(item.canvasAssignmentId)}`),
+        { cache: "no-store", credentials: "same-origin" }
+      );
+      const body = await response.json();
+      if (response.status === 401) {
+        if (onExit) onExit();
+        else window.location.replace(appPath("/"));
+        return;
+      }
+      if (!response.ok) throw new Error(body.error || "Canvas could not load this assignment.");
+      setSelectedAction((current) => current?.id === item.id ? { ...current, ...body.item } : current);
+    } catch (caught) {
+      setAssignmentDetailError(caught instanceof Error ? caught.message : "Canvas could not load this assignment.");
+    } finally {
+      setAssignmentDetailLoading(false);
+    }
+  }, [onExit]);
 
   useEffect(() => {
     chatLatestIdRef.current = chatMessages.at(-1)?.id ?? null;
@@ -1808,13 +1844,13 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
         <div className="featured-due-stack">
           {dueToday.length || dashboardPreferences.showDueTodayWhenEmpty ? <div className="today-featured-slot due-featured-slot" aria-label="Assignments due today">
-            <MobileDueCard title="Due today" items={dueToday} empty="Nothing is due today." onSelectAssignment={setSelectedAction} featured tone="today" summary={todaySummary} />
+            <MobileDueCard title="Due today" items={dueToday} empty="Nothing is due today." onSelectAssignment={openAssignment} featured tone="today" summary={todaySummary} />
           </div> : null}
           {dueTomorrow.length || dashboardPreferences.showDueTomorrowWhenEmpty ? <div className="tomorrow-featured-slot due-featured-slot" aria-label="Assignments due tomorrow">
-            <MobileDueCard title="Due tomorrow" items={dueTomorrow} empty="Nothing is due tomorrow." onSelectAssignment={setSelectedAction} featured banner="/due-tomorrow-banner.webp" tone="tomorrow" summary={tomorrowSummary} />
+            <MobileDueCard title="Due tomorrow" items={dueTomorrow} empty="Nothing is due tomorrow." onSelectAssignment={openAssignment} featured banner="/due-tomorrow-banner.webp" tone="tomorrow" summary={tomorrowSummary} />
           </div> : null}
           {dueThisWeek.length || dashboardPreferences.showDueWeekWhenEmpty ? <div className="week-featured-slot due-featured-slot" aria-label="Assignments due this week">
-            <MobileDueCard title="Due this week" items={dueThisWeek} empty="Nothing else is due this week." onSelectAssignment={setSelectedAction} featured banner="/this-week-banner.webp" tone="week" summary={weekSummary} />
+            <MobileDueCard title="Due this week" items={dueThisWeek} empty="Nothing else is due this week." onSelectAssignment={openAssignment} featured banner="/this-week-banner.webp" tone="week" summary={weekSummary} />
           </div> : null}
         </div>
 
@@ -1838,7 +1874,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           <span className="critical-shield" aria-hidden="true">{allClear ? "✓" : "!"}</span>
           <div><p>Critical information</p><strong>{allClear ? "Nothing is due today and there are no unread teacher messages." : `${data.critical.length} items need attention.`}</strong></div>
           <span className="critical-chevron" aria-hidden="true">›</span>
-          {!allClear ? <ActionList items={data.critical} empty="Nothing needs attention." onSelectAssignment={setSelectedAction} /> : null}
+          {!allClear ? <ActionList items={data.critical} empty="Nothing needs attention." onSelectAssignment={openAssignment} /> : null}
         </section>
 
         <div className="primary-dashboard-grid schedule-only-grid">
@@ -1919,7 +1955,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           </div>
         )}
       </section>
-      {selectedAction ? <AssignmentModal item={selectedAction} onClose={closeAssignment} /> : null}
+      {selectedAction ? <AssignmentModal item={selectedAction} loading={assignmentDetailLoading} loadError={assignmentDetailError} onClose={closeAssignment} /> : null}
       {selectedThread ? <InboxThreadModal thread={selectedThread} onClose={closeThread} /> : null}
       {composerBoard ? <PostComposerModal board={composerBoard} onClose={closeComposer} onSubmit={(payload) => createPost(composerBoard, payload)} /> : null}
     </main>

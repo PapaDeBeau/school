@@ -63,6 +63,8 @@ type Conversation = {
 type ActionItem = {
   id: string;
   kind: "assignment" | "message";
+  canvasCourseId: number | null;
+  canvasAssignmentId: number | null;
   title: string;
   course: string;
   dueAt: string | null;
@@ -173,6 +175,8 @@ function normalizePlannerItem(item: PlannerItem, courseNames: Map<number, string
   return {
     id: `assignment-${item.course_id ?? "canvas"}-${item.plannable?.id ?? title}`,
     kind: "assignment",
+    canvasCourseId: item.course_id ?? null,
+    canvasAssignmentId: item.plannable?.id ?? null,
     title,
     course,
     dueAt,
@@ -245,6 +249,8 @@ export async function GET(request: Request) {
     const messages: ActionItem[] = unreadConversations.map((conversation) => ({
       id: `message-${conversation.id}`,
       kind: "message",
+      canvasCourseId: null,
+      canvasAssignmentId: null,
       title: conversation.subject?.trim() || "Canvas message",
       course: conversation.context_name ?? "Inbox",
       dueAt: conversation.last_message_at ?? conversation.start_at ?? null,

@@ -214,6 +214,12 @@ test("assignments open a detailed accessible modal before leaving for Canvas", a
   assert.match(dashboard, /DOMPurify\.sanitize/);
   assert.match(dashboard, /<h4>\{item\.title\}<\/h4>/);
   assert.match(dashboard, /Open \$\{item\.title\} in Canvas in a new browser window/);
+  assert.match(dashboard, /\/api\/assignment-details\?course_id=/);
+  assert.match(dashboard, /Loading the full assignment from Canvas/);
+  assert.match(dashboard, /canvasCourseId: number \| null/);
+  const assignmentDetails = await readFile(new URL("app/api/assignment-details/route.ts", root), "utf8");
+  assert.match(assignmentDetails, /\/api\/v1\/courses\/\$\{courseId\}\/assignments\/\$\{assignmentId\}/);
+  assert.match(assignmentDetails, /readFamilySession/);
   assert.match(dashboard, /event\.key === "Escape"/);
   assert.match(dashboardRoute, /description: canvasHtmlToText/);
   assert.match(dashboardRoute, /item\.plannable\?\.message/);
