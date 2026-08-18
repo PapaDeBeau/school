@@ -454,7 +454,6 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .grades-banner { width: 100%; height: auto; display: block; }
 .grade-artwork-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 10px 18px 0; }
 .grade-artwork-card { position: relative; width: 100%; min-width: 0; margin: 0; padding: 0; overflow: hidden; border: 0; border-radius: 18px; background: transparent; box-shadow: none; cursor: pointer; text-align: left; }
-.grade-artwork-card::after { content: "VIEW CLASS  ›"; position: absolute; right: 5%; top: 5%; z-index: 3; padding: 5px 9px; border: 1px solid rgba(255,255,255,.5); border-radius: 999px; color: #fff; background: rgba(7, 20, 50, .78); font-size: clamp(7px, 1.25vw, 12px); font-weight: 900; letter-spacing: .07em; box-shadow: 0 3px 10px rgba(0,0,0,.3); }
 .grade-artwork-card:hover { transform: translateY(-2px); filter: saturate(1.06); }
 .grade-artwork-card:focus-visible { outline: 4px solid #63a9ff; outline-offset: 3px; }
 .grade-artwork-card img { width: 100%; height: auto; display: block; }
@@ -1979,7 +1978,6 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   .admin-save { min-height: 47px; }
   .grade-artwork-grid { gap: 8px; margin-top: 8px; }
   .grade-artwork-card { border-radius: 12px; }
-  .grade-artwork-card::after { right: 4%; top: 4%; padding: 3px 6px; font-size: 6px; }
   .course-gradebook-view { min-height: calc(100dvh - 88px); padding: 10px; border-radius: 14px; }
   .gradebook-hero { grid-template-columns: 78px minmax(0,1fr); gap: 12px; padding: 13px; border-radius: 15px; }
   .gradebook-hero > span { width: 72px; height: 72px; border-width: 3px; font-size: 19px; }
