@@ -1720,6 +1720,45 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   }, [activeView, adminLoading, chatLoading, chatMessages, postBoardLoading, postsByBoard]);
 
   useLayoutEffect(() => {
+    if (activeView !== "dashboard") return;
+    const section = homeContentRef.current?.querySelector<HTMLElement>(".dashboard-announcements");
+    if (!section) return;
+    const title = section.querySelector<HTMLElement>(".announcements-title-art");
+    const cards = Array.from(section.querySelectorAll<HTMLElement>(".announcement-card"));
+    if (!title) return;
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reducedMotion) {
+      gsap.set([title, ...cards], { autoAlpha: 1, x: 0, y: 0, scale: 1 });
+      return;
+    }
+
+    gsap.set(title, { autoAlpha: 0, scale: 0.2, y: -8, transformOrigin: "50% 50%" });
+    gsap.set(cards, { autoAlpha: 0, y: -10 });
+    let animation: gsap.core.Timeline | null = null;
+    const play = () => {
+      animation?.kill();
+      animation = gsap.timeline()
+        .to(title, { autoAlpha: 1, scale: 1, y: 0, duration: 0.9, ease: "elastic.out(1.18, 0.34)" })
+        .to(cards, { autoAlpha: 1, y: 0, duration: 0.42, stagger: 0.11, ease: "power2.out" }, "-=0.3");
+    };
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      observer.disconnect();
+      play();
+    }, { threshold: 0.2 });
+    observer.observe(section);
+
+    return () => {
+      observer.disconnect();
+      animation?.kill();
+      gsap.killTweensOf([title, ...cards]);
+      gsap.set([title, ...cards], { clearProps: "all" });
+    };
+  }, [activeView, data]);
+
+  useLayoutEffect(() => {
     const showcase = gradesShowcaseRef.current;
     if (activeView !== "dashboard" || !showcase) return;
     const values = Array.from(showcase.querySelectorAll<HTMLElement>(".grade-artwork-value"));
