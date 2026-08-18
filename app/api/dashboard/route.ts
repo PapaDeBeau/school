@@ -65,6 +65,20 @@ type Conversation = {
   participants?: Array<{ id: number; name?: string }>;
 };
 
+type CanvasAnnouncement = {
+  id: number;
+  title?: string;
+  message?: string | null;
+  html_url?: string;
+  posted_at?: string | null;
+  published?: boolean;
+  context_code?: string;
+  author?: {
+    display_name?: string;
+    avatar_image_url?: string | null;
+  } | null;
+};
+
 type ActionItem = {
   id: string;
   kind: "assignment" | "announcement" | "message";
@@ -87,6 +101,8 @@ type ActionItem = {
   gradingType: string | null;
   allowedAttempts: number | null;
   published: boolean | null;
+  authorName: string | null;
+  authorAvatarUrl: string | null;
 };
 
 const PACIFIC_TIME_ZONE = "America/Los_Angeles";
@@ -216,6 +232,8 @@ function normalizePlannerItem(item: PlannerItem, courseNames: Map<number, string
     gradingType: item.plannable?.grading_type ?? null,
     allowedAttempts: item.plannable?.allowed_attempts ?? null,
     published: item.plannable?.published ?? null,
+    authorName: null,
+    authorAvatarUrl: null,
   };
 }
 
@@ -255,6 +273,42 @@ function normalizeAnnouncement(item: PlannerItem, courseNames: Map<number, strin
     gradingType: null,
     allowedAttempts: null,
     published: item.plannable?.published ?? null,
+    authorName: null,
+    authorAvatarUrl: null,
+  };
+}
+
+function normalizeCanvasAnnouncement(item: CanvasAnnouncement, courseNames: Map<number, string>): ActionItem | null {
+  const title = item.title?.trim();
+  if (!title) return null;
+  const courseId = Number(item.context_code?.match(/^course_(\d+)$/)?.[1] ?? 0) || null;
+  const descriptionHtml = item.message?.trim() ?? "";
+  const source = item.html_url ?? (courseId ? `${CANVAS_BASE_URL}/courses/${courseId}/discussion_topics/${item.id}` : CANVAS_BASE_URL);
+
+  return {
+    id: `announcement-${courseId ?? "canvas"}-${item.id}`,
+    kind: "announcement",
+    canvasCourseId: courseId,
+    canvasItemId: item.id,
+    canvasItemType: "announcement",
+    title,
+    course: (courseId ? courseNames.get(courseId) : undefined) ?? "Canvas",
+    dueAt: item.posted_at ?? null,
+    points: null,
+    state: "announcement",
+    detail: "Canvas announcement",
+    sourceUrl: source.startsWith("http") ? source : `${CANVAS_BASE_URL}${source}`,
+    description: canvasHtmlToText(descriptionHtml),
+    descriptionHtml,
+    availableFrom: null,
+    availableUntil: null,
+    submissionTypes: [],
+    allowedExtensions: [],
+    gradingType: null,
+    allowedAttempts: null,
+    published: item.published ?? null,
+    authorName: item.author?.display_name?.trim() || null,
+    authorAvatarUrl: item.author?.avatar_image_url?.trim() || null,
   };
 }
 
@@ -305,11 +359,22 @@ export async function GET(request: Request) {
     ]);
 
     const courseNames = new Map(courses.map((course) => [course.id, course.name]));
+    const announcementParams = new URLSearchParams({
+      start_date: dateOffset(-14),
+      end_date: dateOffset(14),
+      active_only: "true",
+      per_page: "100",
+    });
+    courses.forEach((course) => announcementParams.append("context_codes[]", `course_${course.id}`));
+    const canvasAnnouncements = courses.length
+      ? await canvasGet<CanvasAnnouncement[]>(`/api/v1/announcements?${announcementParams.toString()}`, token).catch(() => [])
+      : [];
     const assignments = plannerItems
       .map((item) => normalizePlannerItem(item, courseNames))
       .filter((item): item is ActionItem => Boolean(item));
-    const announcements = plannerItems
-      .map((item) => normalizeAnnouncement(item, courseNames))
+    const announcements = (canvasAnnouncements.length
+      ? canvasAnnouncements.map((item) => normalizeCanvasAnnouncement(item, courseNames))
+      : plannerItems.map((item) => normalizeAnnouncement(item, courseNames)))
       .filter((item): item is ActionItem => Boolean(item))
       .sort((a, b) => new Date(b.dueAt ?? 0).getTime() - new Date(a.dueAt ?? 0).getTime());
     const messages: ActionItem[] = unreadConversations.map((conversation) => ({
@@ -334,6 +399,8 @@ export async function GET(request: Request) {
       gradingType: null,
       allowedAttempts: null,
       published: null,
+      authorName: null,
+      authorAvatarUrl: null,
     }));
 
     const now = new Date();

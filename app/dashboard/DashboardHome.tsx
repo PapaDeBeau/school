@@ -27,6 +27,8 @@ type ActionItem = {
   gradingType: string | null;
   allowedAttempts: number | null;
   published: boolean | null;
+  authorName: string | null;
+  authorAvatarUrl: string | null;
 };
 
 function plainCanvasText(value: string) {
@@ -1126,6 +1128,16 @@ function MobileDueCard({ title, items, empty, onSelectAssignment, featured = fal
 }
 
 function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect: (item: ActionItem) => void }) {
+  const courseLabel = (course: string) => {
+    const normalized = course.toLocaleLowerCase("en-US");
+    if (normalized.includes("hsva") || normalized.includes("orientation")) return "HSVA";
+    if (normalized.includes("world history") || normalized.includes("history")) return "History";
+    if (normalized.includes("algebra")) return "Algebra";
+    if (normalized.includes("english")) return "English";
+    if (normalized.includes("biology")) return "Biology";
+    return course.trim().split(/\s+/)[0] || "Canvas";
+  };
+
   return (
     <section className="dashboard-announcements" aria-labelledby="dashboard-announcements-title">
       <h2 className="visually-hidden" id="dashboard-announcements-title">Announcements</h2>
@@ -1134,7 +1146,16 @@ function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect:
       <div className="announcement-card-list">
         {items.map((item) => (
           <button type="button" className="announcement-card" key={item.id} onClick={() => onSelect(item)}>
-            <span><strong>{item.title}</strong><small>{item.course}{item.dueAt ? ` · ${formatDate(item.dueAt)}` : ""}</small></span>
+            <span className="announcement-teacher">
+              <span className="announcement-teacher-photo" aria-label={item.authorName ? `Teacher: ${item.authorName}` : "Teacher"}>
+                {item.authorAvatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={item.authorAvatarUrl} alt={item.authorName || "Teacher"} referrerPolicy="no-referrer" />
+                ) : <strong aria-hidden="true">{(item.authorName || "Teacher").slice(0, 1).toUpperCase()}</strong>}
+              </span>
+              <small>{courseLabel(item.course)}</small>
+            </span>
+            <span className="announcement-card-copy"><strong>{item.title}</strong><small>{item.dueAt ? formatDate(item.dueAt) : "Date unavailable"}</small></span>
             <i aria-hidden="true">›</i>
           </button>
         ))}
