@@ -1740,16 +1740,19 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     if (!section) return;
     const title = section.querySelector<HTMLElement>(".announcements-title-art");
     const cards = Array.from(section.querySelectorAll<HTMLElement>(".announcement-card"));
-    if (!title) return;
+    const underline = section.querySelector<HTMLElement>(".announcements-section-underline");
+    if (!title || !underline) return;
 
     gsap.set(title, { autoAlpha: 0, scale: 0.2, y: -8, transformOrigin: "50% 50%" });
     gsap.set(cards, { autoAlpha: 0, y: -10 });
+    gsap.set(underline, { autoAlpha: 0, y: -10, scaleX: 0.65, transformOrigin: "50% 50%" });
     let animation: gsap.core.Timeline | null = null;
     const play = () => {
       animation?.kill();
       animation = gsap.timeline({ delay: 0.5 })
         .to(title, { autoAlpha: 1, scale: 1, y: 0, duration: 0.9, ease: "elastic.out(1.18, 0.34)" })
-        .to(cards, { autoAlpha: 1, y: 0, duration: 0.5, stagger: 0.2, ease: "power2.out" }, ">-0.05");
+        .to(cards, { autoAlpha: 1, y: 0, duration: 0.5, stagger: 0.2, ease: "power2.out" }, ">-0.05")
+        .to(underline, { autoAlpha: 1, y: 0, scaleX: 1, duration: 0.5, ease: "power2.out" }, ">");
     };
 
     const observer = new IntersectionObserver(([entry]) => {
@@ -1762,8 +1765,8 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     return () => {
       observer.disconnect();
       animation?.kill();
-      gsap.killTweensOf([title, ...cards]);
-      gsap.set([title, ...cards], { clearProps: "all" });
+      gsap.killTweensOf([title, ...cards, underline]);
+      gsap.set([title, ...cards, underline], { clearProps: "all" });
     };
   }, [activeView, data]);
 
