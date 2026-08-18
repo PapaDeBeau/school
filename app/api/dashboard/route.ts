@@ -20,10 +20,15 @@ type PlannerItem = {
   course_id?: number;
   context_name?: string;
   html_url?: string;
+  plannable_id?: number | string;
   plannable_date?: string;
   plannable_type?: string;
+  planner_override?: {
+    assignment_id?: number | null;
+  } | null;
   plannable?: {
     id?: number;
+    assignment_id?: number | null;
     title?: string;
     description?: string | null;
     message?: string | null;
@@ -64,7 +69,8 @@ type ActionItem = {
   id: string;
   kind: "assignment" | "message";
   canvasCourseId: number | null;
-  canvasAssignmentId: number | null;
+  canvasItemId: number | null;
+  canvasItemType: string | null;
   title: string;
   course: string;
   dueAt: string | null;
@@ -148,6 +154,17 @@ function canvasRichContent(item: PlannerItem) {
   return candidates.find((value) => value?.trim())?.trim() ?? "";
 }
 
+function detailIdForPlannerItem(item: PlannerItem, source: string) {
+  const discussionTopicId = source.match(/\/courses\/\d+\/discussion_topics\/(\d+)/i)?.[1];
+  if (discussionTopicId) return Number(discussionTopicId);
+  const urlAssignmentId = source.match(/\/courses\/\d+\/assignments\/(\d+)/i)?.[1];
+  if (urlAssignmentId) return Number(urlAssignmentId);
+  if (item.plannable?.assignment_id) return item.plannable.assignment_id;
+  if (item.planner_override?.assignment_id) return item.planner_override.assignment_id;
+  const plannerId = Number(item.plannable_id ?? item.plannable?.id);
+  return Number.isSafeInteger(plannerId) && plannerId > 0 ? plannerId : null;
+}
+
 function normalizePlannerItem(item: PlannerItem, courseNames: Map<number, string>): ActionItem | null {
   const title = item.plannable?.title?.trim();
   if (!title) return null;
@@ -171,12 +188,15 @@ function normalizePlannerItem(item: PlannerItem, courseNames: Map<number, string
     "Canvas";
   const source = item.html_url ?? item.plannable?.html_url ?? CANVAS_BASE_URL;
   const descriptionHtml = canvasRichContent(item);
+  const canvasItemId = detailIdForPlannerItem(item, source);
+  const canvasItemType = item.plannable_type?.toLocaleLowerCase("en-US") ?? null;
 
   return {
     id: `assignment-${item.course_id ?? "canvas"}-${item.plannable?.id ?? title}`,
     kind: "assignment",
     canvasCourseId: item.course_id ?? null,
-    canvasAssignmentId: item.plannable?.id ?? null,
+    canvasItemId,
+    canvasItemType,
     title,
     course,
     dueAt,
@@ -250,7 +270,8 @@ export async function GET(request: Request) {
       id: `message-${conversation.id}`,
       kind: "message",
       canvasCourseId: null,
-      canvasAssignmentId: null,
+      canvasItemId: null,
+      canvasItemType: null,
       title: conversation.subject?.trim() || "Canvas message",
       course: conversation.context_name ?? "Inbox",
       dueAt: conversation.last_message_at ?? conversation.start_at ?? null,

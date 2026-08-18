@@ -59,6 +59,7 @@ test("family login uses server-side sessions and never commits PIN values", asyn
 test("successful login changes scenes without navigating away from the school URL", async () => {
   const login = await readFile(new URL("app/FamilyLogin.tsx", root), "utf8");
   const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
+  const dashboardRoute = await readFile(new URL("app/api/dashboard/route.ts", root), "utf8");
   const styles = await readFile(new URL("app/globals.css", root), "utf8");
 
   assert.match(login, /gsap\.to\(card/);
@@ -215,13 +216,15 @@ test("assignments open a detailed accessible modal before leaving for Canvas", a
   assert.match(dashboard, /<h4>\{item\.title\}<\/h4>/);
   assert.match(dashboard, /Open \$\{item\.title\} in Canvas in a new browser window/);
   assert.match(dashboard, /\/api\/assignment-details\?course_id=/);
+  assert.match(dashboard, /item_type=/);
   assert.match(dashboard, /function mergeCanvasInstructions\(/);
   assert.match(dashboard, /Additional Canvas details/);
   assert.match(dashboard, /return \{ \.\.\.current, \.\.\.body\.item, \.\.\.mergedInstructions \}/);
-  assert.match(dashboard, /Loading the full assignment from Canvas/);
+  assert.match(dashboard, /Loading the full item from Canvas/);
   assert.match(dashboard, /canvasCourseId: number \| null/);
   const assignmentDetails = await readFile(new URL("app/api/assignment-details/route.ts", root), "utf8");
-  assert.match(assignmentDetails, /\/api\/v1\/courses\/\$\{courseId\}\/assignments\/\$\{assignmentId\}/);
+  assert.match(assignmentDetails, /\/api\/v1\/courses\/\$\{courseId\}\/assignments\/\$\{itemId\}/);
+  assert.match(assignmentDetails, /\/api\/v1\/courses\/\$\{courseId\}\/discussion_topics\/\$\{itemId\}/);
   assert.match(assignmentDetails, /readFamilySession/);
   assert.match(dashboard, /event\.key === "Escape"/);
   assert.match(dashboardRoute, /description: canvasHtmlToText/);
@@ -308,6 +311,7 @@ test("family chat is persistent, paginated, link-aware, and sender controlled", 
 
 test("admin stores percentages and controls empty due-card visibility", async () => {
   const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
+  const dashboardRoute = await readFile(new URL("app/api/dashboard/route.ts", root), "utf8");
   const styles = await readFile(new URL("app/globals.css", root), "utf8");
   const adminRoute = await readFile(new URL("app/api/admin/route.ts", root), "utf8");
   const schema = await readFile(new URL("db/schema.ts", root), "utf8");
@@ -339,6 +343,9 @@ test("admin stores percentages and controls empty due-card visibility", async ()
   assert.match(dashboard, /startPersistentMotion\(value, motion\)/);
   assert.match(dashboard, /\}, \[activeView, data, gradeOverrides\]\);/);
   assert.match(dashboard, /const percentage = course\?\.score \?\? grade\?\.percentage \?\? null/);
+  assert.match(dashboardRoute, /function detailIdForPlannerItem\(/);
+  assert.match(dashboardRoute, /discussion_topics/);
+  assert.match(dashboardRoute, /source\.match\(\/\\\/courses\\\/\\d\+\\\/assignments\\\/\(\\d\+\)\/i\)/);
   assert.match(styles, /\.grade-tone-b \.grade-artwork-letter,[\s\S]*\.grade-tone-d \.grade-artwork-letter \{ left: 51%; \}/);
   assert.match(styles, /\.grade-artwork-value \{[^}]*visibility: hidden; opacity: 0;/);
   assert.doesNotMatch(dashboard, /autoAlpha: 0\.18/);

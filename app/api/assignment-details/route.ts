@@ -20,6 +20,13 @@ type CanvasAssignment = {
   published?: boolean;
 };
 
+type CanvasDiscussionTopic = {
+  message?: string | null;
+  html_url?: string;
+  posted_at?: string | null;
+  published?: boolean;
+};
+
 const headers = {
   "Cache-Control": "no-store, max-age=0",
   "Referrer-Policy": "no-referrer",
@@ -68,9 +75,10 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const courseId = url.searchParams.get("course_id");
-  const assignmentId = url.searchParams.get("assignment_id");
-  if (!validCanvasId(courseId) || !validCanvasId(assignmentId)) {
-    return json({ error: "A valid Canvas course and assignment are required." }, { status: 400 });
+  const itemId = url.searchParams.get("item_id") ?? url.searchParams.get("assignment_id");
+  const itemType = (url.searchParams.get("item_type") ?? "assignment").toLocaleLowerCase("en-US");
+  if (!validCanvasId(courseId) || !validCanvasId(itemId)) {
+    return json({ error: "A valid Canvas course and item are required." }, { status: 400 });
   }
 
   try {
@@ -83,12 +91,29 @@ export async function GET(request: Request) {
     if (!connection) return json({ error: "Canvas is not connected." }, { status: 409 });
 
     const token = await decryptCanvasToken(connection.encryptedToken, connection.tokenIv);
+    if (itemType === "announcement" || itemType === "discussion_topic") {
+      const topic = await canvasGet<CanvasDiscussionTopic>(
+        `/api/v1/courses/${courseId}/discussion_topics/${itemId}`,
+        token
+      );
+      const descriptionHtml = topic.message?.trim() ?? "";
+      const sourceUrl = topic.html_url ?? `${CANVAS_BASE_URL}/courses/${courseId}/discussion_topics/${itemId}`;
+      return json({
+        item: {
+          descriptionHtml,
+          description: canvasHtmlToText(descriptionHtml),
+          sourceUrl: sourceUrl.startsWith("http") ? sourceUrl : `${CANVAS_BASE_URL}${sourceUrl}`,
+          published: topic.published ?? null,
+        },
+      });
+    }
+
     const assignment = await canvasGet<CanvasAssignment>(
-      `/api/v1/courses/${courseId}/assignments/${assignmentId}`,
+      `/api/v1/courses/${courseId}/assignments/${itemId}`,
       token
     );
     const descriptionHtml = assignment.description?.trim() ?? "";
-    const sourceUrl = assignment.html_url ?? `${CANVAS_BASE_URL}/courses/${courseId}/assignments/${assignmentId}`;
+    const sourceUrl = assignment.html_url ?? `${CANVAS_BASE_URL}/courses/${courseId}/assignments/${itemId}`;
 
     return json({
       item: {

@@ -9,7 +9,8 @@ type ActionItem = {
   id: string;
   kind: "assignment" | "message";
   canvasCourseId: number | null;
-  canvasAssignmentId: number | null;
+  canvasItemId: number | null;
+  canvasItemType: string | null;
   title: string;
   course: string;
   dueAt: string | null;
@@ -427,7 +428,7 @@ function AssignmentModal({ item, loading, loadError, onClose }: { item: ActionIt
           <section className="assignment-detail-section assignment-description" id="assignment-modal-description">
             <h3>Instructions &amp; details</h3>
             <h4>{item.title}</h4>
-            {loading ? <p className="assignment-description-fallback">Loading the full assignment from Canvas…</p> : null}
+            {loading ? <p className="assignment-description-fallback">Loading the full item from Canvas…</p> : null}
             {loadError ? <p className="assignment-description-fallback">{loadError}</p> : null}
             <CanvasRichContent
               html={item.descriptionHtml}
@@ -1167,12 +1168,12 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const openAssignment = useCallback(async (item: ActionItem) => {
     setSelectedAction(item);
     setAssignmentDetailError(null);
-    if (item.kind !== "assignment" || !item.canvasCourseId || !item.canvasAssignmentId) return;
+    if (item.kind !== "assignment" || !item.canvasCourseId || !item.canvasItemId || !item.canvasItemType) return;
 
     setAssignmentDetailLoading(true);
     try {
       const response = await fetch(
-        appPath(`/api/assignment-details?course_id=${encodeURIComponent(item.canvasCourseId)}&assignment_id=${encodeURIComponent(item.canvasAssignmentId)}`),
+        appPath(`/api/assignment-details?course_id=${encodeURIComponent(item.canvasCourseId)}&item_id=${encodeURIComponent(item.canvasItemId)}&item_type=${encodeURIComponent(item.canvasItemType)}`),
         { cache: "no-store", credentials: "same-origin" }
       );
       const body = await response.json();
