@@ -1732,9 +1732,9 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     let animation: gsap.core.Timeline | null = null;
     const play = () => {
       animation?.kill();
-      animation = gsap.timeline({ delay: 1 })
+      animation = gsap.timeline({ delay: 0.5 })
         .to(title, { autoAlpha: 1, scale: 1, y: 0, duration: 0.9, ease: "elastic.out(1.18, 0.34)" })
-        .to(cards, { autoAlpha: 1, y: 0, duration: 0.5, stagger: 0.5, ease: "power2.out" }, ">-0.05");
+        .to(cards, { autoAlpha: 1, y: 0, duration: 0.5, stagger: 0.2, ease: "power2.out" }, ">-0.05");
     };
 
     const observer = new IntersectionObserver(([entry]) => {
