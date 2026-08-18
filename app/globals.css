@@ -1840,6 +1840,28 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   }
   .mobile-menu-option img { width: 100%; height: auto; display: block; }
   .mobile-menu-option:focus-visible { outline: 3px solid rgba(104, 190, 255, .9); outline-offset: 2px; }
+  .mobile-menu-action {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 43px;
+    padding: 9px 16px;
+    border: 1px solid rgba(255, 255, 255, .34);
+    border-radius: 10px;
+    color: #fff;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 850;
+    letter-spacing: .02em;
+    text-align: center;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .42);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 4px 14px rgba(0, 0, 0, .28);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-menu-close-action { background: #e01c2d; }
+  .mobile-menu-logout-action { background: #086fe8; }
+  .mobile-menu-action:active { transform: translateY(1px); }
+  .mobile-menu-action:focus-visible { outline: 3px solid rgba(255, 255, 255, .92); outline-offset: 2px; }
   .featured-due-stack { margin-bottom: 0; }
   .school-app .overview-hero { display: none; }
   .immersive-dashboard .summary-card,

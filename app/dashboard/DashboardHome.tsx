@@ -1958,12 +1958,18 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
         <div className="mobile-menu-layer" ref={mobileMenuLayerRef} aria-hidden={!mobileMenuOpen}>
           <button className="mobile-menu-backdrop" type="button" onClick={() => setMobileMenuOpen(false)} aria-label="Close school menu" tabIndex={mobileMenuOpen ? 0 : -1} />
           <div className="mobile-school-menu" id="mobile-school-menu" ref={mobileMenuPanelRef} role="menu" aria-label="School menu options">
+            <button className="mobile-menu-action mobile-menu-close-action" type="button" role="menuitem" onClick={() => setMobileMenuOpen(false)} tabIndex={mobileMenuOpen ? 0 : -1}>
+              Close
+            </button>
             {mobileMenuItems.map((item) => (
               <button className="mobile-menu-option" type="button" role="menuitem" key={item.label} onClick={() => chooseMobileMenuItem(item.action)} tabIndex={mobileMenuOpen ? 0 : -1}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={appPath(item.image)} alt={item.label} />
               </button>
             ))}
+            <button className="mobile-menu-action mobile-menu-logout-action" type="button" role="menuitem" onClick={() => void signOut()} tabIndex={mobileMenuOpen ? 0 : -1}>
+              Log Out
+            </button>
           </div>
         </div>
 
