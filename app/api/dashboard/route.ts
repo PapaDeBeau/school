@@ -67,7 +67,7 @@ type Conversation = {
 
 type ActionItem = {
   id: string;
-  kind: "assignment" | "message";
+  kind: "assignment" | "announcement" | "message";
   canvasCourseId: number | null;
   canvasItemId: number | null;
   canvasItemType: string | null;
@@ -219,6 +219,45 @@ function normalizePlannerItem(item: PlannerItem, courseNames: Map<number, string
   };
 }
 
+function normalizeAnnouncement(item: PlannerItem, courseNames: Map<number, string>): ActionItem | null {
+  const itemType = item.plannable_type?.toLocaleLowerCase("en-US") ?? "";
+  if (itemType !== "announcement") return null;
+
+  const title = item.plannable?.title?.trim();
+  if (!title) return null;
+
+  const course =
+    (item.course_id ? courseNames.get(item.course_id) : undefined) ??
+    item.context_name ??
+    "Canvas";
+  const source = item.html_url ?? item.plannable?.html_url ?? CANVAS_BASE_URL;
+  const descriptionHtml = canvasRichContent(item);
+
+  return {
+    id: `announcement-${item.course_id ?? "canvas"}-${item.plannable?.id ?? item.plannable_id ?? title}`,
+    kind: "announcement",
+    canvasCourseId: item.course_id ?? null,
+    canvasItemId: detailIdForPlannerItem(item, source),
+    canvasItemType: "announcement",
+    title,
+    course,
+    dueAt: item.plannable_date ?? null,
+    points: null,
+    state: "announcement",
+    detail: "Canvas announcement",
+    sourceUrl: source.startsWith("http") ? source : `${CANVAS_BASE_URL}${source}`,
+    description: canvasHtmlToText(descriptionHtml),
+    descriptionHtml,
+    availableFrom: null,
+    availableUntil: null,
+    submissionTypes: [],
+    allowedExtensions: [],
+    gradingType: null,
+    allowedAttempts: null,
+    published: item.plannable?.published ?? null,
+  };
+}
+
 function classSchedule() {
   return [
     { day: "Monday", time: "8:45–9:45 AM", course: "World History A", note: "Section needs confirmation", tentative: true },
@@ -269,6 +308,10 @@ export async function GET(request: Request) {
     const assignments = plannerItems
       .map((item) => normalizePlannerItem(item, courseNames))
       .filter((item): item is ActionItem => Boolean(item));
+    const announcements = plannerItems
+      .map((item) => normalizeAnnouncement(item, courseNames))
+      .filter((item): item is ActionItem => Boolean(item))
+      .sort((a, b) => new Date(b.dueAt ?? 0).getTime() - new Date(a.dueAt ?? 0).getTime());
     const messages: ActionItem[] = unreadConversations.map((conversation) => ({
       id: `message-${conversation.id}`,
       kind: "message",
@@ -315,6 +358,7 @@ export async function GET(request: Request) {
       student: connection.displayName,
       courseCount: courses.length,
       unreadCount: unreadConversations.length,
+      announcements,
       critical,
       upcoming,
       week: classSchedule(),

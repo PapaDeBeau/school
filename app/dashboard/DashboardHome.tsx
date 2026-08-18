@@ -7,7 +7,7 @@ import { appPath } from "../../lib/app-paths";
 
 type ActionItem = {
   id: string;
-  kind: "assignment" | "message";
+  kind: "assignment" | "announcement" | "message";
   canvasCourseId: number | null;
   canvasItemId: number | null;
   canvasItemType: string | null;
@@ -98,6 +98,7 @@ type DashboardData = {
   student: string;
   courseCount: number;
   unreadCount: number;
+  announcements: ActionItem[];
   critical: ActionItem[];
   upcoming: ActionItem[];
   week: WeekItem[];
@@ -411,7 +412,12 @@ function AssignmentModal({ item, loading, loadError, onClose }: { item: ActionIt
     };
   }, [onClose]);
 
-  const detailRows = [
+  const isAnnouncement = item.kind === "announcement";
+  const detailRows = isAnnouncement ? [
+    { label: "Course", value: item.course },
+    { label: "Posted", value: formatDate(item.dueAt) },
+    { label: "Published", value: item.published === null ? "Not reported" : item.published ? "Yes" : "No" },
+  ] : [
     { label: "Course", value: item.course },
     { label: "Due", value: formatDate(item.dueAt) },
     { label: "Status", value: assignmentStatus(item.state) },
@@ -427,16 +433,16 @@ function AssignmentModal({ item, loading, loadError, onClose }: { item: ActionIt
 
   return (
     <div className="assignment-modal-backdrop">
-      <button className="modal-backdrop-dismiss" type="button" onClick={onClose} aria-label="Close assignment details" />
+      <button className="modal-backdrop-dismiss" type="button" onClick={onClose} aria-label={`Close ${isAnnouncement ? "announcement" : "assignment"} details`} />
       <section className="assignment-modal" role="dialog" aria-modal="true" aria-labelledby="assignment-modal-title" aria-describedby="assignment-modal-description">
-        <button className="assignment-modal-x" type="button" onClick={onClose} aria-label="Close assignment details">
+        <button className="assignment-modal-x" type="button" onClick={onClose} aria-label={`Close ${isAnnouncement ? "announcement" : "assignment"} details`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={appPath("/logout-button.webp")} alt="" aria-hidden="true" />
         </button>
         <div className="assignment-modal-scroll">
           <header className="assignment-modal-heading">
             <span aria-hidden="true">A</span>
-            <div><p>Assignment details</p><h2 id="assignment-modal-title">{item.title}</h2><small>{item.course}</small></div>
+            <div><p>{isAnnouncement ? "Announcement" : "Assignment details"}</p><h2 id="assignment-modal-title">{item.title}</h2><small>{item.course}</small></div>
           </header>
 
           <section className="assignment-detail-section">
@@ -447,13 +453,13 @@ function AssignmentModal({ item, loading, loadError, onClose }: { item: ActionIt
           </section>
 
           <section className="assignment-detail-section assignment-description" id="assignment-modal-description">
-            <h3>Instructions &amp; details</h3>
+            <h3>{isAnnouncement ? "Announcement details" : <>Instructions &amp; details</>}</h3>
             <h4>{item.title}</h4>
             {loading ? <p className="assignment-description-fallback">Loading the full item from Canvas…</p> : null}
             {loadError ? <p className="assignment-description-fallback">{loadError}</p> : null}
             <CanvasRichContent
               html={item.descriptionHtml}
-              fallbackText={item.description || "Canvas has not included written instructions for this item. Use the Canvas button below to check for files, worksheets, videos, rubrics, or teacher updates."}
+              fallbackText={item.description || (isAnnouncement ? "Open this announcement in Canvas to read the teacher's full message." : "Canvas has not included written instructions for this item. Use the Canvas button below to check for files, worksheets, videos, rubrics, or teacher updates.")}
             />
           </section>
         </div>
@@ -1119,6 +1125,24 @@ function MobileDueCard({ title, items, empty, onSelectAssignment, featured = fal
   );
 }
 
+function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect: (item: ActionItem) => void }) {
+  return (
+    <section className="dashboard-announcements" aria-labelledby="dashboard-announcements-title">
+      <h2 className="visually-hidden" id="dashboard-announcements-title">Announcements</h2>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="announcements-title-art" src={appPath("/announcements-title.png")} alt="Announcements" />
+      <div className="announcement-card-list">
+        {items.map((item) => (
+          <button type="button" className="announcement-card" key={item.id} onClick={() => onSelect(item)}>
+            <span><strong>{item.title}</strong><small>{item.course}{item.dueAt ? ` · ${formatDate(item.dueAt)}` : ""}</small></span>
+            <i aria-hidden="true">›</i>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 const canvasLinks = [
   { label: "Dashboard", icon: "⌂", href: appPath("/dashboard"), local: true },
   { label: "Canvas", icon: "▣", href: "https://sequoiagrove.instructure.com/" },
@@ -1240,7 +1264,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const openAssignment = useCallback(async (item: ActionItem) => {
     setSelectedAction(item);
     setAssignmentDetailError(null);
-    if (item.kind !== "assignment" || !item.canvasCourseId || !item.canvasItemId || !item.canvasItemType) return;
+    if (item.kind === "message" || !item.canvasCourseId || !item.canvasItemId || !item.canvasItemType) return;
 
     setAssignmentDetailLoading(true);
     try {
@@ -1997,6 +2021,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           {dueToday.length || dashboardPreferences.showDueTodayWhenEmpty ? <div className="today-featured-slot due-featured-slot" aria-label="Assignments due today">
             <MobileDueCard title="Due today" items={dueToday} empty="Nothing is due today." onSelectAssignment={openAssignment} featured tone="today" summary={todaySummary} />
           </div> : null}
+          <AnnouncementStack items={data.announcements ?? []} onSelect={openAssignment} />
           {dueTomorrow.length || dashboardPreferences.showDueTomorrowWhenEmpty ? <div className="tomorrow-featured-slot due-featured-slot" aria-label="Assignments due tomorrow">
             <MobileDueCard title="Due tomorrow" items={dueTomorrow} empty="Nothing is due tomorrow." onSelectAssignment={openAssignment} featured banner="/due-tomorrow-banner.webp" tone="tomorrow" summary={tomorrowSummary} />
           </div> : null}

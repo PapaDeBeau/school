@@ -990,6 +990,15 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .due-featured-slot .week-item-due { margin-bottom: 1px; color: #216fd0; font-size: 9px; font-style: normal; font-weight: 850; letter-spacing: .025em; }
 .due-featured-slot .week-item-due b { color: #e56c13; font-weight: 950; text-transform: uppercase; }
 .due-featured-slot .mobile-due-list i { color: #65748f; font-size: 20px; font-style: normal; }
+.dashboard-announcements { width: 100%; display: grid; gap: 10px; justify-items: center; padding: 2px 0 0; background: transparent; }
+.announcements-title-art { width: 34%; min-width: 190px; max-width: 360px; height: auto; display: block; object-fit: contain; filter: drop-shadow(0 6px 12px rgba(0, 50, 170, .32)); }
+.announcement-card-list { width: 100%; display: grid; gap: 9px; }
+.announcement-card { width: 100%; min-height: 58px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px 18px; border: 1px solid rgba(186, 213, 246, .9); border-radius: 13px; color: var(--dash-ink); background: rgba(255, 255, 255, .9); box-shadow: 0 10px 26px rgba(0, 25, 75, .16), inset 0 1px 0 #fff; font: inherit; text-align: left; cursor: pointer; }
+.announcement-card > span { min-width: 0; display: grid; gap: 4px; }
+.announcement-card strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.announcement-card small { color: #687792; font-size: 9px; }
+.announcement-card i { color: #1674e8; font-size: 24px; font-style: normal; }
+.announcement-card:focus-visible { outline: 3px solid rgba(36, 99, 235, .42); outline-offset: 2px; }
 .school-app.is-focus-mode { grid-template-columns: 150px minmax(0, 1fr); }
 .school-app.is-focus-mode .sidebar-brand > span:last-child,
 .school-app.is-focus-mode .school-nav,
