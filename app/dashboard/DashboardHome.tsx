@@ -1727,12 +1727,6 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     const cards = Array.from(section.querySelectorAll<HTMLElement>(".announcement-card"));
     if (!title) return;
 
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reducedMotion) {
-      gsap.set([title, ...cards], { autoAlpha: 1, x: 0, y: 0, scale: 1 });
-      return;
-    }
-
     gsap.set(title, { autoAlpha: 0, scale: 0.2, y: -8, transformOrigin: "50% 50%" });
     gsap.set(cards, { autoAlpha: 0, y: -10 });
     let animation: gsap.core.Timeline | null = null;
