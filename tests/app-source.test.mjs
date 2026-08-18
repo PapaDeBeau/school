@@ -339,6 +339,8 @@ test("admin stores percentages and controls empty due-card visibility", async ()
   assert.match(dashboard, /showDueTodayWhenEmpty/);
   assert.match(dashboard, /showDueTomorrowWhenEmpty/);
   assert.match(dashboard, /showDueWeekWhenEmpty/);
+  assert.match(dashboard, /className="week-item-due"/);
+  assert.match(dashboard, /thisWeekDueLabel\(item\.dueAt\)/);
   assert.match(dashboard, /function letterGrade/);
   assert.match(dashboard, /grade-artwork-value/);
   assert.match(dashboard, /const scrollRoot = showcase\.closest<HTMLElement>\("\.school-workspace"\)/);

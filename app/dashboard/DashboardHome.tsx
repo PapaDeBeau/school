@@ -246,6 +246,14 @@ function shortOrdinalDay(key: string) {
   return `${monthLabel} ${day}${suffix}`;
 }
 
+function thisWeekDueLabel(value: string | null) {
+  if (!value) return "Due date not listed";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Due date unavailable";
+  const weekday = new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", weekday: "long" }).format(date);
+  return `${weekday}, ${shortOrdinalDay(dayKey(date))}`;
+}
+
 function formatDate(value: string | null) {
   if (!value) return "No due date";
   const date = new Date(value);
@@ -1102,7 +1110,7 @@ function MobileDueCard({ title, items, empty, onSelectAssignment, featured = fal
         <div className="mobile-due-list">
           {items.map((item) => (
             <button type="button" key={item.id} onClick={() => onSelectAssignment(item)} aria-label={`View details for ${item.title}`}>
-              <span><strong>{item.title}</strong><small>{item.course}</small></span><i aria-hidden="true">›</i>
+              <span>{tone === "week" ? <em className="week-item-due"><b>Due:</b> {thisWeekDueLabel(item.dueAt)}</em> : null}<strong>{item.title}</strong><small>{item.course}</small></span><i aria-hidden="true">›</i>
             </button>
           ))}
         </div>

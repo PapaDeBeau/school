@@ -987,6 +987,8 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .due-featured-slot .mobile-due-list button > span { min-width: 0; display: grid; gap: 3px; }
 .due-featured-slot .mobile-due-list strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .due-featured-slot .mobile-due-list small { color: #6b7690; font-size: 9px; }
+.due-featured-slot .week-item-due { margin-bottom: 1px; color: #216fd0; font-size: 9px; font-style: normal; font-weight: 850; letter-spacing: .025em; }
+.due-featured-slot .week-item-due b { color: #e56c13; font-weight: 950; text-transform: uppercase; }
 .due-featured-slot .mobile-due-list i { color: #65748f; font-size: 20px; font-style: normal; }
 .school-app.is-focus-mode { grid-template-columns: 150px minmax(0, 1fr); }
 .school-app.is-focus-mode .sidebar-brand > span:last-child,
