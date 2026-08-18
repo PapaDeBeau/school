@@ -76,6 +76,19 @@ type Course = {
   score: number | null;
 };
 
+type CourseGradeItem = {
+  id: number;
+  name: string;
+  dueAt: string | null;
+  submittedAt: string | null;
+  status: string;
+  score: number | null;
+  grade: string | null;
+  pointsPossible: number | null;
+  percentage: number | null;
+  sourceUrl: string;
+};
+
 type DashboardData = {
   generatedAt: string;
   viewer: {
@@ -529,6 +542,42 @@ function ClassesView({ courses, week }: { courses: Course[]; week: WeekItem[] })
             </div>
             {course.sourceUrl ? <a href={course.sourceUrl} target="_blank" rel="noreferrer">Open class in Canvas <span aria-hidden="true">→</span></a> : null}
           </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CourseGradebookView({ course, assignments, loading, error }: {
+  course: Course;
+  assignments: CourseGradeItem[];
+  loading: boolean;
+  error: string | null;
+}) {
+  return (
+    <section className="course-gradebook-view" aria-label={`${course.name} gradebook`}>
+      <header className="gradebook-hero">
+        <span aria-hidden="true">{course.score === null ? "—" : `${course.score.toFixed(course.score % 1 ? 1 : 0)}%`}</span>
+        <div><p>Canvas gradebook</p><h1>{course.name}</h1><small>{course.grade || (course.score === null ? "No overall grade yet" : "Current course score")}</small></div>
+      </header>
+      <div className="gradebook-column-key" aria-hidden="true"><span>Assignment</span><span>Progress</span></div>
+      {loading ? <div className="gradebook-state" role="status"><i aria-hidden="true" /><p>Loading class work from Canvas…</p></div> : null}
+      {error ? <div className="gradebook-state is-error" role="alert"><strong>Class work could not be loaded.</strong><p>{error}</p></div> : null}
+      {!loading && !error && !assignments.length ? <div className="gradebook-state"><strong>No assignments are available yet.</strong></div> : null}
+      <div className="gradebook-assignment-list">
+        {assignments.map((assignment) => (
+          <a className="gradebook-assignment-card" href={assignment.sourceUrl} target="_blank" rel="noreferrer" key={assignment.id}>
+            <div className="gradebook-card-top"><h2>{assignment.name}</h2><span className={`gradebook-status status-${assignment.status.toLocaleLowerCase("en-US").replace(/\s+/g, "-")}`}>{assignment.status}</span></div>
+            <dl>
+              <div><dt>Due</dt><dd>{formatDate(assignment.dueAt)}</dd></div>
+              <div><dt>Submitted</dt><dd>{assignment.submittedAt ? formatInboxDate(assignment.submittedAt) : "Not submitted"}</dd></div>
+            </dl>
+            <div className="gradebook-score-row">
+              <span>Score</span>
+              <strong>{assignment.grade || (assignment.score === null ? "—" : `${assignment.score}${assignment.pointsPossible === null ? "" : ` / ${assignment.pointsPossible}`}`)}</strong>
+              <i aria-hidden="true">›</i>
+            </div>
+          </a>
         ))}
       </div>
     </section>
@@ -1073,7 +1122,7 @@ const canvasLinks = [
   { label: "Settings", icon: "⚙", href: appPath("/settings"), local: true },
 ];
 
-type ActiveView = "dashboard" | "inbox" | "classes" | "chat" | "admin" | PostBoard;
+type ActiveView = "dashboard" | "inbox" | "classes" | "grades" | "chat" | "admin" | PostBoard;
 
 const mobileMenuItems: Array<{ label: string; image: string; action?: Exclude<ActiveView, "dashboard"> }> = [
   { label: "To-Do List", image: "/menu-todo.webp" },
@@ -1096,6 +1145,17 @@ const gradeArtwork = [
   { label: "HSVA", image: "/grade-hsva.webp" },
   { label: "History", image: "/grade-history.webp" },
 ];
+
+function artworkForCourse(courseName: string) {
+  const name = comparableCourseName(courseName);
+  if (name.includes("biology") && name.includes("garcia")) return gradeArtwork[0];
+  if (name.includes("biology") && name.includes("baier")) return gradeArtwork[1];
+  if (name.includes("algebra")) return gradeArtwork[2];
+  if (name.includes("english")) return gradeArtwork[3];
+  if (name.includes("hsva") || name.includes("orientation")) return gradeArtwork[4];
+  if (name.includes("history")) return gradeArtwork[5];
+  return gradeArtwork[0];
+}
 
 const familyProfilePhoto: Record<string, string> = {
   beau: "/beau-profile.webp",
@@ -1133,6 +1193,10 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const [focusMode, setFocusMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeView, setActiveView] = useState<ActiveView>("dashboard");
+  const [selectedGradeCourse, setSelectedGradeCourse] = useState<Course | null>(null);
+  const [courseGradeItems, setCourseGradeItems] = useState<CourseGradeItem[]>([]);
+  const [courseGradesLoading, setCourseGradesLoading] = useState(false);
+  const [courseGradesError, setCourseGradesError] = useState<string | null>(null);
   const [inboxConversations, setInboxConversations] = useState<InboxConversation[]>([]);
   const [inboxLoading, setInboxLoading] = useState(false);
   const [inboxError, setInboxError] = useState<string | null>(null);
@@ -1523,6 +1587,29 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     transitionToView(nextView);
   }, [loadAdmin, loadChat, loadInbox, loadPostBoard, transitionToView]);
 
+  const openCourseGradebook = useCallback(async (course: Course) => {
+    setSelectedGradeCourse(course);
+    setCourseGradeItems([]);
+    setCourseGradesError(null);
+    setCourseGradesLoading(true);
+    transitionToView("grades");
+    try {
+      const response = await fetch(appPath(`/api/course-grades?course_id=${encodeURIComponent(course.id)}`), { cache: "no-store", credentials: "same-origin" });
+      const body = await response.json();
+      if (response.status === 401) {
+        if (onExit) onExit();
+        else window.location.replace(appPath("/"));
+        return;
+      }
+      if (!response.ok) throw new Error(body.error || "Canvas grades could not be loaded.");
+      setCourseGradeItems(body.assignments ?? []);
+    } catch (caught) {
+      setCourseGradesError(caught instanceof Error ? caught.message : "Canvas grades could not be loaded.");
+    } finally {
+      setCourseGradesLoading(false);
+    }
+  }, [onExit, transitionToView]);
+
   const returnToDashboard = useCallback(() => {
     setSelectedThread(null);
     transitionToView("dashboard");
@@ -1795,6 +1882,15 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const viewerInitials = data.viewer.displayName.slice(0, 2).toUpperCase();
   const viewerPhoto = familyProfilePhoto[data.viewer.username];
   const familyGreeting = familyGreetings[greetingIndex](data.viewer.displayName);
+  const gradeCards = data.courses.map((course) => {
+    const manualGrade = gradeOverrides.find((entry) => entry.courseKey === String(course.id));
+    return { course, artwork: artworkForCourse(course.name), percentage: course.score ?? manualGrade?.percentage ?? null };
+  }).sort((a, b) => {
+    if (a.percentage === null && b.percentage === null) return a.course.name.localeCompare(b.course.name);
+    if (a.percentage === null) return 1;
+    if (b.percentage === null) return -1;
+    return b.percentage - a.percentage || a.course.name.localeCompare(b.course.name);
+  });
   const assignmentPool = Array.from(new Map(
     [...data.critical, ...data.upcoming]
       .filter((item) => item.kind === "assignment" && item.dueAt)
@@ -1945,16 +2041,13 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="grades-banner" src={appPath("/grades-banner.webp")} alt="Grades" />
           <div className="grade-artwork-grid">
-            {gradeArtwork.map((item, index) => {
-              const course = data.courses[index];
-              const grade = course ? gradeOverrides.find((entry) => entry.courseKey === String(course.id)) : null;
-              const percentage = course?.score ?? grade?.percentage ?? null;
+            {gradeCards.map(({ course, artwork: item, percentage }) => {
               const calculatedLetter = percentage === null ? null : letterGrade(percentage);
-              return <article className="grade-artwork-card" key={item.label} aria-label={course?.name ?? item.label}>
+              return <button className="grade-artwork-card" type="button" key={course.id} aria-label={`Open ${course.name} gradebook`} onClick={() => void openCourseGradebook(course)}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={appPath(item.image)} alt={course?.name ?? item.label} />
+                <img src={appPath(item.image)} alt={course.name} />
                 {percentage !== null && calculatedLetter ? <div className={`grade-artwork-value grade-tone-${calculatedLetter.toLowerCase()}`} data-grade={calculatedLetter} data-grade-rank={gradeAnimationRank[calculatedLetter]}><strong className="grade-artwork-letter"><span className="grade-artwork-letter-motion">{calculatedLetter}</span></strong><span className="grade-artwork-percentage">{percentage.toFixed(percentage % 1 ? 1 : 0)}</span></div> : null}
-              </article>;
+              </button>;
             })}
           </div>
         </section>
@@ -1962,7 +2055,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
         ) : (
           <div className="feature-view-shell" ref={featureViewRef}>
             <FeatureBackBar onBack={returnToDashboard} />
-            {activeView === "inbox" ? <InboxView
+            {activeView === "grades" && selectedGradeCourse ? <CourseGradebookView course={selectedGradeCourse} assignments={courseGradeItems} loading={courseGradesLoading} error={courseGradesError} /> : activeView === "inbox" ? <InboxView
               conversations={inboxConversations}
               loading={inboxLoading}
               error={inboxError}
@@ -1987,13 +2080,13 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
               loading={adminLoading}
               error={adminError}
               onSave={saveAdmin}
-            /> : <PostBoardView
+            /> : activeView === "inspiration" || activeView === "resources" ? <PostBoardView
               board={activeView}
               posts={postsByBoard[activeView]}
               loading={postBoardLoading}
               error={postBoardError}
               onNewPost={() => setComposerBoard(activeView)}
-            />}
+            /> : null}
           </div>
         )}
       </section>

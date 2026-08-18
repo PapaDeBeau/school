@@ -59,7 +59,6 @@ test("family login uses server-side sessions and never commits PIN values", asyn
 test("successful login changes scenes without navigating away from the school URL", async () => {
   const login = await readFile(new URL("app/FamilyLogin.tsx", root), "utf8");
   const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
-  const dashboardRoute = await readFile(new URL("app/api/dashboard/route.ts", root), "utf8");
   const styles = await readFile(new URL("app/globals.css", root), "utf8");
 
   assert.match(login, /gsap\.to\(card/);
@@ -241,6 +240,24 @@ test("assignments open a detailed accessible modal before leaving for Canvas", a
   assert.match(dashboard, /logout-button\.webp/);
 });
 
+test("grade artwork opens a mobile course gradebook sorted by course score", async () => {
+  const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
+  const gradeRoute = await readFile(new URL("app/api/course-grades/route.ts", root), "utf8");
+  const styles = await readFile(new URL("app/globals.css", root), "utf8");
+
+  assert.match(dashboard, /function CourseGradebookView/);
+  assert.match(dashboard, /onClick=\{\(\) => void openCourseGradebook\(course\)\}/);
+  assert.match(dashboard, /return b\.percentage - a\.percentage/);
+  assert.match(dashboard, /Due/);
+  assert.match(dashboard, /Submitted/);
+  assert.match(dashboard, /Status/);
+  assert.match(dashboard, /Score/);
+  assert.match(gradeRoute, /students\/submissions\?include\[\]=assignment/);
+  assert.match(gradeRoute, /submissionStatus/);
+  assert.match(styles, /\.course-gradebook-view/);
+  assert.match(styles, /\.gradebook-assignment-card/);
+});
+
 test("Canvas Inbox loads the ten newest conversations and full message threads", async () => {
   const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
   const inboxRoute = await readFile(new URL("app/api/inbox/route.ts", root), "utf8");
@@ -343,7 +360,7 @@ test("admin stores percentages and controls empty due-card visibility", async ()
   assert.match(dashboard, /\.to\(motion, \{ rotation: "\+=360"/);
   assert.match(dashboard, /startPersistentMotion\(value, motion\)/);
   assert.match(dashboard, /\}, \[activeView, data, gradeOverrides\]\);/);
-  assert.match(dashboard, /const percentage = course\?\.score \?\? grade\?\.percentage \?\? null/);
+  assert.match(dashboard, /percentage: course\.score \?\? manualGrade\?\.percentage \?\? null/);
   assert.match(dashboardRoute, /function detailIdForPlannerItem\(/);
   assert.match(dashboardRoute, /discussion_topics/);
   assert.match(dashboardRoute, /source\.match\(\/\\\/courses\\\/\\d\+\\\/assignments\\\/\(\\d\+\)\/i\)/);
