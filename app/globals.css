@@ -656,7 +656,8 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .assignment-modal-actions a { min-height: auto; padding: 0; border: 0; background: transparent; box-shadow: none; }
 .assignment-modal-actions a img { width: min(360px, 100%); height: auto; display: block; }
 .assignment-modal-actions button { border: 1px solid #c5d3e7; color: #314865; background: rgba(255, 255, 255, .78); }
-.announcement-modal-got-it { width: 100%; min-height: 46px; margin-top: 14px; padding: 10px 16px; border: 1px solid rgba(255, 255, 255, .36); border-radius: 11px; color: #fff; background: #159447; font: 850 12px/1 system-ui, sans-serif; letter-spacing: .02em; text-align: center; text-shadow: 0 1px 3px rgba(0, 0, 0, .42); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 4px 12px rgba(0, 0, 0, .2); cursor: pointer; }
+.announcement-modal-got-it { width: 100%; min-height: 46px; margin-top: 14px; padding: 0; overflow: hidden; border: 0; border-radius: 11px; background: transparent; cursor: pointer; }
+.announcement-modal-got-it img { width: 100%; height: auto; display: block; }
 .announcement-modal-got-it:active { transform: translateY(1px); }
 .announcement-modal-got-it:focus-visible { outline: 3px solid rgba(21, 148, 71, .34); outline-offset: 2px; }
 .assignment-modal button:focus-visible,
@@ -1009,11 +1010,10 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .announcement-card-main i { color: #1674e8; font-size: 24px; font-style: normal; }
 .announcement-card-main:focus-visible { outline: 3px solid rgba(36, 99, 235, .42); outline-offset: 2px; border-radius: 8px; }
 .announcement-card-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; padding-top: 8px; border-top: 1px solid rgba(194, 214, 240, .72); }
-.announcement-card-actions button { width: 100%; min-height: 36px; padding: 7px 5px; border: 1px solid rgba(255, 255, 255, .36); border-radius: 9px; color: #fff; font: 850 10px/1 system-ui, sans-serif; letter-spacing: .02em; text-align: center; text-shadow: 0 1px 3px rgba(0, 0, 0, .42); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 3px 10px rgba(0, 0, 0, .22); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.announcement-card-actions button { width: 100%; min-width: 0; padding: 0; overflow: hidden; border: 0; border-radius: 9px; background: transparent; box-shadow: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.announcement-card-actions button img { width: 100%; height: auto; display: block; }
 .announcement-card-actions button:active { transform: translateY(1px); }
 .announcement-card-actions button:focus-visible { outline: 3px solid rgba(36, 99, 235, .38); outline-offset: 2px; }
-.announcement-action-view { background: #086fe8; }
-.announcement-action-listen { background: #e01c2d; }
 .school-app.is-focus-mode { grid-template-columns: 150px minmax(0, 1fr); }
 .school-app.is-focus-mode .sidebar-brand > span:last-child,
 .school-app.is-focus-mode .school-nav,

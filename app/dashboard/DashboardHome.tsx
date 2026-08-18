@@ -464,7 +464,10 @@ function AssignmentModal({ item, loading, loadError, onClose }: { item: ActionIt
               fallbackText={item.description || (isAnnouncement ? "Open this announcement in Canvas to read the teacher's full message." : "Canvas has not included written instructions for this item. Use the Canvas button below to check for files, worksheets, videos, rubrics, or teacher updates.")}
             />
           </section>
-          {isAnnouncement ? <button type="button" className="announcement-modal-got-it" onClick={onClose}>Got It</button> : null}
+          {isAnnouncement ? <button type="button" className="announcement-modal-got-it" onClick={onClose} aria-label="Got it — close announcement">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={appPath("/announcement-got-it.png")} alt="Got It!" />
+          </button> : null}
         </div>
 
         <footer className="assignment-modal-actions">
@@ -1161,8 +1164,14 @@ function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect:
               <i aria-hidden="true">›</i>
             </button>
             <div className="announcement-card-actions" aria-label={`Actions for ${item.title}`}>
-              <button type="button" className="announcement-action-view" onClick={() => onSelect(item)}>View</button>
-              <button type="button" className="announcement-action-listen">Listen</button>
+              <button type="button" className="announcement-action-view" onClick={() => onSelect(item)} aria-label={`View ${item.title}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={appPath("/announcement-view.png")} alt="View" />
+              </button>
+              <button type="button" className="announcement-action-listen" aria-label={`Listen to ${item.title}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={appPath("/announcement-listen.png")} alt="Listen" />
+              </button>
             </div>
           </article>
         ))}
