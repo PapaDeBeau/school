@@ -1145,12 +1145,8 @@ function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect:
   return (
     <section className="dashboard-announcements" aria-labelledby="dashboard-announcements-title">
       <h2 className="visually-hidden" id="dashboard-announcements-title">Announcements</h2>
-      <div className="announcements-title-art">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={appPath("/announcements-title.png")} alt="Announcements" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="announcements-title-underline" src={appPath("/announcements-underline.png")} alt="" aria-hidden="true" />
-      </div>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="announcements-title-art" src={appPath("/announcements-title.png")} alt="Announcements" />
       <div className="announcement-card-list">
         {items.map((item) => (
           <article className="announcement-card" key={item.id}>
@@ -1177,6 +1173,8 @@ function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect:
           </article>
         ))}
       </div>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="announcements-section-underline" src={appPath("/announcements-underline.png")} alt="" aria-hidden="true" />
     </section>
   );
 }
