@@ -211,11 +211,18 @@ test("assignments open a detailed accessible modal before leaving for Canvas", a
   assert.match(dashboard, /role="dialog" aria-modal="true"/);
   assert.match(dashboard, /See in Canvas/);
   assert.match(dashboard, /Instructions &amp; details/);
+  assert.match(dashboard, /DOMPurify\.sanitize/);
+  assert.match(dashboard, /<h4>\{item\.title\}<\/h4>/);
+  assert.match(dashboard, /Open \$\{item\.title\} in Canvas in a new browser window/);
   assert.match(dashboard, /event\.key === "Escape"/);
   assert.match(dashboardRoute, /description: canvasHtmlToText/);
+  assert.match(dashboardRoute, /item\.plannable\?\.message/);
+  assert.match(dashboardRoute, /descriptionHtml/);
   assert.match(dashboardRoute, /submissionTypes:/);
   assert.match(styles, /\.assignment-modal-scroll \{[^}]*overflow-y: auto/);
   assert.match(styles, /\.assignment-modal-actions button \{ width: 100%/);
+  assert.match(styles, /\.canvas-rich-content img,[\s\S]*max-width: 100%/);
+  assert.match(styles, /\.canvas-rich-content iframe \{[^}]*aspect-ratio: 16 \/ 9/);
   assert.match(styles, /panel-pattern-2\.webp/);
   assert.match(dashboard, /see-in-canvas\.webp/);
   assert.match(dashboard, /logout-button\.webp/);
@@ -322,7 +329,7 @@ test("admin stores percentages and controls empty due-card visibility", async ()
   assert.match(dashboard, /\.to\(motion, \{ rotation: "\+=360"/);
   assert.match(dashboard, /startPersistentMotion\(value, motion\)/);
   assert.match(dashboard, /\}, \[activeView, data, gradeOverrides\]\);/);
-  assert.match(styles, /\.grade-tone-b \.grade-artwork-letter,[\s\S]*\.grade-tone-d \.grade-artwork-letter \{ left: 56%; \}/);
+  assert.match(styles, /\.grade-tone-b \.grade-artwork-letter,[\s\S]*\.grade-tone-d \.grade-artwork-letter \{ left: 54%; \}/);
   assert.match(styles, /\.grade-artwork-value \{[^}]*visibility: hidden; opacity: 0;/);
   assert.doesNotMatch(dashboard, /autoAlpha: 0\.18/);
   assert.match(dashboard, /value\.dataset\.grade === "D"/);

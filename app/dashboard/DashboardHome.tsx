@@ -2,6 +2,7 @@
 
 import { type FormEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
+import DOMPurify from "dompurify";
 import { appPath } from "../../lib/app-paths";
 
 type ActionItem = {
@@ -15,6 +16,7 @@ type ActionItem = {
   detail: string;
   sourceUrl: string;
   description: string;
+  descriptionHtml: string;
   availableFrom: string | null;
   availableUntil: string | null;
   submissionTypes: string[];
@@ -234,6 +236,106 @@ function fileSizeLabel(value: number | null) {
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+const CANVAS_ORIGIN = "https://sequoiagrove.instructure.com";
+
+function canvasMediaUrl(value: string | null) {
+  if (!value) return null;
+  try {
+    const url = new URL(value, CANVAS_ORIGIN);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+function CanvasRichContent({ html, fallbackText }: { html: string; fallbackText: string }) {
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = contentRef.current;
+    if (!container) return;
+    container.replaceChildren();
+
+    const appendFallback = () => {
+      const fallback = document.createElement("p");
+      fallback.className = "assignment-description-fallback";
+      fallback.textContent = fallbackText;
+      container.appendChild(fallback);
+    };
+    if (!html.trim()) return appendFallback();
+
+    const sanitized = DOMPurify.sanitize(html, {
+      ADD_TAGS: ["iframe", "video", "source", "track"],
+      ADD_ATTR: ["allow", "allowfullscreen", "controls", "decoding", "default", "frameborder", "kind", "label", "loading", "playsinline", "poster", "preload", "sizes", "srcset", "srclang"],
+      FORBID_TAGS: ["base", "button", "embed", "form", "input", "link", "meta", "object", "option", "script", "select", "style", "textarea"],
+      FORBID_ATTR: ["srcdoc", "style"],
+    });
+    const parsed = new DOMParser().parseFromString(`<div>${sanitized}</div>`, "text/html");
+    const root = parsed.body.firstElementChild;
+    if (!root) {
+      appendFallback();
+      return;
+    }
+
+    root.querySelectorAll<HTMLAnchorElement>("a[href]").forEach((link) => {
+      const href = canvasMediaUrl(link.getAttribute("href"));
+      if (!href) {
+        link.removeAttribute("href");
+        return;
+      }
+      link.href = href;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+    });
+    root.querySelectorAll<HTMLImageElement>("img").forEach((image) => {
+      const src = canvasMediaUrl(image.getAttribute("src"));
+      if (!src) {
+        image.remove();
+        return;
+      }
+      image.src = src;
+      image.loading = "lazy";
+      image.decoding = "async";
+      if (!image.hasAttribute("alt")) image.alt = "Image included with the Canvas instructions";
+    });
+    root.querySelectorAll<HTMLVideoElement>("video").forEach((video) => {
+      const src = canvasMediaUrl(video.getAttribute("src"));
+      if (video.hasAttribute("src") && !src) video.removeAttribute("src");
+      else if (src) video.src = src;
+      const poster = canvasMediaUrl(video.getAttribute("poster"));
+      if (poster) video.poster = poster;
+      else video.removeAttribute("poster");
+      video.controls = true;
+      video.playsInline = true;
+      video.preload = "metadata";
+    });
+    root.querySelectorAll<HTMLSourceElement | HTMLTrackElement>("source, track").forEach((media) => {
+      const src = canvasMediaUrl(media.getAttribute("src"));
+      if (!src) media.remove();
+      else media.src = src;
+    });
+    root.querySelectorAll<HTMLIFrameElement>("iframe").forEach((frame) => {
+      const src = canvasMediaUrl(frame.getAttribute("src"));
+      if (!src) {
+        frame.remove();
+        return;
+      }
+      frame.src = src;
+      frame.loading = "lazy";
+      frame.referrerPolicy = "no-referrer-when-downgrade";
+      frame.setAttribute("sandbox", "allow-forms allow-popups allow-presentation allow-scripts");
+      frame.setAttribute("allow", "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share");
+      frame.setAttribute("allowfullscreen", "");
+    });
+
+    const containsContent = Boolean(root.textContent?.trim() || root.querySelector("img, video, iframe"));
+    if (!containsContent) return appendFallback();
+    container.append(...Array.from(root.childNodes).map((node) => node.cloneNode(true)));
+  }, [fallbackText, html]);
+
+  return <div className="canvas-rich-content" ref={contentRef} />;
+}
+
 function AssignmentModal({ item, onClose }: { item: ActionItem; onClose: () => void }) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -291,12 +393,16 @@ function AssignmentModal({ item, onClose }: { item: ActionItem; onClose: () => v
 
           <section className="assignment-detail-section assignment-description" id="assignment-modal-description">
             <h3>Instructions &amp; details</h3>
-            <p>{item.description || "Canvas has not included written instructions for this assignment. Use the Canvas button below to check for files, worksheets, videos, rubrics, or teacher updates."}</p>
+            <h4>{item.title}</h4>
+            <CanvasRichContent
+              html={item.descriptionHtml}
+              fallbackText={item.description || "Canvas has not included written instructions for this item. Use the Canvas button below to check for files, worksheets, videos, rubrics, or teacher updates."}
+            />
           </section>
         </div>
 
         <footer className="assignment-modal-actions">
-          <a href={item.sourceUrl} target="_blank" rel="noreferrer">
+          <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer" aria-label={`Open ${item.title} in Canvas in a new browser window`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={appPath("/see-in-canvas.webp")} alt="See in Canvas" />
           </a>

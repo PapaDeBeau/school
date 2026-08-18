@@ -26,6 +26,9 @@ type PlannerItem = {
     id?: number;
     title?: string;
     description?: string | null;
+    message?: string | null;
+    details?: string | null;
+    body?: string | null;
     due_at?: string | null;
     points_possible?: number | null;
     html_url?: string;
@@ -68,6 +71,7 @@ type ActionItem = {
   detail: string;
   sourceUrl: string;
   description: string;
+  descriptionHtml: string;
   availableFrom: string | null;
   availableUntil: string | null;
   submissionTypes: string[];
@@ -132,6 +136,16 @@ function canvasHtmlToText(value?: string | null) {
     .trim();
 }
 
+function canvasRichContent(item: PlannerItem) {
+  const candidates = [
+    item.plannable?.description,
+    item.plannable?.message,
+    item.plannable?.details,
+    item.plannable?.body,
+  ];
+  return candidates.find((value) => value?.trim())?.trim() ?? "";
+}
+
 function normalizePlannerItem(item: PlannerItem, courseNames: Map<number, string>): ActionItem | null {
   const title = item.plannable?.title?.trim();
   if (!title) return null;
@@ -154,6 +168,7 @@ function normalizePlannerItem(item: PlannerItem, courseNames: Map<number, string
     item.context_name ??
     "Canvas";
   const source = item.html_url ?? item.plannable?.html_url ?? CANVAS_BASE_URL;
+  const descriptionHtml = canvasRichContent(item);
 
   return {
     id: `assignment-${item.course_id ?? "canvas"}-${item.plannable?.id ?? title}`,
@@ -165,7 +180,8 @@ function normalizePlannerItem(item: PlannerItem, courseNames: Map<number, string
     state,
     detail: locked && unlockAt ? `Unlocks ${unlockAt.toISOString()}` : state,
     sourceUrl: source.startsWith("http") ? source : `${CANVAS_BASE_URL}${source}`,
-    description: canvasHtmlToText(item.plannable?.description),
+    description: canvasHtmlToText(descriptionHtml),
+    descriptionHtml,
     availableFrom: item.plannable?.unlock_at ?? null,
     availableUntil: item.plannable?.lock_at ?? null,
     submissionTypes: item.plannable?.submission_types ?? [],
@@ -237,6 +253,7 @@ export async function GET(request: Request) {
       detail: conversation.last_message?.trim() || "New unread message",
       sourceUrl: `${CANVAS_BASE_URL}/conversations#filter=type=inbox`,
       description: conversation.last_message?.trim() || "New unread Canvas message.",
+      descriptionHtml: "",
       availableFrom: null,
       availableUntil: null,
       submissionTypes: [],
