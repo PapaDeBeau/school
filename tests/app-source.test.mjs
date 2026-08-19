@@ -363,14 +363,21 @@ test("family chat is persistent, paginated, link-aware, and sender controlled", 
   assert.match(schema, /family_chat_messages/);
   assert.match(schema, /family_chat_message_reads/);
   assert.match(dashboard, /data-chat-message-id/);
-  assert.match(dashboard, /className="chat-seen-row"/);
+  assert.match(dashboard, /chat-seen-row\$\{message\.seenBy\.length/);
   assert.match(dashboard, /entry\.intersectionRatio < 0\.35/);
-  assert.match(dashboard, /const refreshed = new Map<string, ChatMessage>/);
+  assert.match(dashboard, /function mergeChatRefresh/);
+  assert.match(dashboard, /return changed \? merged : current/);
+  assert.match(dashboard, /\[firstMessageId, latestMessageId, loading, messages\.length\]/);
+  assert.match(dashboard, /\[activeView, adminLoading, chatLoading, postBoardLoading, postsByBoard\]/);
+  assert.doesNotMatch(dashboard, /\[activeView, adminLoading, chatLoading, chatMessages/);
+  assert.match(dashboard, /\[activeView, hasDashboardData\]/);
   assert.match(dashboard, /aria-label="Close school app"/);
   assert.match(dashboard, /mobile-menu-logout-action/);
   assert.match(styles, /\.chat-message\.is-mine/);
   assert.match(styles, /\.chat-message\.tone-girl/);
   assert.match(styles, /\.chat-seen-row/);
+  assert.match(styles, /\.chat-seen-row\.is-empty/);
+  assert.match(styles, /width: 26px; height: 26px/);
 });
 
 test("admin stores percentages and controls empty due-card visibility", async () => {
@@ -407,7 +414,7 @@ test("admin stores percentages and controls empty due-card visibility", async ()
   assert.match(dashboard, /gsap\.timeline\(\{ repeat: -1, repeatDelay: 0\.65 \}\)/);
   assert.match(dashboard, /\.to\(motion, \{ rotation: "\+=360"/);
   assert.match(dashboard, /startPersistentMotion\(value, motion\)/);
-  assert.match(dashboard, /\}, \[activeView, data, gradeOverrides\]\);/);
+  assert.match(dashboard, /\}, \[activeView, gradeOverrides, hasDashboardData\]\);/);
   assert.match(dashboard, /percentage: course\.score \?\? manualGrade\?\.percentage \?\? null/);
   assert.match(dashboardRoute, /function detailIdForPlannerItem\(/);
   assert.match(dashboardRoute, /discussion_topics/);

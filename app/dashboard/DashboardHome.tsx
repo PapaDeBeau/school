@@ -177,6 +177,44 @@ type ChatMessage = {
   updatedAt: string;
 };
 
+function sameChatMessage(left: ChatMessage, right: ChatMessage) {
+  const sameAudio = (!left.audio && !right.audio) || Boolean(
+    left.audio && right.audio
+    && left.audio.url === right.audio.url
+    && left.audio.contentType === right.audio.contentType
+    && left.audio.durationMs === right.audio.durationMs
+  );
+  const sameReaders = left.seenBy.length === right.seenBy.length
+    && left.seenBy.every((person, index) => person.username === right.seenBy[index]?.username && person.name === right.seenBy[index]?.name);
+  return left.id === right.id
+    && left.body === right.body
+    && left.author.username === right.author.username
+    && left.author.name === right.author.name
+    && left.createdAt === right.createdAt
+    && left.updatedAt === right.updatedAt
+    && sameAudio
+    && sameReaders;
+}
+
+function mergeChatRefresh(current: ChatMessage[], incoming: ChatMessage[]) {
+  if (!incoming.length) return current;
+  const refreshed = new Map(incoming.map((message) => [message.id, message] as const));
+  const existing = new Set(current.map((message) => message.id));
+  let changed = false;
+  const merged = current.map((message) => {
+    const next = refreshed.get(message.id);
+    if (!next || sameChatMessage(message, next)) return message;
+    changed = true;
+    return next;
+  });
+  for (const message of incoming) {
+    if (existing.has(message.id)) continue;
+    merged.push(message);
+    changed = true;
+  }
+  return changed ? merged : current;
+}
+
 type DashboardPreferences = {
   showDueTodayWhenEmpty: boolean;
   showDueTomorrowWhenEmpty: boolean;
@@ -811,6 +849,8 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onL
   const recorderRef = useRef<MediaRecorder | null>(null);
   const recordingStartedRef = useRef(0);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const firstMessageId = messages[0]?.id ?? null;
+  const latestMessageId = messages.at(-1)?.id ?? null;
 
   useEffect(() => () => {
     if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
@@ -854,12 +894,11 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onL
       preserveHeightRef.current = null;
       return;
     }
-    const latestId = messages.at(-1)?.id ?? null;
-    if (previousLatestIdRef.current === null || (latestId !== previousLatestIdRef.current && scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 180)) {
+    if (previousLatestIdRef.current === null || (latestMessageId !== previousLatestIdRef.current && scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 180)) {
       scroll.scrollTop = scroll.scrollHeight;
     }
-    previousLatestIdRef.current = latestId;
-  }, [loading, messages]);
+    previousLatestIdRef.current = latestMessageId;
+  }, [firstMessageId, latestMessageId, loading, messages.length]);
 
   useEffect(() => {
     const root = scrollRef.current;
@@ -962,8 +1001,8 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onL
                   </footer>
                   {message.audio ? <ChatAudioPlayer url={message.audio.url} durationMs={message.audio.durationMs} /> : null}
                 </div>
-                {message.seenBy.length ? <div className="chat-seen-row" aria-label={`Seen by ${message.seenBy.map((person) => person.name).join(", ")}`}>
-                  <span>SEEN:</span>
+                <div className={`chat-seen-row${message.seenBy.length ? "" : " is-empty"}`} aria-label={message.seenBy.length ? `Seen by ${message.seenBy.map((person) => person.name).join(", ")}` : undefined}>
+                  <span>{message.seenBy.length ? "SEEN:" : ""}</span>
                   {message.seenBy.map((person) => {
                     const photo = familyProfilePhoto[person.username];
                     return <i key={person.username} title={person.name}>{photo ? (
@@ -971,7 +1010,7 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onL
                       <img src={appPath(photo)} alt={person.name} />
                     ) : person.name.slice(0, 1).toUpperCase()}</i>;
                   })}
-                </div> : null}
+                </div>
               </article>
             );
           })}
@@ -1545,6 +1584,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const featureViewRef = useRef<HTMLDivElement>(null);
   const gradesShowcaseRef = useRef<HTMLElement>(null);
   const [data, setData] = useState<DashboardData | null>(null);
+  const hasDashboardData = Boolean(data);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [focusMode, setFocusMode] = useState(false);
@@ -1804,11 +1844,16 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     });
     if (!response.ok) throw new Error("Seen status could not be saved.");
     const body = await response.json();
-    setChatMessages((current) => current.map((message) => {
-      const receipt = (body.seen ?? []).find((item: { messageId: string }) => item.messageId === message.id);
-      if (!receipt || message.seenBy.some((person) => person.username === receipt.user.username)) return message;
-      return { ...message, seenBy: [...message.seenBy, receipt.user] };
-    }));
+    setChatMessages((current) => {
+      let changed = false;
+      const next = current.map((message) => {
+        const receipt = (body.seen ?? []).find((item: { messageId: string }) => item.messageId === message.id);
+        if (!receipt || message.seenBy.some((person) => person.username === receipt.user.username)) return message;
+        changed = true;
+        return { ...message, seenBy: [...message.seenBy, receipt.user] };
+      });
+      return changed ? next : current;
+    });
   }, []);
 
   const loadAdmin = useCallback(async () => {
@@ -1860,14 +1905,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
         if (!response.ok) return;
         const body = await response.json();
         if (body.messages?.length) {
-          setChatMessages((current) => {
-            const existing = new Set(current.map((message) => message.id));
-            const refreshed = new Map<string, ChatMessage>(body.messages.map((message: ChatMessage) => [message.id, message]));
-            return [
-              ...current.map((message) => refreshed.get(message.id) ?? message),
-              ...body.messages.filter((message: ChatMessage) => !existing.has(message.id)),
-            ];
-          });
+          setChatMessages((current) => mergeChatRefresh(current, body.messages));
         }
       } catch { /* A later chat refresh will retry quietly. */ }
     };
@@ -2036,7 +2074,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       ease: "power2.out",
       clearProps: "transform,opacity,visibility",
     });
-  }, [activeView, adminLoading, chatLoading, chatMessages, postBoardLoading, postsByBoard]);
+  }, [activeView, adminLoading, chatLoading, postBoardLoading, postsByBoard]);
 
   useLayoutEffect(() => {
     if (activeView !== "dashboard") return;
@@ -2072,7 +2110,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       gsap.killTweensOf([title, ...cards, underline]);
       gsap.set([title, ...cards, underline], { clearProps: "all" });
     };
-  }, [activeView, data]);
+  }, [activeView, hasDashboardData]);
 
   useLayoutEffect(() => {
     const showcase = gradesShowcaseRef.current;
@@ -2234,7 +2272,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       if (batchTimer !== null) window.clearTimeout(batchTimer);
       values.forEach(resetValue);
     };
-  }, [activeView, data, gradeOverrides]);
+  }, [activeView, gradeOverrides, hasDashboardData]);
 
   useLayoutEffect(() => {
     const app = appRef.current;
@@ -2258,7 +2296,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     }, app);
 
     return () => context.revert();
-  }, [data, immersive]);
+  }, [hasDashboardData, immersive]);
 
   async function signOut() {
     await fetch(appPath("/api/auth/logout"), { method: "POST", credentials: "same-origin" });
