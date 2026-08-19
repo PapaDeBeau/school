@@ -444,8 +444,13 @@ function AssignmentModal({ item, loading, loadError, onClose }: { item: ActionIt
         </button>
         <div className="assignment-modal-scroll">
           <header className="assignment-modal-heading">
-            <span aria-hidden="true">A</span>
-            <div><p>{isAnnouncement ? "Announcement" : "Assignment details"}</p><h2 id="assignment-modal-title">{item.title}</h2><small>{item.course}</small></div>
+            <span className="assignment-modal-teacher">
+              {item.authorAvatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={item.authorAvatarUrl} alt={item.authorName || "Teacher"} referrerPolicy="no-referrer" />
+              ) : <strong aria-hidden="true">{(item.authorName || item.course || "T").slice(0, 1).toUpperCase()}</strong>}
+            </span>
+            <div><p>{isAnnouncement ? "Announcement" : "Assignment details"}</p><h2 id="assignment-modal-title">{item.title}</h2><small>{item.authorName ? `${item.authorName} · ${item.course}` : item.course}</small></div>
           </header>
 
           <section className="assignment-detail-section">
@@ -476,7 +481,7 @@ function AssignmentModal({ item, loading, loadError, onClose }: { item: ActionIt
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={appPath("/see-in-canvas.webp")} alt="See in Canvas" />
           </a>
-          <button type="button" onClick={onClose} ref={closeButtonRef}>Close</button>
+          <button className="assignment-modal-close" type="button" onClick={onClose} ref={closeButtonRef}>Close</button>
         </footer>
       </section>
     </div>
