@@ -291,6 +291,9 @@ test("assignments open a detailed accessible modal before leaving for Canvas", a
   assert.match(dashboardRoute, /if \(itemType === "announcement"\) return null/);
   assert.match(dashboardRoute, /async function enrichDueAssignmentInstructions\(items: ActionItem\[\], token: string\)/);
   assert.match(dashboardRoute, /params\.append\("assignment_ids\[\]", String\(itemId\)\)/);
+  assert.doesNotMatch(dashboardRoute, /item\.kind !== "assignment"\s*\|\| item\.description\.trim\(\)/);
+  assert.match(dashboardRoute, /\/discussion_topics\/\$\{itemId\}/);
+  assert.match(dashboardRoute, /details\.set\(`discussion_topic:\$\{courseId\}:\$\{itemId\}`/);
   assert.match(dashboardRoute, /descriptionHtml = assignment\.description\?\.trim\(\) \?\? ""/);
   assert.match(dashboardRoute, /critical: enrichedCritical/);
   assert.match(dashboardRoute, /upcoming: enrichedUpcoming/);

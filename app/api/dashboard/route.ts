@@ -101,6 +101,14 @@ type CanvasAssignmentDetails = {
   published?: boolean;
 };
 
+type CanvasDiscussionDetails = {
+  id: number;
+  message?: string | null;
+  html_url?: string;
+  posted_at?: string | null;
+  published?: boolean;
+};
+
 type ActionItem = {
   id: string;
   kind: "assignment" | "announcement" | "message";
@@ -375,33 +383,58 @@ async function optionalCanvasGet<T>(primaryPath: string, fallbackPath: string, t
 
 async function enrichDueAssignmentInstructions(items: ActionItem[], token: string) {
   const assignmentsByCourse = new Map<number, Set<number>>();
+  const discussionItems = new Map<string, { courseId: number; itemId: number }>();
   for (const item of items) {
     if (
       item.kind !== "assignment"
-      || item.description.trim()
       || !item.canvasCourseId
       || !item.canvasItemId
     ) continue;
+    if (item.canvasItemType?.toLocaleLowerCase("en-US") === "discussion_topic") {
+      discussionItems.set(`${item.canvasCourseId}:${item.canvasItemId}`, {
+        courseId: item.canvasCourseId,
+        itemId: item.canvasItemId,
+      });
+      continue;
+    }
     const ids = assignmentsByCourse.get(item.canvasCourseId) ?? new Set<number>();
     ids.add(item.canvasItemId);
     assignmentsByCourse.set(item.canvasCourseId, ids);
   }
 
   const details = new Map<string, CanvasAssignmentDetails>();
-  await Promise.all([...assignmentsByCourse].map(async ([courseId, itemIds]) => {
-    const params = new URLSearchParams({ per_page: "100" });
-    [...itemIds].forEach((itemId) => params.append("assignment_ids[]", String(itemId)));
-    const assignments = await canvasGet<CanvasAssignmentDetails[]>(
-      `/api/v1/courses/${courseId}/assignments?${params.toString()}`,
-      token
-    ).catch(() => []);
-    assignments.forEach((assignment) => details.set(`${courseId}:${assignment.id}`, assignment));
-  }));
+  await Promise.all([
+    ...[...assignmentsByCourse].map(async ([courseId, itemIds]) => {
+      const params = new URLSearchParams({ per_page: "100" });
+      [...itemIds].forEach((itemId) => params.append("assignment_ids[]", String(itemId)));
+      const assignments = await canvasGet<CanvasAssignmentDetails[]>(
+        `/api/v1/courses/${courseId}/assignments?${params.toString()}`,
+        token
+      ).catch(() => []);
+      assignments.forEach((assignment) => details.set(`assignment:${courseId}:${assignment.id}`, assignment));
+    }),
+    ...[...discussionItems.values()].map(async ({ courseId, itemId }) => {
+      const topic = await canvasGet<CanvasDiscussionDetails>(
+        `/api/v1/courses/${courseId}/discussion_topics/${itemId}`,
+        token
+      ).catch(() => null);
+      if (!topic) return;
+      details.set(`discussion_topic:${courseId}:${itemId}`, {
+        id: itemId,
+        description: topic.message,
+        html_url: topic.html_url,
+        published: topic.published,
+      });
+    }),
+  ]);
 
   if (!details.size) return items;
   return items.map((item) => {
     if (!item.canvasCourseId || !item.canvasItemId) return item;
-    const assignment = details.get(`${item.canvasCourseId}:${item.canvasItemId}`);
+    const itemType = item.canvasItemType?.toLocaleLowerCase("en-US") === "discussion_topic"
+      ? "discussion_topic"
+      : "assignment";
+    const assignment = details.get(`${itemType}:${item.canvasCourseId}:${item.canvasItemId}`);
     if (!assignment) return item;
     const descriptionHtml = assignment.description?.trim() ?? "";
     return {
