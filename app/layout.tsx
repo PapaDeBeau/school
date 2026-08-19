@@ -44,6 +44,9 @@ export default function RootLayout({
         <link rel="preload" as="image" href="/school/menu-admin.webp" type="image/webp" />
         <link rel="preload" as="image" href="/school/menu-popup-bg.webp" type="image/webp" />
         <link rel="preload" as="image" href="/school/see-in-canvas.webp" type="image/webp" />
+        <link rel="preload" as="image" href="/school/announcement-got-it.webp" type="image/webp" />
+        <link rel="preload" as="image" href="/school/assignment-details-play.webp" type="image/webp" />
+        <link rel="preload" as="image" href="/school/assignment-details-pause.webp" type="image/webp" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${schoolbell.variable} antialiased`}

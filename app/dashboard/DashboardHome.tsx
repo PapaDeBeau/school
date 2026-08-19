@@ -615,7 +615,7 @@ function AssignmentModal({ item, loading, loadError, onClose }: { item: ActionIt
           </section>
           {isAnnouncement ? <button type="button" className="announcement-modal-got-it" onClick={requestClose} aria-label="Got it — close announcement">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={appPath("/announcement-got-it.png")} alt="Got It!" />
+            <img src={appPath("/announcement-got-it.webp")} alt="Got It!" />
           </button> : null}
         </div>
 
@@ -1856,7 +1856,7 @@ function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect:
           </div>
           <button className="announcement-player-done" type="button" onClick={closePlayer} aria-label="OK, I got it">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={appPath("/announcement-got-it.png")} alt="OK, I got it" />
+            <img src={appPath("/announcement-got-it.webp")} alt="OK, I got it" />
           </button>
         </section>
       </div> : null}

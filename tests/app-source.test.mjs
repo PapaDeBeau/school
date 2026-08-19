@@ -182,6 +182,8 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(dashboard, /Look, it’s \$\{name\}!/);
   assert.match(dashboard, /menu-button\.webp/);
   assert.match(dashboard, /logout-button\.webp/);
+  assert.match(dashboard, /announcement-got-it\.webp/);
+  assert.doesNotMatch(dashboard, /announcement-got-it\.png/);
   assert.match(dashboard, /due-count-web\.webp/);
   assert.ok(dueCountArtwork.size < 20_000);
   assert.doesNotMatch(dashboard, /mobile-sync-button|sync-button\.webp|className="sync-button"/);
