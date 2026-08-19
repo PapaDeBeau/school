@@ -2306,6 +2306,11 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
   function closeApp() {
     setMobileMenuOpen(false);
+    const androidBridge = (window as Window & { BeauSchoolApp?: { close?: () => void } }).BeauSchoolApp;
+    if (typeof androidBridge?.close === "function") {
+      androidBridge.close();
+      return;
+    }
     window.location.href = "beauschool://close";
     window.setTimeout(() => {
       if (!document.hidden) window.close();

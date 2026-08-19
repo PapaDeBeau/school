@@ -90,6 +90,7 @@ test("successful login changes scenes without navigating away from the school UR
 
 test("mobile red X closes the Android wrapper while the menu keeps Log Out", async () => {
   const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
+  assert.match(dashboard, /BeauSchoolApp/);
   assert.match(dashboard, /beauschool:\/\/close/);
   assert.match(dashboard, /mobile-menu-logout-action[^>]*[\s\S]*?Log Out/);
   assert.match(dashboard, /async function signOut\(\)[\s\S]*?\/api\/auth\/logout/);
