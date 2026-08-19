@@ -962,7 +962,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .inbox-empty p { margin: 9px 0 0; font-size: 11px; }
 
 .inbox-thread-backdrop { position: fixed; z-index: 1001; inset: 0; display: grid; place-items: center; padding: 18px; background: rgba(0, 8, 24, .68); -webkit-backdrop-filter: blur(12px) saturate(115%); backdrop-filter: blur(12px) saturate(115%); }
-.inbox-launch-row { width: min(720px, calc(100% - 32px)); display: grid; grid-template-columns: minmax(0, 8fr) minmax(0, 9fr); align-items: center; gap: 10px; margin: 0 auto 15px; }
+.inbox-launch-row { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; gap: 10px; margin: 0 auto 15px; padding: 0; border: 0; background: transparent; box-shadow: none; }
 .email-teacher-launch,
 .canvas-email-launch { width: 100%; display: block; margin: 0; padding: 0; overflow: visible; border: 0; border-radius: 0; background: transparent; box-shadow: none; cursor: pointer; }
 .email-teacher-launch img,
@@ -2205,7 +2205,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   .inbox-conversation p { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; }
   .inbox-read-button { width: 100%; grid-column: 1 / -1; }
   .inbox-thread-backdrop { padding: 9px; }
-  .inbox-launch-row { width: calc(100% - 24px); gap: 7px; margin-bottom: 12px; }
+  .inbox-launch-row { width: 100%; gap: 7px; margin-bottom: 12px; }
   .teacher-picker-backdrop,
   .teacher-email-backdrop { place-items: start center; padding: max(8px, env(safe-area-inset-top)) 8px 8px; }
   .teacher-picker-modal { max-height: calc(100dvh - max(16px, env(safe-area-inset-top))); padding: 25px 14px 24px; border-radius: 18px; }

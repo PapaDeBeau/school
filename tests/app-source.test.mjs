@@ -409,7 +409,9 @@ test("Canvas Inbox can start a complete teacher email with required subject and 
   assert.match(dashboard, /conversations#filter=type=inbox/);
   assert.match(dashboard, /aria-label="Open Canvas Inbox"/);
   assert.match(dashboard, /target="_blank" rel="noopener noreferrer" aria-label="Open Canvas Inbox"/);
-  assert.match(styles, /\.inbox-launch-row \{[^}]*grid-template-columns: minmax\(0, 8fr\) minmax\(0, 9fr\)/);
+  assert.match(dashboard, /className="inbox-launch-row"[\s\S]*?className="canvas-email-launch"[\s\S]*?className="email-teacher-launch"/);
+  assert.match(styles, /\.inbox-launch-row \{ width: 100%;[^}]*grid-template-columns: minmax\(0, 1fr\)[^}]*background: transparent; box-shadow: none;/);
+  assert.doesNotMatch(styles, /\.inbox-launch-row \{[^}]*grid-template-columns: minmax\(0, 8fr\) minmax\(0, 9fr\)/);
   assert.match(dashboard, /Who would you like to email\?/);
   assert.match(dashboard, /disabled={!subject\.trim\(\) \|\| !message\.trim\(\) \|\| sending}/);
   assert.match(dashboard, /Record audio/);
