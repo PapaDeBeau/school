@@ -36,6 +36,13 @@
       "when": 1787098665838,
       "tag": "0004_large_banshee",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1787123986755,
+      "tag": "0005_curved_demogoblin",
+      "breakpoints": true
     }
   ]
 }

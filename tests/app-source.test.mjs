@@ -92,6 +92,11 @@ test("mobile red X closes the Android wrapper while the menu keeps Log Out", asy
   const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
   assert.match(dashboard, /beauschool:\/\/close/);
   assert.match(dashboard, /mobile-menu-logout-action[^>]*[\s\S]*?Log Out/);
+  assert.match(dashboard, /async function signOut\(\)[\s\S]*?\/api\/auth\/logout/);
+  const closeStart = dashboard.indexOf("function closeApp()");
+  const closeEnd = dashboard.indexOf("if (!data && loading)", closeStart);
+  assert.ok(closeStart >= 0 && closeEnd > closeStart);
+  assert.doesNotMatch(dashboard.slice(closeStart, closeEnd), /logout|signOut/i);
 });
 
 test("login artwork uses lightweight WebP assets", async () => {
@@ -352,12 +357,20 @@ test("family chat is persistent, paginated, link-aware, and sender controlled", 
   assert.match(chatRoute, /WHERE id < \?/);
   assert.match(chatRoute, /existing\.author_username !== auth\.user\.username/);
   assert.match(chatRoute, /export async function PATCH/);
+  assert.match(chatRoute, /export async function PUT/);
+  assert.match(chatRoute, /SELECT message_id[\s\S]*family_chat_message_reads/);
   assert.match(chatRoute, /export async function DELETE/);
   assert.match(schema, /family_chat_messages/);
+  assert.match(schema, /family_chat_message_reads/);
+  assert.match(dashboard, /data-chat-message-id/);
+  assert.match(dashboard, /className="chat-seen-row"/);
+  assert.match(dashboard, /entry\.intersectionRatio < 0\.35/);
+  assert.match(dashboard, /const refreshed = new Map<string, ChatMessage>/);
   assert.match(dashboard, /aria-label="Close school app"/);
   assert.match(dashboard, /mobile-menu-logout-action/);
   assert.match(styles, /\.chat-message\.is-mine/);
   assert.match(styles, /\.chat-message\.tone-girl/);
+  assert.match(styles, /\.chat-seen-row/);
 });
 
 test("admin stores percentages and controls empty due-card visibility", async () => {

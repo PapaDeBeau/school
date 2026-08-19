@@ -818,6 +818,9 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .chat-profile-actions button:disabled { opacity: .55; cursor: wait; }
 .chat-bubble { position: relative; width: 100%; min-width: 0; padding: 13px 15px 10px 92px; overflow: hidden; border: 1px solid var(--chat-tone); border-radius: 16px; background: rgba(var(--chat-tone-rgb), .12); box-shadow: 0 11px 29px rgba(0, 0, 0, .38), 0 0 18px rgba(var(--chat-tone-rgb), .11); }
 .chat-message.is-mine .chat-bubble { padding-right: 92px; padding-left: 15px; background: rgba(var(--chat-tone-rgb), .12); }
+.chat-seen-row { min-height: 14px; display: flex; align-items: center; justify-content: flex-end; gap: 3px; margin: 3px 5px -9px 0; color: rgba(45, 67, 96, .72); font: 900 6px/1 system-ui, sans-serif; letter-spacing: .04em; }
+.chat-seen-row i { width: 13px; height: 13px; display: grid; place-items: center; overflow: hidden; border: 1px solid rgba(var(--chat-tone-rgb), .75); border-radius: 50%; color: #fff; background: rgba(4, 22, 50, .9); font-size: 6px; font-style: normal; box-shadow: 0 1px 4px rgba(0, 0, 0, .25); }
+.chat-seen-row img { width: 100%; height: 100%; display: block; object-fit: cover; }
 .chat-message.has-audio .chat-bubble { min-height: 156px; padding-bottom: 70px; }
 .chat-bubble > header { min-width: 0; display: flex; align-items: baseline; justify-content: flex-start; gap: 9px; white-space: nowrap; }
 .chat-message.is-mine .chat-bubble > header { justify-content: flex-end; }

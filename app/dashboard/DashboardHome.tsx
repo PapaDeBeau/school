@@ -172,6 +172,7 @@ type ChatMessage = {
   body: string;
   audio: { url: string; contentType: string | null; durationMs: number | null } | null;
   author: { username: string; name: string };
+  seenBy: Array<{ username: string; name: string }>;
   createdAt: string;
   updatedAt: string;
 };
@@ -778,7 +779,7 @@ function ChatAudioPlayer({ url, durationMs }: { url: string; durationMs: number 
   </div>;
 }
 
-function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onLoadOlder, onSend, onEdit, onDelete }: {
+function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onLoadOlder, onSend, onEdit, onDelete, onSeen }: {
   messages: ChatMessage[];
   viewer: DashboardData["viewer"];
   loading: boolean;
@@ -789,10 +790,12 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onL
   onSend: (body: string, audio?: Blob, durationMs?: number) => Promise<void>;
   onEdit: (id: string, body: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onSeen: (ids: string[]) => Promise<void>;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const preserveHeightRef = useRef<number | null>(null);
   const previousLatestIdRef = useRef<string | null>(null);
+  const seenSentRef = useRef(new Set<string>());
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -858,6 +861,31 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onL
     previousLatestIdRef.current = latestId;
   }, [loading, messages]);
 
+  useEffect(() => {
+    const root = scrollRef.current;
+    if (!root || loading) return;
+    const observer = new IntersectionObserver((entries) => {
+      const visibleIds: string[] = [];
+      for (const entry of entries) {
+        if (!entry.isIntersecting || entry.intersectionRatio < 0.35 || document.visibilityState !== "visible") continue;
+        const id = (entry.target as HTMLElement).dataset.chatMessageId;
+        if (!id || seenSentRef.current.has(id)) continue;
+        const message = messages.find((item) => item.id === id);
+        if (message?.seenBy.some((person) => person.username === viewer.username)) {
+          seenSentRef.current.add(id);
+          observer.unobserve(entry.target);
+          continue;
+        }
+        seenSentRef.current.add(id);
+        visibleIds.push(id);
+        observer.unobserve(entry.target);
+      }
+      if (visibleIds.length) void onSeen(visibleIds).catch(() => visibleIds.forEach((id) => seenSentRef.current.delete(id)));
+    }, { root, threshold: 0.35 });
+    root.querySelectorAll<HTMLElement>("[data-chat-message-id]").forEach((message) => observer.observe(message));
+    return () => observer.disconnect();
+  }, [loading, messages, onSeen, viewer.username]);
+
   async function loadOlder() {
     const scroll = scrollRef.current;
     if (!scroll || olderLoading || !hasMore) return;
@@ -918,7 +946,7 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onL
               <img src={appPath(profilePhoto)} alt="" />
             ) : message.author.name.slice(0, 1).toUpperCase();
             return (
-              <article className={`chat-message${mine ? " is-mine" : ""}${message.audio ? " has-audio" : ""} ${girl ? "tone-girl" : "tone-boy"} chat-tilt-${Number(message.id) % 5}`} key={message.id}>
+              <article className={`chat-message${mine ? " is-mine" : ""}${message.audio ? " has-audio" : ""} ${girl ? "tone-girl" : "tone-boy"} chat-tilt-${Number(message.id) % 5}`} data-chat-message-id={message.id} key={message.id}>
                 {mine ? <button className="chat-profile-square chat-message-menu-trigger" type="button" aria-label={`Show actions for ${message.author.name}'s message`} aria-expanded={openActionsId === message.id} onClick={() => setOpenActionsId((current) => current === message.id ? null : message.id)}>{profileContents}</button> : <span className="chat-profile-square" aria-hidden="true">{profileContents}</span>}
                 {mine && openActionsId === message.id && editingId !== message.id ? <div className="chat-profile-actions" role="menu" aria-label="Message actions"><button type="button" role="menuitem" onClick={() => { setEditingId(message.id); setEditingBody(message.body); setOpenActionsId(null); }}>Edit</button><button type="button" role="menuitem" onClick={() => { setOpenActionsId(null); void remove(message.id); }} disabled={changingId === message.id}>Delete</button></div> : null}
                 <div className="chat-bubble">
@@ -934,6 +962,16 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onL
                   </footer>
                   {message.audio ? <ChatAudioPlayer url={message.audio.url} durationMs={message.audio.durationMs} /> : null}
                 </div>
+                {message.seenBy.length ? <div className="chat-seen-row" aria-label={`Seen by ${message.seenBy.map((person) => person.name).join(", ")}`}>
+                  <span>SEEN:</span>
+                  {message.seenBy.map((person) => {
+                    const photo = familyProfilePhoto[person.username];
+                    return <i key={person.username} title={person.name}>{photo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={appPath(photo)} alt={person.name} />
+                    ) : person.name.slice(0, 1).toUpperCase()}</i>;
+                  })}
+                </div> : null}
               </article>
             );
           })}
@@ -1531,7 +1569,6 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const [chatHasMore, setChatHasMore] = useState(false);
   const [chatNextBefore, setChatNextBefore] = useState<string | null>(null);
   const [chatError, setChatError] = useState<string | null>(null);
-  const chatLatestIdRef = useRef<string | null>(null);
   const [dashboardPreferences, setDashboardPreferences] = useState<DashboardPreferences>({ showDueTodayWhenEmpty: true, showDueTomorrowWhenEmpty: true, showDueWeekWhenEmpty: true });
   const [gradeOverrides, setGradeOverrides] = useState<GradeOverride[]>([]);
   const [adminLoading, setAdminLoading] = useState(false);
@@ -1582,10 +1619,6 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       setAssignmentDetailLoading(false);
     }
   }, [onExit]);
-
-  useEffect(() => {
-    chatLatestIdRef.current = chatMessages.at(-1)?.id ?? null;
-  }, [chatMessages]);
 
   const loadInbox = useCallback(async () => {
     setInboxLoading(true);
@@ -1764,6 +1797,20 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     setChatMessages((current) => current.filter((item) => item.id !== id));
   }, []);
 
+  const markChatSeen = useCallback(async (ids: string[]) => {
+    if (!ids.length) return;
+    const response = await fetch(appPath("/api/chat"), {
+      method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }),
+    });
+    if (!response.ok) throw new Error("Seen status could not be saved.");
+    const body = await response.json();
+    setChatMessages((current) => current.map((message) => {
+      const receipt = (body.seen ?? []).find((item: { messageId: string }) => item.messageId === message.id);
+      if (!receipt || message.seenBy.some((person) => person.username === receipt.user.username)) return message;
+      return { ...message, seenBy: [...message.seenBy, receipt.user] };
+    }));
+  }, []);
+
   const loadAdmin = useCallback(async () => {
     setAdminLoading(true);
     setAdminError(null);
@@ -1808,16 +1855,18 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   useEffect(() => {
     if (activeView !== "chat") return;
     const refresh = async () => {
-      const after = chatLatestIdRef.current;
-      if (!after) return;
       try {
-        const response = await fetch(appPath(`/api/chat?after=${encodeURIComponent(after)}`), { cache: "no-store", credentials: "same-origin" });
+        const response = await fetch(appPath("/api/chat"), { cache: "no-store", credentials: "same-origin" });
         if (!response.ok) return;
         const body = await response.json();
         if (body.messages?.length) {
           setChatMessages((current) => {
             const existing = new Set(current.map((message) => message.id));
-            return [...current, ...body.messages.filter((message: ChatMessage) => !existing.has(message.id))];
+            const refreshed = new Map<string, ChatMessage>(body.messages.map((message: ChatMessage) => [message.id, message]));
+            return [
+              ...current.map((message) => refreshed.get(message.id) ?? message),
+              ...body.messages.filter((message: ChatMessage) => !existing.has(message.id)),
+            ];
           });
         }
       } catch { /* A later chat refresh will retry quietly. */ }
@@ -2211,6 +2260,12 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     return () => context.revert();
   }, [data, immersive]);
 
+  async function signOut() {
+    await fetch(appPath("/api/auth/logout"), { method: "POST", credentials: "same-origin" });
+    if (onExit) onExit();
+    else window.location.assign(appPath("/"));
+  }
+
   function closeApp() {
     setMobileMenuOpen(false);
     window.location.href = "beauschool://close";
@@ -2440,6 +2495,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
               onSend={sendChatMessage}
               onEdit={editChatMessage}
               onDelete={deleteChatMessage}
+              onSeen={markChatSeen}
             /> : activeView === "admin" ? <AdminView
               key={`admin-${adminLoading}-${dashboardPreferences.showDueTodayWhenEmpty}-${dashboardPreferences.showDueTomorrowWhenEmpty}-${dashboardPreferences.showDueWeekWhenEmpty}-${gradeOverrides.map((grade) => `${grade.courseKey}:${grade.percentage}`).join("|")}`}
               courses={data.courses}
