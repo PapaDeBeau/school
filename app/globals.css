@@ -738,11 +738,14 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .class-box { min-width: 0; display: grid; align-content: start; padding: 20px; overflow: hidden; border: 1px solid rgba(190,220,250,.88); border-radius: 18px; background: rgba(255,255,255,.96); box-shadow: 0 18px 42px rgba(0,20,62,.22), inset 0 1px 0 #fff; }
 .class-box > p { margin: 0 0 4px; color: #3977db; font-size: 8px; font-weight: 900; letter-spacing: .17em; text-transform: uppercase; }
 .class-box h2 { margin: 0; color: #152945; font-size: clamp(16px, 2.4vw, 22px); line-height: 1.14; letter-spacing: -.025em; }
-.class-meetings { display: grid; gap: 7px; margin-top: 14px; }
-.class-meetings > div { display: grid; grid-template-columns: minmax(112px, .65fr) minmax(0, 1fr); align-items: center; gap: 4px 10px; padding: 11px 12px; border: 1px solid rgba(191,211,238,.78); border-radius: 11px; background: #f6f9fe; }
-.class-meetings strong { color: #286ac7; font-size: 10px; }
-.class-meetings time { color: #152945; font-size: 11px; font-weight: 850; text-align: right; }
-.class-meetings small { grid-column: 1 / -1; color: #697b95; font-size: 8px; }
+.class-meetings { display: grid; justify-items: center; gap: 9px; margin-top: 16px; }
+.class-meetings > div:not(.class-time-missing) { width: 70%; min-height: 128px; display: grid; grid-template-columns: 1fr; place-items: center; align-content: center; gap: 7px; padding: 16px 14px; border: 1px solid #5299ef; border-radius: 15px; color: #fff; background: linear-gradient(135deg,#268cff,#154aa8); box-shadow: 0 12px 27px rgba(22,96,199,.3), inset 0 1px 0 rgba(255,255,255,.28); text-align: center; }
+.class-meetings > div:not(.class-time-missing) strong { color: #fff; font-size: clamp(11px,1.5vw,14px); letter-spacing: .045em; line-height: 1.15; text-shadow: 0 2px 5px rgba(0,28,78,.42); white-space: nowrap; }
+.class-meetings > div:not(.class-time-missing) time { color: #fff; font-size: clamp(21px,3vw,30px); font-weight: 950; line-height: 1; text-align: center; text-shadow: 0 3px 8px rgba(0,24,74,.5); }
+.class-meetings > div:not(.class-time-missing) small { color: rgba(255,255,255,.84); font-size: 9px; }
+.class-time-missing { width: 100%; display: grid; gap: 5px; padding: 12px; border: 1px solid rgba(191,211,238,.78); border-radius: 11px; background: #f6f9fe; }
+.class-time-missing strong { color: #286ac7; font-size: 10px; }
+.class-time-missing small { color: #697b95; font-size: 8px; }
 .class-box > a { min-height: 42px; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; padding: 10px 15px; border: 1px solid #5299ef; border-radius: 11px; color: #fff; background: linear-gradient(135deg,#268cff,#154aa8); box-shadow: 0 9px 20px rgba(22,96,199,.25), inset 0 1px 0 rgba(255,255,255,.25); font-size: 10px; font-weight: 900; text-decoration: none; }
 .class-box > a:hover { color: #fff; background: linear-gradient(135deg,#3297ff,#1954bd); }
 .class-box button:focus-visible,
@@ -2198,6 +2201,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   .portal-feature-view { --feature-pad: 10px; min-height: calc(100dvh - 88px); margin: 0 auto 18px; padding: var(--feature-pad); border-radius: 0 0 17px 17px; }
   .classes-grid { grid-template-columns: 1fr; gap: 10px; }
   .class-box { padding: 15px; border-radius: 14px; }
+  .class-meetings > div:not(.class-time-missing) { width: min(86%, 390px); min-height: 120px; }
   .post-board-view { height: calc(100dvh - 88px); max-height: none; grid-template-rows: minmax(0, 1fr) auto; }
   .post-board-list { gap: 10px; padding-inline: 1px; }
   .family-post { gap: 10px; padding: 15px 13px; border-radius: 14px; }

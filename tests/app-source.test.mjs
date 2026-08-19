@@ -402,6 +402,8 @@ test("Classes and family boards use the shared animated feature view", async () 
   assert.match(dashboard, /Open Class in Canvas/);
   assert.match(styles, /\.portal-feature-view\.classes-view \{[^}]*background: none/);
   assert.match(styles, /\.class-box \{[^}]*background: rgba\(255,255,255,\.96\)/);
+  assert.match(styles, /\.class-meetings > div:not\(\.class-time-missing\) \{[^}]*width: 70%[^}]*linear-gradient\(135deg,#268cff,#154aa8\)/);
+  assert.match(styles, /white-space: nowrap/);
   assert.match(dashboard, /function PostBoardView/);
   assert.match(dashboard, /Make a new post/);
   assert.match(dashboard, /youtube-nocookie\.com\/embed/);
