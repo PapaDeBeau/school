@@ -3,7 +3,13 @@ import { familyUnauthorizedResponse, readFamilySession } from "../../../../lib/f
 import { isAuthorizedAppRequest, unauthorizedAppResponse } from "../../../../lib/request-auth";
 
 const sounds = new Set(["school_chime", "school_bell", "school_alert", "greatpower", "longbell"]);
-const soundChannels: Record<string, string> = { school_chime: "school_chime_v1", school_bell: "school_bell_v1", school_alert: "school_alert_v1", greatpower: "greatpower_v1", longbell: "longbell_v1" };
+const soundChannels: Record<string, string> = {
+  school_chime: "02629372-0a08-4298-aed2-2fdb18b3493f",
+  school_bell: "b3aa0a8e-0026-41fb-bb49-f13956d6530f",
+  school_alert: "6d45a575-b748-4cef-ab8d-47216ce748d6",
+  greatpower: "c6b29628-9251-4eb1-891c-4d21bab2fbf7",
+  longbell: "44238e50-458b-4d3b-94cf-2c8d26d61f44",
+};
 const clean = (value: FormDataEntryValue | null, max: number) => typeof value === "string" ? value.trim().slice(0, max) : "";
 
 export async function POST(request: Request) {
@@ -27,7 +33,7 @@ export async function POST(request: Request) {
     if (!env.ONESIGNAL_APP_ID || !env.ONESIGNAL_REST_API_KEY) throw new Error("OneSignal is not configured on the server.");
     const payload: Record<string, unknown> = {
       app_id: env.ONESIGNAL_APP_ID, target_channel: "push", included_segments: ["Total Subscriptions"],
-      headings: { en: title }, contents: { en: message }, android_sound: sound, existing_android_channel_id: soundChannels[sound],
+      headings: { en: title }, contents: { en: message }, android_channel_id: soundChannels[sound],
       data: { urgent_overlay: true, overlay_image: imageUrl || "", target_url: `${new URL(request.url).origin}/school`, button_label: buttonLabel },
       buttons: [{ id: "open_school", text: buttonLabel }],
     };
