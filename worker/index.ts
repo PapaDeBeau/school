@@ -5,6 +5,7 @@ import handler from "vinext/server/app-router-entry";
 interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
+  CHAT_AUDIO: R2Bucket;
   BEAU_PROXY_ACCESS_KEY?: string;
   IMAGES: {
     input(stream: ReadableStream): {

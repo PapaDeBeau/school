@@ -1,10 +1,13 @@
-import { ensureFamilyChatSchema, getD1 } from "../../../db";
+import { ensureFamilyChatSchema, getChatAudioBucket, getD1 } from "../../../db";
 import { familyUnauthorizedResponse, readFamilySession } from "../../../lib/family-auth";
 import { isAuthorizedAppRequest, unauthorizedAppResponse } from "../../../lib/request-auth";
 
 type ChatRecord = {
   id: number;
   body: string;
+  audio_key: string | null;
+  audio_content_type: string | null;
+  audio_duration_ms: number | null;
   author_username: string;
   author_name: string;
   created_at: string;
@@ -25,6 +28,11 @@ function publicMessage(record: ChatRecord) {
   return {
     id: String(record.id),
     body: record.body,
+    audio: record.audio_key ? {
+      url: `/api/chat/audio?id=${record.id}`,
+      contentType: record.audio_content_type,
+      durationMs: record.audio_duration_ms,
+    } : null,
     author: { username: record.author_username, name: record.author_name },
     createdAt: record.created_at,
     updatedAt: record.updated_at,
@@ -50,6 +58,8 @@ function messageBody(value: unknown) {
   return body;
 }
 
+const chatColumns = "id, body, audio_key, audio_content_type, audio_duration_ms, author_username, author_name, created_at, updated_at";
+
 export async function GET(request: Request) {
   const auth = await authorize(request);
   if (auth.response) return auth.response;
@@ -64,7 +74,7 @@ export async function GET(request: Request) {
 
   if (after) {
     const result = await getD1().prepare(`
-      SELECT id, body, author_username, author_name, created_at, updated_at
+      SELECT ${chatColumns}
       FROM family_chat_messages
       WHERE id > ?
       ORDER BY id ASC
@@ -75,14 +85,14 @@ export async function GET(request: Request) {
 
   const query = before
     ? getD1().prepare(`
-        SELECT id, body, author_username, author_name, created_at, updated_at
+        SELECT ${chatColumns}
         FROM family_chat_messages
         WHERE id < ?
         ORDER BY id DESC
         LIMIT 16
       `).bind(before)
     : getD1().prepare(`
-        SELECT id, body, author_username, author_name, created_at, updated_at
+        SELECT ${chatColumns}
         FROM family_chat_messages
         ORDER BY id DESC
         LIMIT 16
@@ -98,16 +108,36 @@ export async function POST(request: Request) {
   const auth = await authorize(request);
   if (auth.response || !auth.user) return auth.response ?? familyUnauthorizedResponse();
   try {
-    const payload = await request.json() as { body?: unknown };
-    const body = messageBody(payload.body);
+    const contentType = request.headers.get("content-type") ?? "";
+    let body = "";
+    let audio: File | null = null;
+    let durationMs: number | null = null;
+    if (contentType.includes("multipart/form-data")) {
+      const payload = await request.formData();
+      body = typeof payload.get("body") === "string" ? String(payload.get("body")).trim() : "";
+      const candidate = payload.get("audio");
+      audio = candidate instanceof File && candidate.size ? candidate : null;
+      const duration = Number(payload.get("durationMs"));
+      durationMs = Number.isFinite(duration) ? Math.max(0, Math.min(duration, 10 * 60_000)) : null;
+    } else {
+      const payload = await request.json() as { body?: unknown };
+      body = typeof payload.body === "string" ? payload.body.trim() : "";
+    }
+    if (!body && !audio) throw new Error("Write a message or attach a recording first.");
+    if (body.length > 2_000) throw new Error("Keep family chat messages under 2,000 characters.");
+    if (audio && audio.size > 12 * 1024 * 1024) throw new Error("Keep audio recordings under 12 MB.");
+    if (audio && !audio.type.startsWith("audio/")) throw new Error("That recording format is not supported.");
     await ensureFamilyChatSchema();
     const now = new Date().toISOString();
+    const audioKey = audio ? `family-chat/${auth.user.username}/${crypto.randomUUID()}` : null;
+    if (audio && audioKey) await getChatAudioBucket().put(audioKey, audio.stream(), { httpMetadata: { contentType: audio.type } });
     const insert = await getD1().prepare(`
-      INSERT INTO family_chat_messages (body, author_username, author_name, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?)
-    `).bind(body, auth.user.username, auth.user.displayName, now, now).run();
+      INSERT INTO family_chat_messages (body, audio_key, audio_content_type, audio_duration_ms, author_username, author_name, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(body, audioKey, audio?.type ?? null, durationMs, auth.user.username, auth.user.displayName, now, now).run();
     return json({ message: publicMessage({
       id: Number(insert.meta.last_row_id), body,
+      audio_key: audioKey, audio_content_type: audio?.type ?? null, audio_duration_ms: durationMs,
       author_username: auth.user.username, author_name: auth.user.displayName,
       created_at: now, updated_at: now,
     }) }, { status: 201 });
@@ -131,7 +161,7 @@ export async function PATCH(request: Request) {
     const now = new Date().toISOString();
     await getD1().prepare(`UPDATE family_chat_messages SET body = ?, updated_at = ? WHERE id = ?`).bind(body, now, id).run();
     const updated = await getD1().prepare(`
-      SELECT id, body, author_username, author_name, created_at, updated_at
+      SELECT ${chatColumns}
       FROM family_chat_messages WHERE id = ?
     `).bind(id).first<ChatRecord>();
     return json({ message: updated ? publicMessage(updated) : null });
@@ -148,9 +178,10 @@ export async function DELETE(request: Request) {
     const id = positiveId(typeof payload.id === "string" ? payload.id : String(payload.id ?? ""));
     if (!id) return json({ error: "That chat message is invalid." }, { status: 400 });
     await ensureFamilyChatSchema();
-    const existing = await getD1().prepare(`SELECT author_username FROM family_chat_messages WHERE id = ?`).bind(id).first<{ author_username: string }>();
+    const existing = await getD1().prepare(`SELECT author_username, audio_key FROM family_chat_messages WHERE id = ?`).bind(id).first<{ author_username: string; audio_key: string | null }>();
     if (!existing) return json({ error: "That chat message no longer exists." }, { status: 404 });
     if (existing.author_username !== auth.user.username) return json({ error: "Only the sender can delete this message." }, { status: 403 });
+    if (existing.audio_key) await getChatAudioBucket().delete(existing.audio_key);
     await getD1().prepare(`DELETE FROM family_chat_messages WHERE id = ?`).bind(id).run();
     return json({ deleted: String(id) });
   } catch (error) {

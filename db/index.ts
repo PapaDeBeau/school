@@ -4,6 +4,7 @@ import * as schema from "./schema";
 
 type AppEnv = {
   DB?: D1Database;
+  CHAT_AUDIO?: R2Bucket;
   CANVAS_TOKEN_WRAP_KEY?: string;
   BEAU_PROXY_ACCESS_KEY?: string;
   FAMILY_AUTH_SIGNING_KEY?: string;
@@ -20,6 +21,12 @@ export function getD1() {
     throw new Error("The local encrypted connection store is unavailable.");
   }
   return d1;
+}
+
+export function getChatAudioBucket() {
+  const bucket = getAppEnv().CHAT_AUDIO;
+  if (!bucket) throw new Error("Family chat audio storage is unavailable.");
+  return bucket;
 }
 
 export function getDb() {
@@ -102,6 +109,14 @@ export async function ensureFamilyChatSchema() {
       ON family_chat_messages(created_at)
     `),
   ]);
+  const columns = await d1.prepare("PRAGMA table_info(family_chat_messages)").all<{ name: string }>();
+  const names = new Set((columns.results ?? []).map((column) => column.name));
+  const additions = [
+    ["audio_key", "ALTER TABLE family_chat_messages ADD COLUMN audio_key TEXT"],
+    ["audio_content_type", "ALTER TABLE family_chat_messages ADD COLUMN audio_content_type TEXT"],
+    ["audio_duration_ms", "ALTER TABLE family_chat_messages ADD COLUMN audio_duration_ms INTEGER"],
+  ] as const;
+  for (const [name, sql] of additions) if (!names.has(name)) await d1.prepare(sql).run();
   await d1.prepare("PRAGMA optimize").run();
 }
 

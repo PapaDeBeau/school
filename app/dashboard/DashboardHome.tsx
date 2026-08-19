@@ -167,6 +167,7 @@ type FamilyPost = {
 type ChatMessage = {
   id: string;
   body: string;
+  audio: { url: string; contentType: string | null; durationMs: number | null } | null;
   author: { username: string; name: string };
   createdAt: string;
   updatedAt: string;
@@ -738,6 +739,23 @@ function ChatMessageBody({ body }: { body: string }) {
   );
 }
 
+function formatAudioTime(milliseconds: number) {
+  const seconds = Math.max(0, Math.round(milliseconds / 1000));
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function ChatAudioPlayer({ url, durationMs }: { url: string; durationMs: number | null }) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  return <div className="chat-audio-player">
+    <button type="button" onClick={() => { const audio = audioRef.current; if (!audio) return; if (audio.paused) void audio.play(); else audio.pause(); }} aria-label={playing ? "Pause audio message" : "Play audio message"}>{playing ? "Ⅱ" : "▶"}</button>
+    <div className="chat-audio-track" aria-hidden="true"><i style={{ width: `${progress * 100}%` }} /></div>
+    <small>{formatAudioTime(durationMs ?? 0)}</small>
+    <audio ref={audioRef} src={appPath(url)} preload="metadata" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => { setPlaying(false); setProgress(0); }} onTimeUpdate={(event) => setProgress(event.currentTarget.duration ? event.currentTarget.currentTime / event.currentTarget.duration : 0)} />
+  </div>;
+}
+
 function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onLoadOlder, onSend, onEdit, onDelete }: {
   messages: ChatMessage[];
   viewer: DashboardData["viewer"];
@@ -746,7 +764,7 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onL
   hasMore: boolean;
   error: string | null;
   onLoadOlder: () => Promise<void>;
-  onSend: (body: string) => Promise<void>;
+  onSend: (body: string, audio?: Blob, durationMs?: number) => Promise<void>;
   onEdit: (id: string, body: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }) {
@@ -759,6 +777,49 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onL
   const [editingBody, setEditingBody] = useState("");
   const [openActionsId, setOpenActionsId] = useState<string | null>(null);
   const [changingId, setChangingId] = useState<string | null>(null);
+  const [recorderOpen, setRecorderOpen] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recordedAudio, setRecordedAudio] = useState<Blob | null>(null);
+  const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
+  const [recordedDuration, setRecordedDuration] = useState(0);
+  const [recordingError, setRecordingError] = useState("");
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recordingStartedRef = useRef(0);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => () => {
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    recorderRef.current?.stream.getTracks().forEach((track) => track.stop());
+    if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+  }, [recordedUrl]);
+
+  function clearRecording() {
+    if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+    setRecordedAudio(null); setRecordedUrl(null); setRecordedDuration(0); setRecordingError("");
+  }
+
+  async function startRecording() {
+    clearRecording();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+        setRecordedAudio(blob); setRecordedUrl(URL.createObjectURL(blob)); setRecordedDuration(Date.now() - recordingStartedRef.current);
+        stream.getTracks().forEach((track) => track.stop());
+      };
+      recorderRef.current = recorder; recordingStartedRef.current = Date.now();
+      setRecordedDuration(0); setRecording(true); recorder.start();
+      recordingTimerRef.current = setInterval(() => setRecordedDuration(Date.now() - recordingStartedRef.current), 250);
+    } catch { setRecordingError("Microphone access is needed to record an audio message."); }
+  }
+
+  function stopRecording() {
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    recordingTimerRef.current = null; setRecording(false); recorderRef.current?.stop();
+  }
 
   useLayoutEffect(() => {
     const scroll = scrollRef.current;
@@ -784,11 +845,12 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onL
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!draft.trim() || sending) return;
+    if ((!draft.trim() && !recordedAudio) || sending) return;
     setSending(true);
     try {
-      await onSend(draft);
+      await onSend(draft, recordedAudio ?? undefined, recordedDuration || undefined);
       setDraft("");
+      clearRecording(); setRecorderOpen(false);
       window.requestAnimationFrame(() => {
         const scroll = scrollRef.current;
         if (scroll) scroll.scrollTop = scroll.scrollHeight;
@@ -844,7 +906,7 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onL
                       <textarea value={editingBody} onChange={(event) => setEditingBody(event.target.value)} maxLength={2000} rows={3} aria-label="Edit family chat message" />
                       <div><button type="button" onClick={() => void saveEdit(message.id)} disabled={changingId === message.id}>Save</button><button type="button" onClick={() => { setEditingId(null); setEditingBody(""); }} disabled={changingId === message.id}>Cancel</button></div>
                     </div>
-                  ) : <ChatMessageBody body={message.body} />}
+                  ) : <>{message.body ? <ChatMessageBody body={message.body} /> : null}{message.audio ? <ChatAudioPlayer url={message.audio.url} durationMs={message.audio.durationMs} /> : null}</>}
                   <footer>
                     {edited ? <small>Edited</small> : <span />}
                   </footer>
@@ -867,9 +929,27 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onL
             event.preventDefault();
             event.currentTarget.form?.requestSubmit();
           }
-        }} maxLength={2000} rows={2} placeholder={`Message the family as ${viewer.displayName}…`} aria-label="Family chat message" />
-        <button type="submit" disabled={sending || !draft.trim()} aria-label="Send family chat message">{sending ? "…" : "➤"}</button>
+        }} maxLength={2000} rows={2} placeholder="" aria-label={`Message the family as ${viewer.displayName}`} />
+        <button className="chat-send-button" type="submit" disabled={sending || (!draft.trim() && !recordedAudio)} aria-label="Send family chat message">{sending ? "…" : "➤"}</button>
+        <button className="chat-record-button" type="button" onClick={() => setRecorderOpen(true)} aria-label="Record an audio message"><span aria-hidden="true">♪</span></button>
       </form>
+      {recorderOpen ? <div className="chat-recorder-backdrop">
+        <button className="modal-backdrop-dismiss" type="button" onClick={() => { if (recording) stopRecording(); setRecorderOpen(false); }} aria-label="Close audio recorder" />
+        <section className="chat-recorder" role="dialog" aria-modal="true" aria-labelledby="chat-recorder-title">
+          <button className="chat-recorder-close" type="button" onClick={() => { if (recording) stopRecording(); setRecorderOpen(false); }} aria-label="Close audio recorder">×</button>
+          <span className={`chat-recorder-icon${recording ? " is-recording" : ""}`} aria-hidden="true">♪</span>
+          <h2 id="chat-recorder-title">Audio message</h2>
+          <p>{recording ? "Recording…" : recordedAudio ? "Listen before you attach it." : "Tap record and speak your message."}</p>
+          <strong className="chat-recorder-time">{formatAudioTime(recordedDuration)}</strong>
+          {recordedUrl ? <audio className="chat-recorder-preview" src={recordedUrl} controls /> : null}
+          {recordingError ? <div className="chat-error" role="alert">{recordingError}</div> : null}
+          <div className="chat-recorder-actions">
+            {!recording && !recordedAudio ? <button type="button" onClick={() => void startRecording()}>Record</button> : null}
+            {recording ? <button className="is-stop" type="button" onClick={stopRecording}>Stop</button> : null}
+            {recordedAudio ? <><button type="button" onClick={() => void startRecording()}>Record again</button><button className="is-attach" type="button" onClick={() => setRecorderOpen(false)}>Attach audio</button></> : null}
+          </div>
+        </section>
+      </div> : null}
     </section>
   );
 }
@@ -1462,10 +1542,14 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     }
   }, [chatNextBefore, chatOlderLoading, onExit]);
 
-  const sendChatMessage = useCallback(async (message: string) => {
+  const sendChatMessage = useCallback(async (message: string, audio?: Blob, durationMs?: number) => {
     setChatError(null);
+    const payload = new FormData();
+    payload.set("body", message);
+    if (audio) payload.set("audio", audio, `family-audio.${audio.type.includes("mp4") ? "m4a" : "webm"}`);
+    if (durationMs) payload.set("durationMs", String(durationMs));
     const response = await fetch(appPath("/api/chat"), {
-      method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body: message }),
+      method: "POST", credentials: "same-origin", body: payload,
     });
     const body = await response.json();
     if (response.status === 401) {

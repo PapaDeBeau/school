@@ -39,6 +39,9 @@ export const familyPosts = sqliteTable("family_posts", {
 export const familyChatMessages = sqliteTable("family_chat_messages", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   body: text("body").notNull(),
+  audioKey: text("audio_key"),
+  audioContentType: text("audio_content_type"),
+  audioDurationMs: integer("audio_duration_ms"),
   authorUsername: text("author_username").notNull(),
   authorName: text("author_name").notNull(),
   createdAt: text("created_at").notNull(),
