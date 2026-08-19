@@ -308,6 +308,10 @@ test("assignments open a detailed accessible modal before leaving for Canvas", a
   assert.match(styles, /\.assignment-modal-actions button \{ width: 100%/);
   assert.match(styles, /\.canvas-rich-content img,[\s\S]*max-width: 100%/);
   assert.match(styles, /\.canvas-rich-content iframe \{[^}]*aspect-ratio: 16 \/ 9/);
+  assert.match(dashboard, /Pinch to zoom · drag to move/);
+  assert.match(dashboard, /onPointerMove/);
+  assert.match(dashboard, /onImageOpen=\{isAnnouncement \? openExpandedImage : undefined\}/);
+  assert.match(styles, /\.announcement-image-stage \{[^}]*touch-action: none/);
   assert.match(styles, /panel-pattern-2\.webp/);
   assert.match(dashboard, /see-in-canvas\.webp/);
   assert.match(dashboard, /logout-button\.webp/);

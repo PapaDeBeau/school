@@ -359,7 +359,7 @@ function canvasMediaUrl(value: string | null) {
   }
 }
 
-function CanvasRichContent({ html, fallbackText }: { html: string; fallbackText: string }) {
+function CanvasRichContent({ html, fallbackText, onImageOpen }: { html: string; fallbackText: string; onImageOpen?: (image: { src: string; alt: string }) => void }) {
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -442,9 +442,86 @@ function CanvasRichContent({ html, fallbackText }: { html: string; fallbackText:
     const containsContent = Boolean(root.textContent?.trim() || root.querySelector("img, video, iframe"));
     if (!containsContent) return appendFallback();
     container.append(...Array.from(root.childNodes).map((node) => node.cloneNode(true)));
-  }, [fallbackText, html]);
+    if (onImageOpen) {
+      container.querySelectorAll<HTMLImageElement>("img").forEach((image) => {
+        image.classList.add("canvas-zoomable-image");
+        image.tabIndex = 0;
+        image.setAttribute("role", "button");
+        image.setAttribute("aria-label", `${image.alt || "Announcement image"}. Open full-screen viewer.`);
+        const openImage = () => onImageOpen({ src: image.currentSrc || image.src, alt: image.alt || "Announcement image" });
+        image.addEventListener("click", openImage);
+        image.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            openImage();
+          }
+        });
+      });
+    }
+  }, [fallbackText, html, onImageOpen]);
 
   return <div className="canvas-rich-content" ref={contentRef} />;
+}
+
+function AnnouncementImageViewer({ image, onClose }: { image: { src: string; alt: string }; onClose: () => void }) {
+  const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const gestureRef = useRef<{ distance: number; centerX: number; centerY: number; view: typeof view } | null>(null);
+  const clampScale = (scale: number) => Math.min(5, Math.max(1, scale));
+
+  const startGesture = () => {
+    const points = Array.from(pointersRef.current.values());
+    if (points.length === 1) gestureRef.current = { distance: 0, centerX: points[0].x, centerY: points[0].y, view };
+    if (points.length >= 2) {
+      const [a, b] = points;
+      gestureRef.current = {
+        distance: Math.hypot(b.x - a.x, b.y - a.y),
+        centerX: (a.x + b.x) / 2,
+        centerY: (a.y + b.y) / 2,
+        view,
+      };
+    }
+  };
+
+  return (
+    <div className="announcement-image-viewer" role="dialog" aria-modal="true" aria-label="Announcement image viewer">
+      <button className="announcement-image-backdrop" type="button" onClick={onClose} aria-label="Close image viewer" />
+      <p className="announcement-image-hint">Pinch to zoom · drag to move</p>
+      <button className="announcement-image-close" type="button" onClick={onClose} aria-label="Close image viewer">×</button>
+      <div
+        className="announcement-image-stage"
+        onWheel={(event) => {
+          event.preventDefault();
+          setView((current) => ({ ...current, scale: clampScale(current.scale * (event.deltaY < 0 ? 1.15 : .87)) }));
+        }}
+        onDoubleClick={() => setView((current) => current.scale === 1 ? { x: 0, y: 0, scale: 2 } : { x: 0, y: 0, scale: 1 })}
+        onPointerDown={(event) => {
+          event.currentTarget.setPointerCapture(event.pointerId);
+          pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+          startGesture();
+        }}
+        onPointerMove={(event) => {
+          if (!pointersRef.current.has(event.pointerId) || !gestureRef.current) return;
+          pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+          const points = Array.from(pointersRef.current.values());
+          const gesture = gestureRef.current;
+          if (points.length === 1) {
+            setView({ ...gesture.view, x: gesture.view.x + points[0].x - gesture.centerX, y: gesture.view.y + points[0].y - gesture.centerY });
+          } else {
+            const [a, b] = points;
+            const distance = Math.hypot(b.x - a.x, b.y - a.y);
+            const scale = clampScale(gesture.view.scale * distance / Math.max(gesture.distance, 1));
+            setView({ x: gesture.view.x + (a.x + b.x) / 2 - gesture.centerX, y: gesture.view.y + (a.y + b.y) / 2 - gesture.centerY, scale });
+          }
+        }}
+        onPointerUp={(event) => { pointersRef.current.delete(event.pointerId); startGesture(); }}
+        onPointerCancel={(event) => { pointersRef.current.delete(event.pointerId); startGesture(); }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={image.src} alt={image.alt} draggable={false} style={{ transform: `translate3d(${view.x}px, ${view.y}px, 0) scale(${view.scale})` }} />
+      </div>
+    </div>
+  );
 }
 
 function AssignmentModal({ item, loading, loadError, onClose }: { item: ActionItem; loading: boolean; loadError: string | null; onClose: () => void }) {
@@ -452,6 +529,8 @@ function AssignmentModal({ item, loading, loadError, onClose }: { item: ActionIt
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closingRef = useRef(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [expandedImage, setExpandedImage] = useState<{ src: string; alt: string } | null>(null);
+  const openExpandedImage = useCallback((image: { src: string; alt: string }) => setExpandedImage(image), []);
 
   const requestClose = useCallback(() => {
     if (closingRef.current) return;
@@ -467,7 +546,7 @@ function AssignmentModal({ item, loading, loadError, onClose }: { item: ActionIt
     closeButtonRef.current?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") requestClose();
+      if (event.key === "Escape") expandedImage ? setExpandedImage(null) : requestClose();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => {
@@ -476,7 +555,7 @@ function AssignmentModal({ item, loading, loadError, onClose }: { item: ActionIt
       document.body.style.overflow = previousOverflow;
       previousFocus?.focus();
     };
-  }, [requestClose]);
+  }, [expandedImage, requestClose]);
 
   const isAnnouncement = item.kind === "announcement";
   const detailRows = isAnnouncement ? [
@@ -531,6 +610,7 @@ function AssignmentModal({ item, loading, loadError, onClose }: { item: ActionIt
             <CanvasRichContent
               html={item.descriptionHtml}
               fallbackText={item.description || (isAnnouncement ? "Open this announcement in Canvas to read the teacher's full message." : DEFAULT_ASSIGNMENT_INSTRUCTIONS)}
+              onImageOpen={isAnnouncement ? openExpandedImage : undefined}
             />
           </section>
           {isAnnouncement ? <button type="button" className="announcement-modal-got-it" onClick={requestClose} aria-label="Got it — close announcement">
@@ -547,6 +627,7 @@ function AssignmentModal({ item, loading, loadError, onClose }: { item: ActionIt
           <button className="assignment-modal-close" type="button" onClick={requestClose} ref={closeButtonRef}>Close</button>
         </footer>
       </section>
+      {expandedImage ? <AnnouncementImageViewer image={expandedImage} onClose={() => setExpandedImage(null)} /> : null}
     </div>
   );
 }
