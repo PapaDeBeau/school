@@ -1333,6 +1333,19 @@ function letterGrade(percentage: number) {
   return "F";
 }
 
+async function normalizePushImage(file: File) {
+  if (!file.type.startsWith("image/")) return file;
+  const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+  const scale = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new Error("The image could not be prepared.")), "image/jpeg", .9));
+  return new File([blob], `${file.name.replace(/\.[^.]+$/, "") || "push-image"}.jpg`, { type: "image/jpeg" });
+}
+
 function AdminView({ courses, settings, grades, loading, error, onSave }: {
   courses: Course[];
   settings: DashboardPreferences;
@@ -1357,6 +1370,8 @@ function AdminView({ courses, settings, grades, loading, error, onSave }: {
     setPushSending(true); setPushMessage("");
     try {
       const formData = new FormData(formElement);
+      const selectedImage = formData.get("image");
+      if (selectedImage instanceof File && selectedImage.size) formData.set("image", await normalizePushImage(selectedImage));
       const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
       const action = submitter?.value === "schedule" ? "schedule" : "send-now";
       formData.set("action", action);
