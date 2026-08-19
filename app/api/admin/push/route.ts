@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     const env = getAppEnv();
     if (!env.ONESIGNAL_APP_ID || !env.ONESIGNAL_REST_API_KEY) throw new Error("OneSignal is not configured on the server.");
     const payload: Record<string, unknown> = {
-      app_id: env.ONESIGNAL_APP_ID, included_segments: ["Subscribed Users"],
+      app_id: env.ONESIGNAL_APP_ID, target_channel: "push", included_segments: ["Subscribed Users"],
       headings: { en: title }, contents: { en: message }, android_sound: sound,
       data: { urgent_overlay: true, overlay_image: imageUrl || "", target_url: `${new URL(request.url).origin}/school`, button_label: buttonLabel },
       buttons: [{ id: "open_school", text: buttonLabel }],
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       if (!Number.isFinite(scheduled.getTime()) || scheduled.getTime() < Date.now() + 60_000) return Response.json({ error: "Choose a scheduled time at least one minute from now." }, { status: 400 });
       payload.send_after = scheduled.toISOString();
     }
-    const response = await fetch("https://api.onesignal.com/notifications", { method: "POST", headers: { Authorization: `Key ${env.ONESIGNAL_REST_API_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    const response = await fetch("https://api.onesignal.com/notifications?c=push", { method: "POST", headers: { Authorization: `Key ${env.ONESIGNAL_REST_API_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     const result = await response.json() as { id?: string; errors?: unknown };
     if (!response.ok || !result.id) throw new Error(`OneSignal rejected the notification${result.errors ? `: ${JSON.stringify(result.errors)}` : "."}`);
     return Response.json({ ok: true, id: result.id, scheduled: Boolean(sendAfter) });
