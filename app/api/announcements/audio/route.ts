@@ -6,7 +6,8 @@ import { readXaiApiKey } from "../../xai/connection/route";
 const femaleTeachers = new Set(["marcela whitehead", "lauren garcia", "heather hathaway", "kristina knox"]);
 const maleTeachers = new Set(["clinton baier"]);
 const safeId = (value: unknown) => { const id = Number(value); return Number.isSafeInteger(id) && id > 0 ? id : null; };
-const audioKey = (courseId: number, itemId: number) => `announcements/v3/${courseId}/${itemId}.mp3`;
+const audioKey = (courseId: number, itemId: number) => `announcements/v4/${courseId}/${itemId}.mp3`;
+const audioUrl = (courseId: number, itemId: number) => `/api/announcements/audio?course_id=${courseId}&item_id=${itemId}&v=4`;
 
 async function authorize(request: Request) {
   if (!isAuthorizedAppRequest(request)) return unauthorizedAppResponse();
@@ -36,13 +37,13 @@ export async function POST(request: Request) {
     const courseId = safeId(payload.courseId); const itemId = safeId(payload.itemId);
     if (!courseId || !itemId) return Response.json({ error: "Invalid announcement." }, { status: 400 });
     const key = audioKey(courseId, itemId); const bucket = getChatAudioBucket();
-    if (await bucket.head(key)) return Response.json({ audioUrl: `/api/announcements/audio?course_id=${courseId}&item_id=${itemId}`, existing: true });
+    if (await bucket.head(key)) return Response.json({ audioUrl: audioUrl(courseId, itemId), existing: true });
     await bucket.delete([
       `announcements/${courseId}/${itemId}.mp3`,
       `announcements/v2/${courseId}/${itemId}.mp3`,
+      `announcements/v3/${courseId}/${itemId}.mp3`,
     ]);
     const title = typeof payload.title === "string" ? payload.title.trim().slice(0, 500) : "";
-    const course = typeof payload.course === "string" ? payload.course.trim().slice(0, 300) : "";
     const authorName = typeof payload.authorName === "string" ? payload.authorName.trim().slice(0, 200) : "Teacher";
     const description = typeof payload.description === "string" ? payload.description.trim().slice(0, 13_500) : "";
     if (!title || !description) return Response.json({ error: "This announcement has no readable text." }, { status: 400 });
@@ -53,6 +54,6 @@ export async function POST(request: Request) {
     if (!response.ok) return Response.json({ error: response.status === 429 ? "xAI is busy. This announcement will retry later." : "xAI could not create this announcement recording." }, { status: 502 });
     const audio = await response.arrayBuffer();
     await bucket.put(key, audio, { httpMetadata: { contentType: response.headers.get("content-type") || "audio/mpeg" }, customMetadata: { voice, authorName } });
-    return Response.json({ audioUrl: `/api/announcements/audio?course_id=${courseId}&item_id=${itemId}`, existing: false, voice });
+    return Response.json({ audioUrl: audioUrl(courseId, itemId), existing: false, voice });
   } catch { return Response.json({ error: "The announcement recording could not be created." }, { status: 500 }); }
 }
