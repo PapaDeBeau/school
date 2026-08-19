@@ -1358,7 +1358,14 @@ function AdminView({ courses, settings, grades, loading, error, onSave }: {
     try {
       const formData = new FormData(formElement);
       const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
-      formData.set("action", submitter?.value === "schedule" ? "schedule" : "send-now");
+      const action = submitter?.value === "schedule" ? "schedule" : "send-now";
+      formData.set("action", action);
+      if (action === "schedule") {
+        const localDateTime = String(formData.get("sendAfter") || "");
+        const scheduled = new Date(localDateTime);
+        if (!localDateTime || !Number.isFinite(scheduled.getTime())) throw new Error("Choose a valid date and time.");
+        formData.set("sendAfter", scheduled.toISOString());
+      }
       const response = await fetch(appPath("/api/admin/push"), { method: "POST", credentials: "same-origin", body: formData });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "The notification could not be created.");
