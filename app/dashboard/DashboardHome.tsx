@@ -681,9 +681,14 @@ function NewTeacherEmailFlow({ courses, onSent }: { courses: Course[]; onSent: (
   }
 
   return <>
-    <button className="email-teacher-launch" type="button" onClick={() => setPickerOpen(true)} aria-label="Email a teacher">
-      {/* eslint-disable-next-line @next/next/no-img-element */}<img src={appPath("/email-a-teacher.jpg")} alt="Email a Teacher" />
-    </button>
+    <div className="inbox-launch-row">
+      <button className="email-teacher-launch" type="button" onClick={() => setPickerOpen(true)} aria-label="Email a teacher">
+        {/* eslint-disable-next-line @next/next/no-img-element */}<img src={appPath("/email-a-teacher.jpg")} alt="Email a Teacher" />
+      </button>
+      <a className="canvas-email-launch" href={`${CANVAS_ORIGIN}/conversations#filter=type=inbox`} target="_blank" rel="noopener noreferrer" aria-label="Open Canvas Inbox">
+        {/* eslint-disable-next-line @next/next/no-img-element */}<img src={appPath("/canvas-emails.webp")} alt="" />
+      </a>
+    </div>
     {pickerOpen && !selected ? <div className={`teacher-picker-backdrop${pickerClosing ? " is-closing" : ""}`} ref={pickerBackdropRef}>
       <button className="modal-backdrop-dismiss" type="button" onClick={closeTeacherPicker} aria-label="Close teacher picker" />
       <section className="teacher-picker-modal" ref={pickerModalRef} role="dialog" aria-modal="true" aria-labelledby="teacher-picker-title">
