@@ -1146,6 +1146,15 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .due-featured-slot .week-item-due b { color: #e56c13; font-weight: 950; text-transform: uppercase; }
 .due-featured-slot .mobile-due-list i { color: #65748f; font-size: 20px; font-style: normal; }
 .assignment-instructions-play { width: 42px; height: 42px; display: block; object-fit: contain; filter: drop-shadow(0 3px 7px rgba(10, 63, 178, .34)); }
+.mobile-due-row { width: 100%; display: grid; grid-template-columns: minmax(0,1fr) 48px; align-items: center; border-top: 1px solid rgba(210,223,240,.76); }
+.due-featured-slot .mobile-due-list .mobile-due-row > button { border-top: 0; }
+.due-featured-slot .mobile-due-list .mobile-due-row > .mobile-due-details { grid-template-columns: 48px minmax(0,1fr) auto; min-width: 0; }
+.due-featured-slot .mobile-due-list .mobile-due-row > .assignment-audio-play,
+.assignment-audio-play { width: 44px; height: 44px; min-height: 0; display: grid; place-items: center; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; cursor: pointer; }
+.assignment-audio-play img { width: 42px; height: 42px; display: block; object-fit: contain; }
+.action-assignment-row { position: relative; }
+.action-assignment-row > .action-item { padding-right: 54px; }
+.action-assignment-row > .assignment-audio-play { position: absolute; top: 50%; right: 3px; transform: translateY(-50%); }
 .assignment-teacher { width: 48px; min-width: 0; display: grid; justify-items: center; gap: 2px; }
 .assignment-teacher-photo { width: 38px; height: 38px; display: grid; place-items: center; overflow: hidden; border: 2px solid #2a82ed; border-radius: 50%; color: #fff; background: linear-gradient(145deg, #1277ee, #071e55); box-shadow: 0 3px 9px rgba(12, 70, 160, .25); }
 .assignment-teacher-photo img { width: 100%; height: 100%; display: block; object-fit: cover; }

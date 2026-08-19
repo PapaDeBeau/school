@@ -50,6 +50,21 @@ test("announcement narration encrypts the xAI key and reuses R2 recordings", asy
   assert.match(dashboard, /type="range"/);
 });
 
+test("assignment narration is generated once and only then shows Play", async () => {
+  const audioRoute = await readFile(new URL("app/api/assignments/audio/route.ts", root), "utf8");
+  const dashboardRoute = await readFile(new URL("app/api/dashboard/route.ts", root), "utf8");
+  const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
+  assert.match(audioRoute, /assignments\/v1\/\$\{courseId\}\/\$\{itemId\}\.mp3/);
+  assert.match(audioRoute, /await bucket\.head\(key\)/);
+  assert.match(audioRoute, /const speech = `\$\{title\}\. \$\{description\}`/);
+  assert.match(audioRoute, /maleTeachers\.has\(name\).*"lux"/s);
+  assert.match(audioRoute, /femaleTeachers\.has\(name\).*"luna"/s);
+  assert.match(dashboardRoute, /assignments\/v1/);
+  assert.match(dashboard, /item\.audioUrl \? <button className="assignment-audio-play"/);
+  assert.match(dashboard, /\/api\/assignments\/audio/);
+  assert.match(dashboard, /function AssignmentAudioPlayer/);
+});
+
 test("hosted Canvas requests use the protected BeauVizenor relay", async () => {
   const client = await readFile(new URL("lib/canvas-client.ts", root), "utf8");
 
@@ -304,8 +319,8 @@ test("assignments open a detailed accessible modal before leaving for Canvas", a
   assert.match(dashboardRoute, /\/discussion_topics\/\$\{itemId\}/);
   assert.match(dashboardRoute, /details\.set\(`discussion_topic:\$\{courseId\}:\$\{itemId\}`/);
   assert.match(dashboardRoute, /descriptionHtml = assignment\.description\?\.trim\(\) \?\? ""/);
-  assert.match(dashboardRoute, /critical: enrichedCritical/);
-  assert.match(dashboardRoute, /upcoming: enrichedUpcoming/);
+  assert.match(dashboardRoute, /critical: criticalWithAudio/);
+  assert.match(dashboardRoute, /upcoming: upcomingWithAudio/);
   assert.match(dashboardRoute, /descriptionHtml/);
   assert.match(dashboardRoute, /submissionTypes:/);
   assert.match(styles, /\.assignment-modal-scroll \{[^}]*overflow-y: auto/);

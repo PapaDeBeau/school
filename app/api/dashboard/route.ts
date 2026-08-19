@@ -576,6 +576,15 @@ export async function GET(request: Request) {
     const enrichedById = new Map(enrichedDueItems.map((item) => [item.id, item] as const));
     const enrichedCritical = critical.map((item) => enrichedById.get(item.id) ?? item);
     const enrichedUpcoming = upcoming.map((item) => enrichedById.get(item.id) ?? item);
+    const assignmentAudio = new Map(await Promise.all([...enrichedCritical, ...enrichedUpcoming]
+      .filter((item, index, items) => item.kind === "assignment" && item.canvasCourseId && item.canvasItemId && items.findIndex((candidate) => candidate.id === item.id) === index)
+      .map(async (item) => {
+        const key = `assignments/v1/${item.canvasCourseId}/${item.canvasItemId}.mp3`;
+        const object = await getChatAudioBucket().head(key).catch(() => null);
+        return [item.id, object ? `/api/assignments/audio?course_id=${item.canvasCourseId}&item_id=${item.canvasItemId}&v=1` : null] as const;
+      })));
+    const criticalWithAudio = enrichedCritical.map((item) => assignmentAudio.get(item.id) ? { ...item, audioUrl: assignmentAudio.get(item.id)! } : item);
+    const upcomingWithAudio = enrichedUpcoming.map((item) => assignmentAudio.get(item.id) ? { ...item, audioUrl: assignmentAudio.get(item.id)! } : item);
 
     return json({
       generatedAt: new Date().toISOString(),
@@ -584,8 +593,8 @@ export async function GET(request: Request) {
       courseCount: courses.length,
       unreadCount: unreadConversations.length,
       announcements,
-      critical: enrichedCritical,
-      upcoming: enrichedUpcoming,
+      critical: criticalWithAudio,
+      upcoming: upcomingWithAudio,
       week: classSchedule(),
       courses: courses.map((course) => ({
         id: course.id,

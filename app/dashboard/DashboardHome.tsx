@@ -1605,7 +1605,7 @@ function AssignmentTeacher({ item }: { item: ActionItem }) {
   </span>;
 }
 
-function ActionList({ items, empty, onSelectAssignment }: { items: ActionItem[]; empty: string; onSelectAssignment: (item: ActionItem) => void }) {
+function ActionList({ items, empty, onSelectAssignment, onPlayAssignment }: { items: ActionItem[]; empty: string; onSelectAssignment: (item: ActionItem) => void; onPlayAssignment: (item: ActionItem) => void }) {
   if (!items.length) {
     return (
       <div className="empty-state">
@@ -1625,7 +1625,12 @@ function ActionList({ items, empty, onSelectAssignment }: { items: ActionItem[];
           <span className="action-arrow" aria-hidden="true">›</span>
         </>;
         return item.kind === "assignment" ? (
-          <button className="action-item" type="button" key={item.id} onClick={() => onSelectAssignment(item)} aria-label={`View details for ${item.title}`}>{content}</button>
+          <div className="action-assignment-row" key={item.id}>
+            <button className="action-item" type="button" onClick={() => onSelectAssignment(item)} aria-label={`View details for ${item.title}`}>{content}</button>
+            {item.audioUrl ? <button className="assignment-audio-play" type="button" onClick={() => onPlayAssignment(item)} aria-label={`Play ${item.title}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}<img src={appPath("/assignment-details-play.webp")} alt="" aria-hidden="true" />
+            </button> : null}
+          </div>
         ) : (
           <a className="action-item" href={item.sourceUrl} key={item.id} rel="noreferrer" target="_blank">{content}</a>
         );
@@ -1689,7 +1694,7 @@ function AnimatedDueBadge({ count, summary }: { count: number; summary: string }
   );
 }
 
-function MobileDueCard({ title, items, empty, onSelectAssignment, featured = false, banner = "/due-today-banner.webp", tone = "week", summary = `${items.length} ${items.length === 1 ? "ITEM" : "ITEMS"} DUE` }: { title: string; items: ActionItem[]; empty: string; onSelectAssignment: (item: ActionItem) => void; featured?: boolean; banner?: string; tone?: "today" | "tomorrow" | "week"; summary?: string }) {
+function MobileDueCard({ title, items, empty, onSelectAssignment, onPlayAssignment, featured = false, banner = "/due-today-banner.webp", tone = "week", summary = `${items.length} ${items.length === 1 ? "ITEM" : "ITEMS"} DUE` }: { title: string; items: ActionItem[]; empty: string; onSelectAssignment: (item: ActionItem) => void; onPlayAssignment: (item: ActionItem) => void; featured?: boolean; banner?: string; tone?: "today" | "tomorrow" | "week"; summary?: string }) {
   return (
     <section className={`mobile-due-card due-tone-${tone}${featured ? " is-featured" : ""}${items.length ? " has-items" : ""}`}>
       {featured ? (
@@ -1707,17 +1712,17 @@ function MobileDueCard({ title, items, empty, onSelectAssignment, featured = fal
       {items.length ? (
         <div className="mobile-due-list">
           {items.map((item) => {
-            const teacherInstructions = hasTeacherInstructions(item);
             return (
-              <button type="button" key={item.id} onClick={() => onSelectAssignment(item)} aria-label={teacherInstructions ? `View teacher instructions for ${item.title}` : `View details for ${item.title}`}>
-                <AssignmentTeacher item={item} />
-                <span>{tone === "week" ? <em className="week-item-due"><b>Due:</b> {thisWeekDueLabel(item.dueAt)}</em> : null}<strong>{item.title}</strong><small>{item.authorName || "Teacher"}</small></span>
-                {teacherInstructions ? (
-                  // Supplied play artwork marks assignments with readable teacher-written instructions.
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img className="assignment-instructions-play" src={appPath("/assignment-details-play.webp")} alt="" aria-hidden="true" />
-                ) : <i aria-hidden="true">›</i>}
-              </button>
+              <div className="mobile-due-row" key={item.id}>
+                <button className="mobile-due-details" type="button" onClick={() => onSelectAssignment(item)} aria-label={`View details for ${item.title}`}>
+                  <AssignmentTeacher item={item} />
+                  <span>{tone === "week" ? <em className="week-item-due"><b>Due:</b> {thisWeekDueLabel(item.dueAt)}</em> : null}<strong>{item.title}</strong><small>{item.authorName || "Teacher"}</small></span>
+                  {!item.audioUrl ? <i aria-hidden="true">›</i> : null}
+                </button>
+                {item.audioUrl ? <button className="assignment-audio-play" type="button" onClick={() => onPlayAssignment(item)} aria-label={`Play ${item.title}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}<img src={appPath("/assignment-details-play.webp")} alt="" aria-hidden="true" />
+                </button> : null}
+              </div>
             );
           })}
         </div>
@@ -1865,6 +1870,65 @@ function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect:
   );
 }
 
+function AssignmentAudioPlayer({ item, onClose }: { item: ActionItem; onClose: () => void }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying] = useState(true);
+  const [elapsed, setElapsed] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  useEffect(() => {
+    if (!item.audioUrl) return;
+    const audio = new Audio(appPath(item.audioUrl));
+    audioRef.current = audio;
+    audio.onloadedmetadata = () => setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
+    audio.ontimeupdate = () => { setElapsed(audio.currentTime); if (Number.isFinite(audio.duration)) setDuration(audio.duration); };
+    audio.onplay = () => setPlaying(true);
+    audio.onpause = () => setPlaying(false);
+    audio.onended = () => setPlaying(false);
+    audio.onerror = () => setPlaying(false);
+    void audio.play().catch(() => setPlaying(false));
+    return () => { audio.pause(); audio.currentTime = 0; audioRef.current = null; };
+  }, [item.audioUrl]);
+
+  const closePlayer = () => {
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
+    onClose();
+  };
+  const audioTime = (seconds: number) => {
+    const safe = Number.isFinite(seconds) ? Math.max(0, Math.floor(seconds)) : 0;
+    return `${Math.floor(safe / 60)}:${String(safe % 60).padStart(2, "0")}`;
+  };
+  const progress = duration > 0 ? Math.min(1, elapsed / duration) : 0;
+
+  return <div className="announcement-player-layer assignment-player-layer">
+    <button className="announcement-player-backdrop" type="button" onClick={closePlayer} aria-label="Close assignment player" />
+    <section className="announcement-player" role="dialog" aria-modal="true" aria-labelledby="assignment-player-title">
+      <div className="announcement-player-teacher">
+        {item.authorAvatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={item.authorAvatarUrl} alt={item.authorName || "Teacher"} referrerPolicy="no-referrer" />
+        ) : <strong aria-hidden="true">{(item.authorName || "Teacher").slice(0, 1).toUpperCase()}</strong>}
+      </div>
+      <p className="announcement-player-teacher-name">{item.authorName || "Teacher"}</p>
+      <p className="announcement-player-subject">{item.course}</p>
+      <h2 id="assignment-player-title">{item.title}</h2>
+      <div className="announcement-player-time" aria-live="off"><strong>{audioTime(elapsed)}</strong><span>/</span><strong>{audioTime(duration)}</strong></div>
+      <div className="announcement-player-controls">
+        <button type="button" className="announcement-player-toggle" onClick={() => { const audio = audioRef.current; if (!audio) return; if (audio.paused) void audio.play().catch(() => setPlaying(false)); else audio.pause(); }} aria-label={playing ? "Pause assignment" : "Play assignment"}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}<img src={appPath(playing ? "/assignment-details-pause.webp" : "/assignment-details-play.webp")} alt="" aria-hidden="true" />
+        </button>
+        <div className="announcement-wave" style={{ "--announcement-progress": progress } as CSSProperties}>
+          {Array.from({ length: 42 }, (_, index) => <i key={index} style={{ height: `${28 + ((index * 17) % 66)}%` }} />)}
+          <input type="range" min="0" max={duration || 0} step="0.1" value={Math.min(elapsed, duration || 0)} onChange={(event) => { const audio = audioRef.current; if (!audio) return; const nextTime = Number(event.target.value); audio.currentTime = nextTime; setElapsed(nextTime); }} aria-label={`Seek through ${item.title}`} disabled={!duration} />
+        </div>
+      </div>
+      <button className="announcement-player-done" type="button" onClick={closePlayer} aria-label="OK, I got it">
+        {/* eslint-disable-next-line @next/next/no-img-element */}<img src={appPath("/announcement-got-it.webp")} alt="OK, I got it" />
+      </button>
+    </section>
+  </div>;
+}
+
 const canvasLinks = [
   { label: "Dashboard", icon: "⌂", href: appPath("/dashboard"), local: true },
   { label: "Canvas", icon: "▣", href: "https://sequoiagrove.instructure.com/" },
@@ -1974,6 +2038,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const [adminError, setAdminError] = useState<string | null>(null);
   const [greetingIndex] = useState(() => Math.floor(Math.random() * familyGreetings.length));
   const [selectedAction, setSelectedAction] = useState<ActionItem | null>(null);
+  const [assignmentPlayerItem, setAssignmentPlayerItem] = useState<ActionItem | null>(null);
   const [assignmentDetailLoading, setAssignmentDetailLoading] = useState(false);
   const [assignmentDetailError, setAssignmentDetailError] = useState<string | null>(null);
   const closeAssignment = useCallback(() => {
@@ -2306,6 +2371,23 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           if (!audioBody.audioUrl) return;
           setData((current) => current ? { ...current, announcements: current.announcements.map((announcement) => announcement.id === item.id ? { ...announcement, audioUrl: audioBody.audioUrl! } : announcement) } : current);
         }).catch(() => { /* A later dashboard refresh will retry missing audio. */ });
+      }
+      const assignmentCandidates = [...(body.critical ?? []), ...(body.upcoming ?? [])] as ActionItem[];
+      const missingAssignmentAudio = Array.from(new Map(assignmentCandidates.map((item) => [item.id, item])).values())
+        .filter((item) => item.kind === "assignment" && !item.audioUrl && item.canvasCourseId && item.canvasItemId && item.description.trim());
+      for (const item of missingAssignmentAudio) {
+        void fetch(appPath("/api/assignments/audio"), {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ courseId: item.canvasCourseId, itemId: item.canvasItemId, title: item.title, authorName: item.authorName, description: item.description }),
+        }).then(async (audioResponse) => {
+          if (!audioResponse.ok) return;
+          const audioBody = await audioResponse.json() as { audioUrl?: string };
+          if (!audioBody.audioUrl) return;
+          const addAudio = (assignment: ActionItem) => assignment.id === item.id ? { ...assignment, audioUrl: audioBody.audioUrl! } : assignment;
+          setData((current) => current ? { ...current, critical: current.critical.map(addAudio), upcoming: current.upcoming.map(addAudio) } : current);
+        }).catch(() => { /* A later dashboard refresh will retry missing assignment audio. */ });
       }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Canvas could not be synced.");
@@ -2830,14 +2912,14 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
         <div className="featured-due-stack">
           {dueToday.length || dashboardPreferences.showDueTodayWhenEmpty ? <div className="today-featured-slot due-featured-slot" aria-label="Assignments due today">
-            <MobileDueCard title="Due today" items={dueToday} empty="Nothing is due today." onSelectAssignment={openAssignment} featured tone="today" summary={todaySummary} />
+            <MobileDueCard title="Due today" items={dueToday} empty="Nothing is due today." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured tone="today" summary={todaySummary} />
           </div> : null}
           {dashboardPreferencesLoaded && dashboardPreferences.showAnnouncements ? <AnnouncementStack items={data.announcements ?? []} onSelect={openAssignment} /> : null}
           {dueTomorrow.length || dashboardPreferences.showDueTomorrowWhenEmpty ? <div className="tomorrow-featured-slot due-featured-slot" aria-label="Assignments due tomorrow">
-            <MobileDueCard title="Due tomorrow" items={dueTomorrow} empty="Nothing is due tomorrow." onSelectAssignment={openAssignment} featured banner="/due-tomorrow-banner.webp" tone="tomorrow" summary={tomorrowSummary} />
+            <MobileDueCard title="Due tomorrow" items={dueTomorrow} empty="Nothing is due tomorrow." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured banner="/due-tomorrow-banner.webp" tone="tomorrow" summary={tomorrowSummary} />
           </div> : null}
           {dueThisWeek.length || dashboardPreferences.showDueWeekWhenEmpty ? <div className="week-featured-slot due-featured-slot" aria-label="Assignments due this week">
-            <MobileDueCard title="Due this week" items={dueThisWeek} empty="Nothing else is due this week." onSelectAssignment={openAssignment} featured banner="/this-week-banner.webp" tone="week" summary={weekSummary} />
+            <MobileDueCard title="Due this week" items={dueThisWeek} empty="Nothing else is due this week." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured banner="/this-week-banner.webp" tone="week" summary={weekSummary} />
           </div> : null}
         </div>
 
@@ -2861,7 +2943,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           <span className="critical-shield" aria-hidden="true">{allClear ? "✓" : "!"}</span>
           <div><p>Critical information</p><strong>{allClear ? "Nothing is due today and there are no unread teacher messages." : `${data.critical.length} items need attention.`}</strong></div>
           <span className="critical-chevron" aria-hidden="true">›</span>
-          {!allClear ? <ActionList items={data.critical} empty="Nothing needs attention." onSelectAssignment={openAssignment} /> : null}
+          {!allClear ? <ActionList items={data.critical} empty="Nothing needs attention." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} /> : null}
         </section>
 
         <div className="primary-dashboard-grid schedule-only-grid">
@@ -2944,6 +3026,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
         )}
       </section>
       {selectedAction ? <AssignmentModal item={selectedAction} loading={assignmentDetailLoading} loadError={assignmentDetailError} onClose={closeAssignment} /> : null}
+      {assignmentPlayerItem ? <AssignmentAudioPlayer item={assignmentPlayerItem} onClose={() => setAssignmentPlayerItem(null)} /> : null}
       {selectedThread ? <InboxThreadModal thread={selectedThread} onClose={closeThread} onThreadChange={setSelectedThread} /> : null}
       {composerBoard ? <PostComposerModal board={composerBoard} onClose={closeComposer} onSubmit={(payload) => createPost(composerBoard, payload)} /> : null}
     </main>
