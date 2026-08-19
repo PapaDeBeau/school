@@ -967,6 +967,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .canvas-email-launch { width: 100%; display: block; margin: 0; padding: 0; overflow: visible; border: 0; border-radius: 0; background: transparent; box-shadow: none; cursor: pointer; }
 .email-teacher-launch img,
 .canvas-email-launch img { width: 100%; height: auto; display: block; }
+.email-teacher-launch img { clip-path: inset(13% 0 13% 0 round 999px); }
 .email-teacher-launch:active,
 .canvas-email-launch:active { transform: translateY(1px); }
 .email-teacher-launch:focus-visible,
