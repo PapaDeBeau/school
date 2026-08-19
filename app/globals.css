@@ -953,6 +953,10 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .admin-push-section textarea { resize: vertical; }
 .admin-push-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .admin-push-send { position: static; margin-top: 16px; background: linear-gradient(135deg,#ff334f,#246dff); }
+.admin-push-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+.admin-push-actions .admin-save { position: static; }
+.admin-push-send-now { background: linear-gradient(135deg,#ff3155,#d50b43); }
+.admin-push-schedule { background: linear-gradient(135deg,#268cff,#164bb4); }
 @media (max-width: 560px) { .admin-push-grid { grid-template-columns: 1fr; gap: 0; } }
 .family-post a:focus-visible,
 .post-board-create-bar button:focus-visible,

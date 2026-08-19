@@ -1356,7 +1356,10 @@ function AdminView({ courses, settings, grades, loading, error, onSave }: {
     const formElement = event.currentTarget;
     setPushSending(true); setPushMessage("");
     try {
-      const response = await fetch(appPath("/api/admin/push"), { method: "POST", credentials: "same-origin", body: new FormData(formElement) });
+      const formData = new FormData(formElement);
+      const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+      formData.set("action", submitter?.value === "schedule" ? "schedule" : "send-now");
+      const response = await fetch(appPath("/api/admin/push"), { method: "POST", credentials: "same-origin", body: formData });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "The notification could not be created.");
       setPushMessage(body.scheduled ? "Notification scheduled." : "Notification sent.");
@@ -1441,9 +1444,9 @@ function AdminView({ courses, settings, grades, loading, error, onSave }: {
             <label><span>Sound</span><select name="sound" defaultValue="school_bell"><option value="school_bell">School bell</option><option value="greatpower">With great power comes great responsibility</option><option value="school_chime">School chime</option><option value="school_alert">School alert</option><option value="longbell">Long bell</option></select></label>
             <label><span>Button text</span><input name="buttonLabel" maxLength={30} defaultValue="Open School" /></label>
           </div>
-          <label><span>Schedule (leave blank to send now)</span><input name="sendAfter" type="datetime-local" /></label>
+          <label><span>Schedule date and time</span><input name="sendAfter" type="datetime-local" /></label>
           {pushMessage ? <p className={`admin-message${/sent|scheduled/i.test(pushMessage) ? " is-success" : " is-error"}`} role="status">{pushMessage}</p> : null}
-          <button className="admin-save admin-push-send" type="submit" disabled={pushSending}>{pushSending ? "Creating alert…" : "Send now / schedule"}</button>
+          <div className="admin-push-actions"><button className="admin-save admin-push-send-now" type="submit" value="send-now" disabled={pushSending}>{pushSending ? "Working…" : "Send now"}</button><button className="admin-save admin-push-schedule" type="submit" value="schedule" disabled={pushSending}>{pushSending ? "Working…" : "Schedule"}</button></div>
           </section>
         </form>
       </div> : null}
