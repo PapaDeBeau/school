@@ -36,6 +36,13 @@
       "when": 1787098665838,
       "tag": "0004_large_banshee",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1787118743098,
+      "tag": "0005_gifted_captain_stacy",
+      "breakpoints": true
     }
   ]
 }

@@ -328,10 +328,17 @@ test("family chat is persistent, paginated, link-aware, and sender controlled", 
   assert.match(chatRoute, /WHERE id < \?/);
   assert.match(chatRoute, /existing\.author_username !== auth\.user\.username/);
   assert.match(chatRoute, /export async function PATCH/);
+  assert.match(chatRoute, /export async function PUT/);
   assert.match(chatRoute, /export async function DELETE/);
   assert.match(schema, /family_chat_messages/);
+  assert.match(schema, /family_chat_message_reads/);
+  assert.match(dashboard, /data-chat-message-id/);
+  assert.match(dashboard, /className="chat-seen-row"/);
+  assert.match(dashboard, /aria-label="Close school app"/);
+  assert.doesNotMatch(dashboard, /mobile-menu-logout-action/);
   assert.match(styles, /\.chat-message\.is-mine/);
   assert.match(styles, /\.chat-message\.tone-girl/);
+  assert.match(styles, /\.chat-seen-row/);
 });
 
 test("admin stores percentages and controls empty due-card visibility", async () => {
