@@ -3,14 +3,23 @@ import { request as httpsRequest } from "node:https";
 export const CANVAS_BASE_URL = "https://sequoiagrove.instructure.com";
 
 export async function canvasGet<T>(path: string, token: string): Promise<T> {
+  return canvasRequest<T>(path, token, "GET");
+}
+
+export async function canvasPostForm<T>(path: string, token: string, form: URLSearchParams): Promise<T> {
+  return canvasRequest<T>(path, token, "POST", form.toString());
+}
+
+async function canvasRequest<T>(path: string, token: string, method: "GET" | "POST", body?: string): Promise<T> {
   const response = await new Promise<{ status: number; body: string }>((resolve, reject) => {
     const request = httpsRequest(
       `${CANVAS_BASE_URL}${path}`,
       {
-        method: "GET",
+        method,
         headers: {
           Authorization: `Bearer ${token.trim()}`,
           Accept: "application/json",
+          ...(body ? { "Content-Type": "application/x-www-form-urlencoded", "Content-Length": String(Buffer.byteLength(body)) } : {}),
           "User-Agent": "Beau-School-Dashboard/0.1",
         },
       },
@@ -34,7 +43,7 @@ export async function canvasGet<T>(path: string, token: string): Promise<T> {
     );
     request.setTimeout(12_000, () => request.destroy(new Error("Canvas request timed out.")));
     request.on("error", reject);
-    request.end();
+    request.end(body);
   });
 
   if (response.status >= 300 && response.status < 400) {

@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { ensureCanvasConnectionSchema, getDb } from "../../../db";
 import { canvasConnections } from "../../../db/schema";
-import { CANVAS_BASE_URL, canvasGet } from "../../../lib/canvas-client";
+import { CANVAS_BASE_URL, canvasGet, canvasPostForm } from "../../../lib/canvas-client";
 import { decryptCanvasToken } from "../../../lib/canvas-vault";
 import { familyUnauthorizedResponse, readFamilySession } from "../../../lib/family-auth";
 import { isAuthorizedAppRequest, unauthorizedAppResponse } from "../../../lib/request-auth";
@@ -44,6 +44,40 @@ type CanvasConversation = {
   participants?: CanvasParticipant[];
   messages?: CanvasMessage[];
 };
+
+function serializeThread(conversation: CanvasConversation) {
+  const participants = new Map(
+    (conversation.participants ?? []).map((participant) => [participant.id, participant])
+  );
+  const audience = new Set(conversation.audience ?? []);
+  const ownParticipant = (conversation.participants ?? []).find((participant) => !audience.has(participant.id));
+  const messages = [...(conversation.messages ?? [])]
+    .sort((left, right) => new Date(right.created_at ?? 0).getTime() - new Date(left.created_at ?? 0).getTime())
+    .map((message) => ({
+      id: String(message.id),
+      createdAt: message.created_at ?? null,
+      body: canvasHtmlToText(message.body) || "Canvas did not include message text.",
+      generated: Boolean(message.generated),
+      isOwn: Boolean(ownParticipant && message.author_id === ownParticipant.id),
+      author: participantData(message.author_id ? participants.get(message.author_id) : null),
+      attachments: (message.attachments ?? []).map((attachment) => ({
+        id: String(attachment.id ?? attachment.url ?? attachment.filename ?? "attachment"),
+        name: attachment.display_name?.trim() || attachment.filename?.trim() || "Attachment",
+        url: safeCanvasUrl(attachment.url),
+        size: attachment.size ?? null,
+      })),
+    }));
+
+  return {
+    id: String(conversation.id),
+    subject: conversation.subject?.trim() || "Canvas message",
+    contextName: conversation.context_name?.trim() || "Canvas Inbox",
+    workflowState: conversation.workflow_state ?? "read",
+    sourceUrl: `${CANVAS_BASE_URL}/conversations#filter=type=inbox`,
+    participants: (conversation.participants ?? []).map(participantData).filter(Boolean),
+    messages,
+  };
+}
 
 const headers = {
   "Cache-Control": "no-store, max-age=0",
@@ -130,36 +164,7 @@ export async function GET(request: Request) {
         `/api/v1/conversations/${conversationId}?include[]=participant_avatars`,
         token
       );
-      const participants = new Map(
-        (conversation.participants ?? []).map((participant) => [participant.id, participant])
-      );
-      const messages = [...(conversation.messages ?? [])]
-        .sort((left, right) => new Date(left.created_at ?? 0).getTime() - new Date(right.created_at ?? 0).getTime())
-        .map((message) => ({
-          id: String(message.id),
-          createdAt: message.created_at ?? null,
-          body: canvasHtmlToText(message.body) || "Canvas did not include message text.",
-          generated: Boolean(message.generated),
-          author: participantData(message.author_id ? participants.get(message.author_id) : null),
-          attachments: (message.attachments ?? []).map((attachment) => ({
-            id: String(attachment.id ?? attachment.url ?? attachment.filename ?? "attachment"),
-            name: attachment.display_name?.trim() || attachment.filename?.trim() || "Attachment",
-            url: safeCanvasUrl(attachment.url),
-            size: attachment.size ?? null,
-          })),
-        }));
-
-      return json({
-        thread: {
-          id: String(conversation.id),
-          subject: conversation.subject?.trim() || "Canvas message",
-          contextName: conversation.context_name?.trim() || "Canvas Inbox",
-          workflowState: conversation.workflow_state ?? "read",
-          sourceUrl: `${CANVAS_BASE_URL}/conversations/${conversation.id}`,
-          participants: (conversation.participants ?? []).map(participantData).filter(Boolean),
-          messages,
-        },
-      });
+      return json({ thread: serializeThread(conversation) });
     }
 
     const conversations = await canvasGet<CanvasConversation[]>(
@@ -185,5 +190,28 @@ export async function GET(request: Request) {
       { error: error instanceof Error ? error.message : "Canvas Inbox could not be loaded." },
       { status: 500 }
     );
+  }
+}
+
+export async function POST(request: Request) {
+  if (!isAuthorizedAppRequest(request)) return unauthorizedAppResponse();
+  if (!await readFamilySession(request)) return familyUnauthorizedResponse();
+
+  try {
+    const payload = await request.json() as { conversationId?: unknown; body?: unknown };
+    const conversationId = typeof payload.conversationId === "string" ? payload.conversationId : "";
+    const body = typeof payload.body === "string" ? payload.body.trim() : "";
+    if (!/^\d{1,20}$/.test(conversationId)) return json({ error: "That Canvas conversation could not be opened." }, { status: 400 });
+    if (!body || body.length > 10_000) return json({ error: "Enter a reply between 1 and 10,000 characters." }, { status: 400 });
+
+    const token = await readCanvasToken();
+    await canvasPostForm(`/api/v1/conversations/${conversationId}/add_message`, token, new URLSearchParams({ body }));
+    const conversation = await canvasGet<CanvasConversation>(
+      `/api/v1/conversations/${conversationId}?include[]=participant_avatars`,
+      token
+    );
+    return json({ thread: serializeThread(conversation) });
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : "Your reply could not be sent to Canvas." }, { status: 500 });
   }
 }
