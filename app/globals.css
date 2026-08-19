@@ -1158,6 +1158,29 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .announcement-card-actions button:active { transform: translateY(1px); }
 .announcement-card-actions button:focus-visible { outline: 3px solid rgba(36, 99, 235, .38); outline-offset: 2px; }
 .announcement-card-date { grid-column: 2; color: #53647f; font-size: 9px; font-weight: 800; line-height: 1.1; text-align: left; }
+.announcement-player-layer { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: start center; padding: min(25vh, 190px) 18px 24px; }
+.announcement-player-backdrop { position: absolute; inset: 0; width: 100%; border: 0; background: rgba(4, 16, 48, .34); backdrop-filter: blur(13px) saturate(.72); -webkit-backdrop-filter: blur(13px) saturate(.72); }
+.announcement-player { --teacher-player-size: clamp(150px,50vw,260px); position: relative; width: min(430px, 100%); display: grid; justify-items: center; padding: calc(var(--teacher-player-size) / 2 + 22px) 22px 22px; border: 1px solid rgba(255,255,255,.8); border-radius: 28px; color: #10214c; background: linear-gradient(160deg, rgba(255,255,255,.97), rgba(222,237,255,.96)); box-shadow: 0 30px 90px rgba(0,18,70,.42), inset 0 1px 0 #fff; }
+.announcement-player-teacher { position: absolute; top: calc(var(--teacher-player-size) / -2); width: var(--teacher-player-size); height: var(--teacher-player-size); display: grid; place-items: center; overflow: hidden; border: 6px solid #fff; border-radius: 50%; color: #fff; background: linear-gradient(145deg,#328df5,#061b52); box-shadow: 0 13px 30px rgba(15,73,165,.4); }
+.announcement-player-teacher img { width: 100%; height: 100%; object-fit: cover; }
+.announcement-player-teacher strong { font-size: 42px; }
+.announcement-player > p { margin: 0; color: #2b66b8; font-size: 12px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.announcement-player > h2 { margin: 5px 0 12px; font-size: clamp(20px,5vw,27px); line-height: 1.08; text-align: center; }
+.announcement-player-time { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; color: #163c78; font-variant-numeric: tabular-nums; }
+.announcement-player-time strong { min-width: 38px; font-size: 18px; }
+.announcement-player-time span { opacity: .45; }
+.announcement-player-controls { width: 100%; display: grid; grid-template-columns: 62px minmax(0,1fr); align-items: center; gap: 12px; }
+.announcement-player-toggle { width: 62px; height: 62px; padding: 0; overflow: hidden; border: 0; border-radius: 50%; background: transparent; filter: drop-shadow(0 8px 12px rgba(30,77,164,.28)); cursor: pointer; }
+.announcement-player-toggle img { width: 100%; height: 100%; object-fit: contain; }
+.announcement-wave { --announcement-progress: 0; position: relative; height: 70px; display: flex; align-items: center; gap: 3px; overflow: hidden; padding: 7px 9px; border-radius: 18px; background: rgba(255,255,255,.62); box-shadow: inset 0 0 0 1px rgba(90,139,211,.2); }
+.announcement-wave::after { content: ""; position: absolute; inset: 0; width: calc(var(--announcement-progress) * 100%); background: linear-gradient(90deg,rgba(36,99,235,.17),rgba(32,201,151,.23)); border-right: 2px solid #18a67a; pointer-events: none; }
+.announcement-wave i { flex: 1 1 2px; min-width: 2px; border-radius: 999px; background: linear-gradient(180deg,#6d4aff,#0ca9eb 52%,#23c483); transform: scaleY(.88); animation: announcement-wave-pulse .8s ease-in-out infinite alternate; }
+.announcement-wave i:nth-child(3n) { animation-delay: -.35s; }.announcement-wave i:nth-child(4n) { animation-delay: -.6s; }
+.announcement-player:has(.announcement-player-toggle[aria-label^="Play"]) .announcement-wave i { animation-play-state: paused; opacity: .72; }
+.announcement-player-done { width: 100%; min-height: 50px; margin-top: 18px; border: 0; border-radius: 13px; color: #fff; background: linear-gradient(180deg,#35c85a,#128b34); box-shadow: 0 9px 20px rgba(18,139,52,.28), inset 0 1px 0 rgba(255,255,255,.5); font: inherit; font-size: 17px; font-weight: 900; line-height: 1; cursor: pointer; }
+.announcement-player-done:active { transform: translateY(1px); }
+@keyframes announcement-wave-pulse { from { transform: scaleY(.55); } to { transform: scaleY(1); } }
+@media (prefers-reduced-motion: reduce) { .announcement-wave i { animation: none; } }
 .school-app.is-focus-mode { grid-template-columns: 150px minmax(0, 1fr); }
 .school-app.is-focus-mode .sidebar-brand > span:last-child,
 .school-app.is-focus-mode .school-nav,

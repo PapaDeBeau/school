@@ -526,7 +526,7 @@ export async function GET(request: Request) {
       .sort((a, b) => new Date(b.dueAt ?? 0).getTime() - new Date(a.dueAt ?? 0).getTime());
     const announcements = await Promise.all(normalizedAnnouncements.map(async (item) => {
       if (!item.canvasCourseId || !item.canvasItemId) return item;
-      const key = `announcements/${item.canvasCourseId}/${item.canvasItemId}.mp3`;
+      const key = `announcements/v2/${item.canvasCourseId}/${item.canvasItemId}.mp3`;
       const object = await getChatAudioBucket().head(key).catch(() => null);
       return object ? { ...item, audioUrl: `/api/announcements/audio?course_id=${item.canvasCourseId}&item_id=${item.canvasItemId}` } : item;
     }));

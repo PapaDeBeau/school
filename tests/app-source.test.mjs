@@ -39,8 +39,11 @@ test("announcement narration encrypts the xAI key and reuses R2 recordings", asy
   assert.match(audioRoute, /maleTeachers\.has\(name\).*"lux"/s);
   assert.match(audioRoute, /femaleTeachers\.has\(name\).*"luna"/s);
   assert.match(audioRoute, /await bucket\.head\(key\)/);
-  assert.match(audioRoute, /announcements\/\$\{courseId\}\/\$\{itemId\}\.mp3/);
+  assert.match(audioRoute, /announcements\/v2\/\$\{courseId\}\/\$\{itemId\}\.mp3/);
+  assert.match(audioRoute, /const speech = `\$\{title\}\. \$\{description\}`/);
   assert.match(dashboard, /item\.audioUrl \?/);
+  assert.match(dashboard, /announcement-player-layer/);
+  assert.match(dashboard, /OK, I got it/);
 });
 
 test("hosted Canvas requests use the protected BeauVizenor relay", async () => {

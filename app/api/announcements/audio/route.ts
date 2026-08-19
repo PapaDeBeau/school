@@ -6,7 +6,7 @@ import { readXaiApiKey } from "../../xai/connection/route";
 const femaleTeachers = new Set(["marcela whitehead", "lauren garcia", "heather hathaway", "kristina knox"]);
 const maleTeachers = new Set(["clinton baier"]);
 const safeId = (value: unknown) => { const id = Number(value); return Number.isSafeInteger(id) && id > 0 ? id : null; };
-const audioKey = (courseId: number, itemId: number) => `announcements/${courseId}/${itemId}.mp3`;
+const audioKey = (courseId: number, itemId: number) => `announcements/v2/${courseId}/${itemId}.mp3`;
 
 async function authorize(request: Request) {
   if (!isAuthorizedAppRequest(request)) return unauthorizedAppResponse();
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     if (!title || !description) return Response.json({ error: "This announcement has no readable text." }, { status: 400 });
     const apiKey = await readXaiApiKey(); if (!apiKey) return Response.json({ error: "Connect xAI in Settings first." }, { status: 409 });
     const voice = voiceForTeacher(authorName);
-    const speech = `Announcement from ${authorName}${course ? ` for ${course}` : ""}. ${title}. ${description}`;
+    const speech = `${title}. ${description}`;
     const response = await fetch("https://api.x.ai/v1/tts", { method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" }, body: JSON.stringify({ text: speech, voice_id: voice, language: "en" }) });
     if (!response.ok) return Response.json({ error: response.status === 429 ? "xAI is busy. This announcement will retry later." : "xAI could not create this announcement recording." }, { status: 502 });
     const audio = await response.arrayBuffer();

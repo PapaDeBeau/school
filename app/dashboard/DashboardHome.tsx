@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type CSSProperties, type FormEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import DOMPurify from "dompurify";
 import { appPath } from "../../lib/app-paths";
@@ -1647,7 +1647,10 @@ function MobileDueCard({ title, items, empty, onSelectAssignment, featured = fal
 
 function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect: (item: ActionItem) => void }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [playingId, setPlayingId] = useState<string | null>(null);
+  const [playerItem, setPlayerItem] = useState<ActionItem | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [duration, setDuration] = useState(0);
   const courseLabel = (course: string) => {
     const normalized = course.toLocaleLowerCase("en-US");
     if (normalized.includes("hsva") || normalized.includes("orientation")) return "HSVA";
@@ -1657,6 +1660,57 @@ function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect:
     if (normalized.includes("biology")) return "Biology";
     return course.trim().split(/\s+/)[0] || "Canvas";
   };
+
+  const closePlayer = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    audioRef.current = null;
+    setPlayerItem(null);
+    setPlaying(false);
+    setElapsed(0);
+    setDuration(0);
+  }, []);
+
+  const openPlayer = useCallback((item: ActionItem) => {
+    if (!item.audioUrl) return;
+    if (audioRef.current) audioRef.current.pause();
+    const audio = new Audio(appPath(item.audioUrl));
+    audioRef.current = audio;
+    setPlayerItem(item);
+    setElapsed(0);
+    setDuration(0);
+    setPlaying(true);
+    audio.onloadedmetadata = () => setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
+    audio.ontimeupdate = () => {
+      setElapsed(audio.currentTime);
+      if (Number.isFinite(audio.duration)) setDuration(audio.duration);
+    };
+    audio.onplay = () => setPlaying(true);
+    audio.onpause = () => setPlaying(false);
+    audio.onended = () => setPlaying(false);
+    audio.onerror = () => setPlaying(false);
+    void audio.play().catch(() => setPlaying(false));
+  }, []);
+
+  const togglePlayback = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) void audio.play().catch(() => setPlaying(false));
+    else audio.pause();
+  }, []);
+
+  useEffect(() => () => {
+    audioRef.current?.pause();
+    audioRef.current = null;
+  }, []);
+
+  const audioTime = (seconds: number) => {
+    const safe = Number.isFinite(seconds) ? Math.max(0, Math.floor(seconds)) : 0;
+    return `${Math.floor(safe / 60)}:${String(safe % 60).padStart(2, "0")}`;
+  };
+  const progress = duration > 0 ? Math.min(1, elapsed / duration) : 0;
 
   return (
     <section className="dashboard-announcements" aria-labelledby="dashboard-announcements-title">
@@ -1681,20 +1735,7 @@ function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect:
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={appPath("/announcement-view.png")} alt="View" />
               </button>
-              {item.audioUrl ? <button type="button" className="announcement-action-listen" aria-label={`${playingId === item.id ? "Pause" : "Listen to"} ${item.title}`} onClick={() => {
-                if (playingId === item.id && audioRef.current) {
-                  audioRef.current.pause();
-                  setPlayingId(null);
-                  return;
-                }
-                audioRef.current?.pause();
-                const audio = new Audio(appPath(item.audioUrl!));
-                audioRef.current = audio;
-                audio.onended = () => setPlayingId(null);
-                audio.onerror = () => setPlayingId(null);
-                setPlayingId(item.id);
-                void audio.play().catch(() => setPlayingId(null));
-              }}>
+              {item.audioUrl ? <button type="button" className="announcement-action-listen" aria-label={`Listen to ${item.title}`} onClick={() => openPlayer(item)}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={appPath("/announcement-listen.png")} alt="Listen" />
               </button> : null}
@@ -1704,6 +1745,30 @@ function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect:
       </div>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img className="announcements-section-underline" src={appPath("/announcements-underline.png")} alt="" aria-hidden="true" />
+      {playerItem ? <div className="announcement-player-layer">
+        <button className="announcement-player-backdrop" type="button" onClick={closePlayer} aria-label="Close announcement player" />
+        <section className="announcement-player" role="dialog" aria-modal="true" aria-labelledby="announcement-player-title">
+          <div className="announcement-player-teacher">
+            {playerItem.authorAvatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={playerItem.authorAvatarUrl} alt={playerItem.authorName || "Teacher"} referrerPolicy="no-referrer" />
+            ) : <strong aria-hidden="true">{(playerItem.authorName || "Teacher").slice(0, 1).toUpperCase()}</strong>}
+          </div>
+          <p>{playerItem.authorName || "Teacher"}</p>
+          <h2 id="announcement-player-title">{playerItem.title}</h2>
+          <div className="announcement-player-time" aria-live="off"><strong>{audioTime(elapsed)}</strong><span>/</span><strong>{audioTime(duration)}</strong></div>
+          <div className="announcement-player-controls">
+            <button type="button" className="announcement-player-toggle" onClick={togglePlayback} aria-label={playing ? "Pause announcement" : "Play announcement"}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={appPath(playing ? "/assignment-details-pause.webp" : "/assignment-details-play.webp")} alt="" aria-hidden="true" />
+            </button>
+            <div className="announcement-wave" style={{ "--announcement-progress": progress } as CSSProperties} aria-hidden="true">
+              {Array.from({ length: 42 }, (_, index) => <i key={index} style={{ height: `${28 + ((index * 17) % 66)}%` }} />)}
+            </div>
+          </div>
+          <button className="announcement-player-done" type="button" onClick={closePlayer}>OK, I got it</button>
+        </section>
+      </div> : null}
     </section>
   );
 }
