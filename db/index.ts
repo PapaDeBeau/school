@@ -166,3 +166,16 @@ export async function ensureFamilyAdminSchema() {
   }
   await d1.prepare("PRAGMA optimize").run();
 }
+
+export async function ensureXaiConnectionSchema() {
+  await getD1().prepare(`
+    CREATE TABLE IF NOT EXISTS xai_connections (
+      id INTEGER PRIMARY KEY,
+      encrypted_api_key TEXT NOT NULL,
+      api_key_iv TEXT NOT NULL,
+      verified_at TEXT NOT NULL,
+      updated_by TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `).run();
+}

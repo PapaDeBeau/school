@@ -58,3 +58,6 @@ export async function decryptCanvasToken(ciphertext: string, encodedIv: string) 
   );
   return new TextDecoder().decode(decrypted);
 }
+
+export const encryptServerSecret = encryptCanvasToken;
+export const decryptServerSecret = decryptCanvasToken;

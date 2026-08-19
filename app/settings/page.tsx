@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { appPath } from "../../lib/app-paths";
 import { CanvasConnectionForm } from "../CanvasConnectionForm";
+import { XaiConnectionForm } from "../XaiConnectionForm";
 
 export const metadata: Metadata = {
   title: "Settings | Beau School Dashboard",
@@ -29,6 +30,16 @@ export default function SettingsPage() {
             </div>
           </div>
           <CanvasConnectionForm />
+        </div>
+      </section>
+      <section className="connection-card" aria-labelledby="xai-page-title">
+        <div className="connection-grid">
+          <div className="connection-copy">
+            <p className="step-label">Announcement voices</p>
+            <h2 id="xai-page-title">Connect Luna and Lux.</h2>
+            <p className="intro">Add the xAI API key once. It is encrypted on the server and used only to create missing announcement recordings.</p>
+          </div>
+          <XaiConnectionForm />
         </div>
       </section>
       <footer><span>Designed for Beau&apos;s 2026–27 school year</span><span>Canvas data remains under your control</span></footer>

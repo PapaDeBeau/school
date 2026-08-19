@@ -50,6 +50,13 @@
       "when": 1787130542117,
       "tag": "0006_nice_the_hunter",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1787132536550,
+      "tag": "0007_third_gertrude_yorkes",
+      "breakpoints": true
     }
   ]
 }

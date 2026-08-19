@@ -29,6 +29,7 @@ type ActionItem = {
   published: boolean | null;
   authorName: string | null;
   authorAvatarUrl: string | null;
+  audioUrl: string | null;
 };
 
 const DEFAULT_ASSIGNMENT_INSTRUCTIONS = "Canvas has not included written instructions for this item. Use the Canvas button below to check for files, worksheets, videos, rubrics, or teacher updates.";
@@ -1645,6 +1646,8 @@ function MobileDueCard({ title, items, empty, onSelectAssignment, featured = fal
 }
 
 function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect: (item: ActionItem) => void }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playingId, setPlayingId] = useState<string | null>(null);
   const courseLabel = (course: string) => {
     const normalized = course.toLocaleLowerCase("en-US");
     if (normalized.includes("hsva") || normalized.includes("orientation")) return "HSVA";
@@ -1678,10 +1681,23 @@ function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect:
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={appPath("/announcement-view.png")} alt="View" />
               </button>
-              <button type="button" className="announcement-action-listen" aria-label={`Listen to ${item.title}`}>
+              {item.audioUrl ? <button type="button" className="announcement-action-listen" aria-label={`${playingId === item.id ? "Pause" : "Listen to"} ${item.title}`} onClick={() => {
+                if (playingId === item.id && audioRef.current) {
+                  audioRef.current.pause();
+                  setPlayingId(null);
+                  return;
+                }
+                audioRef.current?.pause();
+                const audio = new Audio(appPath(item.audioUrl!));
+                audioRef.current = audio;
+                audio.onended = () => setPlayingId(null);
+                audio.onerror = () => setPlayingId(null);
+                setPlayingId(item.id);
+                void audio.play().catch(() => setPlayingId(null));
+              }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={appPath("/announcement-listen.png")} alt="Listen" />
-              </button>
+              </button> : null}
             </div>
           </article>
         ))}
@@ -2113,6 +2129,27 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       }
       if (!response.ok) throw new Error(body.error || "Canvas could not be synced.");
       setData(body);
+      const missingAudio = (body.announcements ?? []).filter((item: ActionItem) => !item.audioUrl && item.canvasCourseId && item.canvasItemId && item.description.trim());
+      for (const item of missingAudio) {
+        void fetch(appPath("/api/announcements/audio"), {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            courseId: item.canvasCourseId,
+            itemId: item.canvasItemId,
+            title: item.title,
+            course: item.course,
+            authorName: item.authorName,
+            description: item.description,
+          }),
+        }).then(async (audioResponse) => {
+          if (!audioResponse.ok) return;
+          const audioBody = await audioResponse.json() as { audioUrl?: string };
+          if (!audioBody.audioUrl) return;
+          setData((current) => current ? { ...current, announcements: current.announcements.map((announcement) => announcement.id === item.id ? { ...announcement, audioUrl: audioBody.audioUrl! } : announcement) } : current);
+        }).catch(() => { /* A later dashboard refresh will retry missing audio. */ });
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Canvas could not be synced.");
     } finally {

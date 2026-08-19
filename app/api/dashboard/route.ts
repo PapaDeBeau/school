@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { ensureCanvasConnectionSchema, getDb } from "../../../db";
+import { ensureCanvasConnectionSchema, getChatAudioBucket, getDb } from "../../../db";
 import { canvasConnections } from "../../../db/schema";
 import { CANVAS_BASE_URL, canvasGet } from "../../../lib/canvas-client";
 import { decryptCanvasToken } from "../../../lib/canvas-vault";
@@ -86,6 +86,21 @@ type CanvasAnnouncement = {
   } | null;
 };
 
+type CanvasAssignmentDetails = {
+  id: number;
+  description?: string | null;
+  due_at?: string | null;
+  points_possible?: number | null;
+  html_url?: string;
+  unlock_at?: string | null;
+  lock_at?: string | null;
+  submission_types?: string[];
+  allowed_extensions?: string[];
+  grading_type?: string | null;
+  allowed_attempts?: number | null;
+  published?: boolean;
+};
+
 type ActionItem = {
   id: string;
   kind: "assignment" | "announcement" | "message";
@@ -110,6 +125,7 @@ type ActionItem = {
   published: boolean | null;
   authorName: string | null;
   authorAvatarUrl: string | null;
+  audioUrl: string | null;
 };
 
 const PACIFIC_TIME_ZONE = "America/Los_Angeles";
@@ -242,6 +258,7 @@ function normalizePlannerItem(item: PlannerItem, courseNames: Map<number, string
     published: item.plannable?.published ?? null,
     authorName: teacher?.name ?? null,
     authorAvatarUrl: teacher?.avatarUrl ?? null,
+    audioUrl: null,
   };
 }
 
@@ -283,6 +300,7 @@ function normalizeAnnouncement(item: PlannerItem, courseNames: Map<number, strin
     published: item.plannable?.published ?? null,
     authorName: null,
     authorAvatarUrl: null,
+    audioUrl: null,
   };
 }
 
@@ -317,6 +335,7 @@ function normalizeCanvasAnnouncement(item: CanvasAnnouncement, courseNames: Map<
     published: item.published ?? null,
     authorName: item.author?.display_name?.trim() || null,
     authorAvatarUrl: item.author?.avatar_image_url?.trim() || null,
+    audioUrl: null,
   };
 }
 
@@ -352,6 +371,57 @@ async function optionalCanvasGet<T>(primaryPath: string, fallbackPath: string, t
   } catch {
     return empty;
   }
+}
+
+async function enrichDueAssignmentInstructions(items: ActionItem[], token: string) {
+  const assignmentsByCourse = new Map<number, Set<number>>();
+  for (const item of items) {
+    if (
+      item.kind !== "assignment"
+      || item.description.trim()
+      || !item.canvasCourseId
+      || !item.canvasItemId
+    ) continue;
+    const ids = assignmentsByCourse.get(item.canvasCourseId) ?? new Set<number>();
+    ids.add(item.canvasItemId);
+    assignmentsByCourse.set(item.canvasCourseId, ids);
+  }
+
+  const details = new Map<string, CanvasAssignmentDetails>();
+  await Promise.all([...assignmentsByCourse].map(async ([courseId, itemIds]) => {
+    const params = new URLSearchParams({ per_page: "100" });
+    [...itemIds].forEach((itemId) => params.append("assignment_ids[]", String(itemId)));
+    const assignments = await canvasGet<CanvasAssignmentDetails[]>(
+      `/api/v1/courses/${courseId}/assignments?${params.toString()}`,
+      token
+    ).catch(() => []);
+    assignments.forEach((assignment) => details.set(`${courseId}:${assignment.id}`, assignment));
+  }));
+
+  if (!details.size) return items;
+  return items.map((item) => {
+    if (!item.canvasCourseId || !item.canvasItemId) return item;
+    const assignment = details.get(`${item.canvasCourseId}:${item.canvasItemId}`);
+    if (!assignment) return item;
+    const descriptionHtml = assignment.description?.trim() ?? "";
+    return {
+      ...item,
+      descriptionHtml,
+      description: canvasHtmlToText(descriptionHtml),
+      dueAt: assignment.due_at ?? item.dueAt,
+      points: assignment.points_possible ?? item.points,
+      sourceUrl: assignment.html_url
+        ? assignment.html_url.startsWith("http") ? assignment.html_url : `${CANVAS_BASE_URL}${assignment.html_url}`
+        : item.sourceUrl,
+      availableFrom: assignment.unlock_at ?? item.availableFrom,
+      availableUntil: assignment.lock_at ?? item.availableUntil,
+      submissionTypes: assignment.submission_types ?? item.submissionTypes,
+      allowedExtensions: assignment.allowed_extensions ?? item.allowedExtensions,
+      gradingType: assignment.grading_type ?? item.gradingType,
+      allowedAttempts: assignment.allowed_attempts ?? item.allowedAttempts,
+      published: assignment.published ?? item.published,
+    };
+  });
 }
 
 export async function GET(request: Request) {
@@ -416,11 +486,17 @@ export async function GET(request: Request) {
     const assignments = plannerItems
       .map((item) => normalizePlannerItem(item, courseNames, courseTeachers))
       .filter((item): item is ActionItem => Boolean(item));
-    const announcements = (canvasAnnouncements.length
+    const normalizedAnnouncements = (canvasAnnouncements.length
       ? canvasAnnouncements.map((item) => normalizeCanvasAnnouncement(item, courseNames))
       : plannerItems.map((item) => normalizeAnnouncement(item, courseNames)))
       .filter((item): item is ActionItem => Boolean(item))
       .sort((a, b) => new Date(b.dueAt ?? 0).getTime() - new Date(a.dueAt ?? 0).getTime());
+    const announcements = await Promise.all(normalizedAnnouncements.map(async (item) => {
+      if (!item.canvasCourseId || !item.canvasItemId) return item;
+      const key = `announcements/${item.canvasCourseId}/${item.canvasItemId}.mp3`;
+      const object = await getChatAudioBucket().head(key).catch(() => null);
+      return object ? { ...item, audioUrl: `/api/announcements/audio?course_id=${item.canvasCourseId}&item_id=${item.canvasItemId}` } : item;
+    }));
     const messages: ActionItem[] = unreadConversations.map((conversation) => ({
       id: `message-${conversation.id}`,
       kind: "message",
@@ -445,6 +521,7 @@ export async function GET(request: Request) {
       published: null,
       authorName: null,
       authorAvatarUrl: null,
+      audioUrl: null,
     }));
 
     const now = new Date();
@@ -462,6 +539,10 @@ export async function GET(request: Request) {
         return due <= inSevenDays;
       })
       .sort((a, b) => new Date(a.dueAt ?? 0).getTime() - new Date(b.dueAt ?? 0).getTime());
+    const enrichedDueItems = await enrichDueAssignmentInstructions([...critical, ...upcoming], token);
+    const enrichedById = new Map(enrichedDueItems.map((item) => [item.id, item] as const));
+    const enrichedCritical = critical.map((item) => enrichedById.get(item.id) ?? item);
+    const enrichedUpcoming = upcoming.map((item) => enrichedById.get(item.id) ?? item);
 
     return json({
       generatedAt: new Date().toISOString(),
@@ -470,8 +551,8 @@ export async function GET(request: Request) {
       courseCount: courses.length,
       unreadCount: unreadConversations.length,
       announcements,
-      critical,
-      upcoming,
+      critical: enrichedCritical,
+      upcoming: enrichedUpcoming,
       week: classSchedule(),
       courses: courses.map((course) => ({
         id: course.id,

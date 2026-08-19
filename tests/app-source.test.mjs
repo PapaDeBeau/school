@@ -26,6 +26,23 @@ test("Canvas token routes remain server-only", async () => {
   assert.match(client, /"User-Agent": CANVAS_USER_AGENT/);
 });
 
+test("announcement narration encrypts the xAI key and reuses R2 recordings", async () => {
+  const form = await readFile(new URL("app/XaiConnectionForm.tsx", root), "utf8");
+  const connectionRoute = await readFile(new URL("app/api/xai/connection/route.ts", root), "utf8");
+  const audioRoute = await readFile(new URL("app/api/announcements/audio/route.ts", root), "utf8");
+  const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
+  assert.match(form, /type="password"/);
+  assert.doesNotMatch(form, /localStorage|sessionStorage/);
+  assert.match(connectionRoute, /encryptServerSecret/);
+  assert.match(connectionRoute, /\/v1\/tts\/voices/);
+  assert.match(audioRoute, /voice_id: voice/);
+  assert.match(audioRoute, /maleTeachers\.has\(name\).*"lux"/s);
+  assert.match(audioRoute, /femaleTeachers\.has\(name\).*"luna"/s);
+  assert.match(audioRoute, /await bucket\.head\(key\)/);
+  assert.match(audioRoute, /announcements\/\$\{courseId\}\/\$\{itemId\}\.mp3/);
+  assert.match(dashboard, /item\.audioUrl \?/);
+});
+
 test("hosted Canvas requests use the protected BeauVizenor relay", async () => {
   const client = await readFile(new URL("lib/canvas-client.ts", root), "utf8");
 
@@ -272,6 +289,11 @@ test("assignments open a detailed accessible modal before leaving for Canvas", a
   assert.match(dashboardRoute, /description: canvasHtmlToText/);
   assert.match(dashboardRoute, /item\.plannable\?\.message/);
   assert.match(dashboardRoute, /if \(itemType === "announcement"\) return null/);
+  assert.match(dashboardRoute, /async function enrichDueAssignmentInstructions\(items: ActionItem\[\], token: string\)/);
+  assert.match(dashboardRoute, /params\.append\("assignment_ids\[\]", String\(itemId\)\)/);
+  assert.match(dashboardRoute, /descriptionHtml = assignment\.description\?\.trim\(\) \?\? ""/);
+  assert.match(dashboardRoute, /critical: enrichedCritical/);
+  assert.match(dashboardRoute, /upcoming: enrichedUpcoming/);
   assert.match(dashboardRoute, /descriptionHtml/);
   assert.match(dashboardRoute, /submissionTypes:/);
   assert.match(styles, /\.assignment-modal-scroll \{[^}]*overflow-y: auto/);

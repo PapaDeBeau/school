@@ -14,6 +14,15 @@ export const canvasConnections = sqliteTable("canvas_connections", {
   updatedAt: text("updated_at").notNull(),
 });
 
+export const xaiConnections = sqliteTable("xai_connections", {
+  id: integer("id").primaryKey(),
+  encryptedApiKey: text("encrypted_api_key").notNull(),
+  apiKeyIv: text("api_key_iv").notNull(),
+  verifiedAt: text("verified_at").notNull(),
+  updatedBy: text("updated_by").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
 export const familyLoginAttempts = sqliteTable("family_login_attempts", {
   keyHash: text("key_hash").primaryKey(),
   attemptCount: integer("attempt_count").notNull().default(0),
