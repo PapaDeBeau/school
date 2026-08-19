@@ -911,7 +911,7 @@ function CourseGradebookView({ course, assignments, loading, error }: {
           ) : <strong aria-hidden="true">{(teacher?.name || course.name).slice(0,1).toUpperCase()}</strong>}</span>
           <small>{teacher?.name || "Teacher"}</small>
         </div>
-        <div className="gradebook-hero-copy"><p>Canvas gradebook</p><h1>{course.name}</h1><div className="gradebook-overall"><strong>Grade:</strong><span>{percentage || "—"}</span><b aria-hidden="true">=</b><em>{grade}</em></div></div>
+        <div className="gradebook-hero-copy"><p>Canvas gradebook</p><h1>{course.name}</h1><div className="gradebook-overall"><strong>Grade:</strong><span>{percentage || "—"}</span><b aria-hidden="true">=</b><em className={`grade-tone-${grade.toLowerCase()}`}>{grade}</em></div></div>
       </header>
       <div className="gradebook-column-key" aria-hidden="true"><span>Assignment</span><span>Progress</span></div>
       {loading ? <div className="gradebook-state" role="status"><i aria-hidden="true" /><p>Loading class work from Canvas…</p></div> : null}

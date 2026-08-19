@@ -485,7 +485,12 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .gradebook-overall > strong { font-size: 14px; }
 .gradebook-overall > span { width: 64px; height: 64px; display: grid; place-items: center; border: 4px solid #fff; border-radius: 50%; color: #fff; background: linear-gradient(135deg,#268cff,#154aa8); box-shadow: inset 0 0 0 4px rgba(0,0,0,.12), 0 7px 17px rgba(22,96,199,.28); font-size: 16px; font-weight: 950; transform: rotate(-4deg); }
 .gradebook-overall > b { color: #607493; font-size: 20px; }
-.gradebook-overall > em { color: #d81f3f; font-size: 27px; font-style: normal; font-weight: 1000; }
+.gradebook-overall > em { color: #d81f3f; font-size: 27px; font-style: normal; font-weight: 1000; text-shadow: 0 2px 8px currentColor; }
+.gradebook-overall > em.grade-tone-a { color: #2f8a43; }
+.gradebook-overall > em.grade-tone-b { color: #2f72bd; }
+.gradebook-overall > em.grade-tone-c { color: #d3a20f; }
+.gradebook-overall > em.grade-tone-d { color: #d96e1d; }
+.gradebook-overall > em.grade-tone-f { color: #d52f3f; }
 .gradebook-column-key { position: relative; z-index: 1; display: flex; justify-content: space-between; padding: 20px 7px 8px; color: #245fae; font-size: 10px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
 .gradebook-assignment-list { position: relative; z-index: 1; display: grid; gap: 11px; }
 .gradebook-assignment-card { display: block; padding: 16px; border: 1px solid rgba(190,220,250,.88); border-left: 5px solid #e4213e; border-radius: 15px; color: #10213b; background: rgba(255,255,255,.96); box-shadow: 0 12px 30px rgba(0,20,62,.18), inset 0 1px 0 #fff; text-decoration: none; }
