@@ -558,6 +558,12 @@ function FeatureBackBar({ onBack }: { onBack: () => void }) {
   return <button className="feature-back-bar" type="button" onClick={onBack}><span aria-hidden="true">←</span> Back To Dashboard</button>;
 }
 
+function createCompatibleAudioRecorder(stream: MediaStream) {
+  const preferredType = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"]
+    .find((type) => MediaRecorder.isTypeSupported(type));
+  return preferredType ? new MediaRecorder(stream, { mimeType: preferredType }) : new MediaRecorder(stream);
+}
+
 type TeacherChoice = { id: string; name: string; avatarUrl: string | null; subjects: string[]; courseId: number };
 
 function NewTeacherEmailFlow({ courses, onSent }: { courses: Course[]; onSent: () => void }) {
@@ -572,6 +578,7 @@ function NewTeacherEmailFlow({ courses, onSent }: { courses: Course[]; onSent: (
     return map;
   }, new Map<string, TeacherChoice>()).values());
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerClosing, setPickerClosing] = useState(false);
   const [selected, setSelected] = useState<TeacherChoice | null>(null);
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
@@ -586,6 +593,27 @@ function NewTeacherEmailFlow({ courses, onSent }: { courses: Course[]; onSent: (
   const recorderRef = useRef<MediaRecorder | null>(null);
   const recordingStartedRef = useRef(0);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pickerBackdropRef = useRef<HTMLDivElement>(null);
+  const pickerModalRef = useRef<HTMLElement>(null);
+
+  useLayoutEffect(() => {
+    const modal = pickerModalRef.current;
+    if (!pickerOpen || selected || !modal || pickerClosing) return;
+    const context = gsap.context(() => {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      const timeline = gsap.timeline();
+      timeline.fromTo(modal, { autoAlpha: 0, y: 42, scale: .97 }, { autoAlpha: 1, y: 0, scale: 1, duration: .34, ease: "power3.out" })
+        .fromTo(modal.querySelectorAll(".teacher-picker-title-char"), { autoAlpha: 0, y: 9 }, { autoAlpha: 1, y: 0, duration: .16, stagger: .022, ease: "power2.out" }, .12);
+      modal.querySelectorAll<HTMLElement>(".teacher-choice").forEach((card, index) => {
+        const start = .35 + index * .22;
+        timeline.fromTo(card.querySelector(".teacher-choice-photo"), { autoAlpha: 0, scale: .08, z: -700, transformPerspective: 900 }, { autoAlpha: 1, scale: 1, z: 0, duration: .62, ease: "elastic.out(1, .55)" }, start)
+          .fromTo(card.querySelector(".teacher-choice-name"), { autoAlpha: 0, y: 25, rotation: -4 }, { autoAlpha: 1, y: 0, rotation: 0, duration: .34, ease: "back.out(2.2)" }, start + .36)
+          .to(card.querySelector(".teacher-choice-name"), { keyframes: [{ rotation: 1.5 }, { rotation: -1.2 }, { rotation: 0 }], duration: .22, ease: "sine.inOut" }, start + .62)
+          .fromTo(card.querySelector("small"), { autoAlpha: 0 }, { autoAlpha: 1, duration: .35, ease: "power1.out" }, start + .68);
+      });
+    }, modal);
+    return () => context.revert();
+  }, [pickerClosing, pickerOpen, selected]);
 
   useEffect(() => () => {
     if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
@@ -601,7 +629,7 @@ function NewTeacherEmailFlow({ courses, onSent }: { courses: Course[]; onSent: (
     setSendError("");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream); const chunks: Blob[] = [];
+      const recorder = createCompatibleAudioRecorder(stream); const chunks: Blob[] = [];
       recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
       recorder.onstop = () => {
         const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
@@ -616,6 +644,17 @@ function NewTeacherEmailFlow({ courses, onSent }: { courses: Course[]; onSent: (
   function stopEmailRecording() {
     if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
     recordingTimerRef.current = null; setRecording(false); recorderRef.current?.stop();
+  }
+
+  function closeTeacherPicker() {
+    if (pickerClosing) return;
+    const modal = pickerModalRef.current;
+    const backdrop = pickerBackdropRef.current;
+    if (!modal || window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setPickerOpen(false); return; }
+    setPickerClosing(true);
+    gsap.timeline({ onComplete: () => { setPickerOpen(false); setPickerClosing(false); } })
+      .to(modal, { y: 72, autoAlpha: 0, duration: .3, ease: "power2.in" })
+      .to(backdrop, { autoAlpha: 0, duration: .25, ease: "power1.in" }, 0);
   }
 
   function attachEmailRecording() {
@@ -645,11 +684,11 @@ function NewTeacherEmailFlow({ courses, onSent }: { courses: Course[]; onSent: (
     <button className="email-teacher-launch" type="button" onClick={() => setPickerOpen(true)} aria-label="Email a teacher">
       {/* eslint-disable-next-line @next/next/no-img-element */}<img src={appPath("/email-a-teacher.jpg")} alt="Email a Teacher" />
     </button>
-    {pickerOpen && !selected ? <div className="teacher-picker-backdrop">
-      <button className="modal-backdrop-dismiss" type="button" onClick={() => setPickerOpen(false)} aria-label="Close teacher picker" />
-      <section className="teacher-picker-modal" role="dialog" aria-modal="true" aria-labelledby="teacher-picker-title">
-        <button className="teacher-picker-x" type="button" onClick={() => setPickerOpen(false)} aria-label="Close teacher picker">×</button>
-        <h2 id="teacher-picker-title">Who would you like to email?</h2>
+    {pickerOpen && !selected ? <div className={`teacher-picker-backdrop${pickerClosing ? " is-closing" : ""}`} ref={pickerBackdropRef}>
+      <button className="modal-backdrop-dismiss" type="button" onClick={closeTeacherPicker} aria-label="Close teacher picker" />
+      <section className="teacher-picker-modal" ref={pickerModalRef} role="dialog" aria-modal="true" aria-labelledby="teacher-picker-title">
+        <button className="teacher-picker-x" type="button" onClick={closeTeacherPicker} aria-label="Close teacher picker">×</button>
+        <h2 id="teacher-picker-title" aria-label="Who would you like to email?">{"Who would you like to email?".split("").map((character, index) => <span className="teacher-picker-title-char" aria-hidden="true" key={`${character}-${index}`}>{character === " " ? "\u00a0" : character}</span>)}</h2>
         {teachers.length ? <div className="teacher-choice-grid">{teachers.map((teacher, index) => <button className={`teacher-choice teacher-tilt-${index % 4}`} type="button" onClick={() => setSelected(teacher)} key={teacher.id}>
           <span className="teacher-choice-photo">{teacher.avatarUrl ? <img src={teacher.avatarUrl} alt="" referrerPolicy="no-referrer" /> : <strong>{teacher.name.slice(0, 1)}</strong>}</span>
           <span className="teacher-choice-name">{teacher.name}</span>
@@ -990,7 +1029,7 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onL
     clearRecording();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      const recorder = createCompatibleAudioRecorder(stream);
       const chunks: Blob[] = [];
       recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
       recorder.onstop = () => {
@@ -1286,7 +1325,7 @@ function InboxThreadModal({ thread, onClose, onThreadChange }: { thread: InboxTh
     clearRecording();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      const recorder = createCompatibleAudioRecorder(stream);
       const chunks: Blob[] = [];
       recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
       recorder.onstop = () => {
