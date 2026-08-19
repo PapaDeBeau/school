@@ -381,6 +381,17 @@ test("family chat is persistent, paginated, link-aware, and sender controlled", 
   assert.match(styles, /width: 26px; height: 26px/);
 });
 
+test("Canvas Inbox can start a complete teacher email with required subject and message", async () => {
+  const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
+  const inboxRoute = await readFile(new URL("app/api/inbox/route.ts", root), "utf8");
+  assert.match(dashboard, /email-a-teacher\.jpg/);
+  assert.match(dashboard, /Who would you like to email\?/);
+  assert.match(dashboard, /disabled={!subject\.trim\(\) \|\| !message\.trim\(\) \|\| sending}/);
+  assert.match(dashboard, /Record audio/);
+  assert.match(inboxRoute, /recipients\[\]/);
+  assert.match(inboxRoute, /force_new/);
+});
+
 test("admin stores percentages and controls empty due-card visibility", async () => {
   const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
   const dashboardRoute = await readFile(new URL("app/api/dashboard/route.ts", root), "utf8");

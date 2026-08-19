@@ -15,6 +15,7 @@ type CanvasCourse = {
     computed_current_grade?: string | null;
   }>;
   teachers?: Array<{
+    id?: number;
     display_name?: string;
     avatar_image_url?: string | null;
   }>;
@@ -478,6 +479,11 @@ export async function GET(request: Request) {
         sourceUrl: `${CANVAS_BASE_URL}/courses/${course.id}`,
         grade: course.enrollments?.[0]?.computed_current_grade ?? null,
         score: course.enrollments?.[0]?.computed_current_score ?? null,
+        teachers: (course.teachers ?? []).map((teacher) => ({
+          id: teacher.id ? String(teacher.id) : null,
+          name: teacher.display_name?.trim() || "Teacher",
+          avatarUrl: teacher.avatar_image_url?.trim() || null,
+        })),
       })),
     });
   } catch (error) {

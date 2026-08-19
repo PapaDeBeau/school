@@ -203,8 +203,13 @@ export async function POST(request: Request) {
   try {
     const form = await request.formData();
     const conversationId = typeof form.get("conversationId") === "string" ? String(form.get("conversationId")) : "";
+    const recipientId = typeof form.get("recipientId") === "string" ? String(form.get("recipientId")) : "";
+    const subject = typeof form.get("subject") === "string" ? String(form.get("subject")).trim() : "";
+    const contextCode = typeof form.get("contextCode") === "string" ? String(form.get("contextCode")) : "";
     const body = typeof form.get("body") === "string" ? String(form.get("body")).trim() : "";
-    if (!/^\d{1,20}$/.test(conversationId)) return json({ error: "That Canvas conversation could not be opened." }, { status: 400 });
+    const creating = !conversationId && recipientId;
+    if (!creating && !/^\d{1,20}$/.test(conversationId)) return json({ error: "That Canvas conversation could not be opened." }, { status: 400 });
+    if (creating && (!/^\d{1,20}$/.test(recipientId) || !subject || subject.length > 255 || !body)) return json({ error: "Choose a teacher and enter both a subject and message." }, { status: 400 });
     const files = form.getAll("attachments").filter((entry): entry is File => entry instanceof File && entry.size > 0);
     if ((!body && !files.length) || body.length > 10_000) return json({ error: "Enter a reply or add an attachment." }, { status: 400 });
     if (files.length > 4) return json({ error: "Attach no more than four files at once." }, { status: 400 });
@@ -214,6 +219,15 @@ export async function POST(request: Request) {
     for (const file of files) uploaded.push(await canvasUploadConversationFile(file, token));
     const messageForm = new URLSearchParams({ body: body || "Attachment" });
     for (const file of uploaded) messageForm.append("attachment_ids[]", String(file.id));
+    if (creating) {
+      messageForm.set("subject", subject);
+      messageForm.set("recipients[]", recipientId);
+      messageForm.set("group_conversation", "false");
+      messageForm.set("force_new", "true");
+      if (/^course_\d{1,20}$/.test(contextCode)) messageForm.set("context_code", contextCode);
+      const created = await canvasPostForm<CanvasConversation[]>("/api/v1/conversations", token, messageForm);
+      return json({ created: true, conversationId: created?.[0]?.id ? String(created[0].id) : null });
+    }
     await canvasPostForm(`/api/v1/conversations/${conversationId}/add_message`, token, messageForm);
     const conversation = await canvasGet<CanvasConversation>(
       `/api/v1/conversations/${conversationId}?include[]=participant_avatars`,

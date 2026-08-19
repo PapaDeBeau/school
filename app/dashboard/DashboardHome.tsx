@@ -76,6 +76,7 @@ type Course = {
   sourceUrl: string;
   grade: string | null;
   score: number | null;
+  teachers: Array<{ id: string | null; name: string; avatarUrl: string | null }>;
 };
 
 type CourseGradeItem = {
@@ -557,15 +558,137 @@ function FeatureBackBar({ onBack }: { onBack: () => void }) {
   return <button className="feature-back-bar" type="button" onClick={onBack}><span aria-hidden="true">←</span> Back To Dashboard</button>;
 }
 
-function InboxView({ conversations, loading, error, threadLoadingId, onRead }: {
+type TeacherChoice = { id: string; name: string; avatarUrl: string | null; subjects: string[]; courseId: number };
+
+function NewTeacherEmailFlow({ courses, onSent }: { courses: Course[]; onSent: () => void }) {
+  const teachers = Array.from(courses.reduce((map, course) => {
+    course.teachers.forEach((teacher) => {
+      if (!teacher.id) return;
+      const current = map.get(teacher.id);
+      if (current) {
+        if (!current.subjects.includes(course.name)) current.subjects.push(course.name);
+      } else map.set(teacher.id, { ...teacher, id: teacher.id, subjects: [course.name], courseId: course.id });
+    });
+    return map;
+  }, new Map<string, TeacherChoice>()).values());
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [selected, setSelected] = useState<TeacherChoice | null>(null);
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState("");
+  const [recorderOpen, setRecorderOpen] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [audio, setAudio] = useState<Blob | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recordingStartedRef = useRef(0);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => () => {
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    recorderRef.current?.stream.getTracks().forEach((track) => track.stop());
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
+  }, [audioUrl]);
+
+  function resetComposer() {
+    setSelected(null); setSubject(""); setMessage(""); setFiles([]); setSendError(""); setRecorderOpen(false);
+  }
+
+  async function startEmailRecording() {
+    setSendError("");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream); const chunks: Blob[] = [];
+      recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+        if (audioUrl) URL.revokeObjectURL(audioUrl);
+        setAudio(blob); setAudioUrl(URL.createObjectURL(blob)); stream.getTracks().forEach((track) => track.stop());
+      };
+      recorderRef.current = recorder; recordingStartedRef.current = Date.now(); setAudioDuration(0); setRecording(true); recorder.start();
+      recordingTimerRef.current = setInterval(() => setAudioDuration(Date.now() - recordingStartedRef.current), 250);
+    } catch { setSendError("Microphone access is needed to record an audio attachment."); }
+  }
+
+  function stopEmailRecording() {
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    recordingTimerRef.current = null; setRecording(false); recorderRef.current?.stop();
+  }
+
+  function attachEmailRecording() {
+    if (!audio) return;
+    const extension = audio.type.includes("mp4") ? "m4a" : audio.type.includes("ogg") ? "ogg" : "webm";
+    setFiles((current) => [...current.filter((file) => !file.name.startsWith("audio-message-")), new File([audio], `audio-message-${Date.now()}.${extension}`, { type: audio.type })].slice(0, 4));
+    setRecorderOpen(false);
+  }
+
+  async function sendTeacherEmail(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selected || !subject.trim() || !message.trim() || sending) return;
+    setSending(true); setSendError("");
+    try {
+      const form = new FormData();
+      form.append("recipientId", selected.id); form.append("subject", subject.trim()); form.append("body", message.trim()); form.append("contextCode", `course_${selected.courseId}`);
+      files.forEach((file) => form.append("attachments", file, file.name));
+      const response = await fetch(appPath("/api/inbox"), { method: "POST", credentials: "same-origin", body: form });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Your email could not be sent to Canvas.");
+      resetComposer(); setPickerOpen(false); onSent();
+    } catch (caught) { setSendError(caught instanceof Error ? caught.message : "Your email could not be sent to Canvas."); }
+    finally { setSending(false); }
+  }
+
+  return <>
+    <button className="email-teacher-launch" type="button" onClick={() => setPickerOpen(true)} aria-label="Email a teacher">
+      {/* eslint-disable-next-line @next/next/no-img-element */}<img src={appPath("/email-a-teacher.jpg")} alt="Email a Teacher" />
+    </button>
+    {pickerOpen && !selected ? <div className="teacher-picker-backdrop">
+      <button className="modal-backdrop-dismiss" type="button" onClick={() => setPickerOpen(false)} aria-label="Close teacher picker" />
+      <section className="teacher-picker-modal" role="dialog" aria-modal="true" aria-labelledby="teacher-picker-title">
+        <button className="teacher-picker-x" type="button" onClick={() => setPickerOpen(false)} aria-label="Close teacher picker">×</button>
+        <h2 id="teacher-picker-title">Who would you like to email?</h2>
+        {teachers.length ? <div className="teacher-choice-grid">{teachers.map((teacher, index) => <button className={`teacher-choice teacher-tilt-${index % 4}`} type="button" onClick={() => setSelected(teacher)} key={teacher.id}>
+          <span className="teacher-choice-photo">{teacher.avatarUrl ? <img src={teacher.avatarUrl} alt="" referrerPolicy="no-referrer" /> : <strong>{teacher.name.slice(0, 1)}</strong>}</span>
+          <span className="teacher-choice-name">{teacher.name}</span>
+          <small>{teacher.subjects.join(" · ")}</small>
+        </button>)}</div> : <p className="teacher-picker-empty">Teacher information is not available from Canvas yet.</p>}
+      </section>
+    </div> : null}
+    {selected ? <div className="teacher-email-backdrop">
+      <button className="modal-backdrop-dismiss" type="button" onClick={resetComposer} aria-label="Close new email" disabled={sending} />
+      <section className="teacher-email-modal" role="dialog" aria-modal="true" aria-labelledby="teacher-email-title">
+        <button className="teacher-picker-x" type="button" onClick={resetComposer} aria-label="Close new email" disabled={sending}>×</button>
+        <header><InboxAvatar person={{ id: selected.id, name: selected.name, avatarUrl: selected.avatarUrl }} label="Teacher" /><div><span>EMAILING</span><strong id="teacher-email-title">{selected.name}</strong><small>{selected.subjects.join(" · ")}</small></div></header>
+        <form onSubmit={sendTeacherEmail}>
+          <label><span>Subject</span><input value={subject} onChange={(event) => setSubject(event.target.value)} maxLength={255} placeholder="What is your email about?" disabled={sending} autoFocus /></label>
+          <label><span>Message</span><textarea value={message} onChange={(event) => setMessage(event.target.value)} maxLength={10000} placeholder="Write your email…" disabled={sending} /></label>
+          <div className="inbox-compose-tools"><label className="inbox-attach-button" htmlFor="teacher-email-files">📎 Attach files</label><button className="inbox-record-button" type="button" onClick={() => setRecorderOpen(true)}>▥ Record audio</button></div>
+          <input className="inbox-file-input" id="teacher-email-files" type="file" multiple accept="image/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv" onChange={(event) => setFiles(Array.from(event.target.files ?? []).slice(0, 4))} />
+          {files.length ? <div className="teacher-email-files">{files.map((file, index) => <span key={`${file.name}-${file.lastModified}`}>{file.name}<button type="button" onClick={() => setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remove ${file.name}`}>×</button></span>)}</div> : null}
+          {sendError ? <p className="inbox-reply-error" role="alert">{sendError}</p> : null}
+          <button className="teacher-email-send" type="submit" disabled={!subject.trim() || !message.trim() || sending}>{sending ? "Sending…" : "Send email"}</button>
+        </form>
+      </section>
+      {recorderOpen ? <div className="chat-recorder-backdrop inbox-audio-recorder"><button className="modal-backdrop-dismiss" type="button" onClick={() => { if (recording) stopEmailRecording(); setRecorderOpen(false); }} aria-label="Close audio recorder" /><section className="chat-recorder" role="dialog" aria-modal="true" aria-labelledby="teacher-recorder-title"><button className="chat-recorder-close" type="button" onClick={() => { if (recording) stopEmailRecording(); setRecorderOpen(false); }}>×</button><span className={`chat-recorder-icon${recording ? " is-recording" : ""}`}>▥</span><h2 id="teacher-recorder-title">Audio attachment</h2><p>{recording ? "Recording…" : audio ? "Listen before attaching it." : "Tap record and speak your message."}</p><strong className="chat-recorder-time">{formatAudioTime(audioDuration)}</strong>{audioUrl && !recording ? <audio src={audioUrl} controls /> : null}<div className="chat-recorder-actions">{recording ? <button type="button" onClick={stopEmailRecording}>Stop</button> : <button type="button" onClick={() => void startEmailRecording()}>Record</button>}{audio ? <button type="button" onClick={attachEmailRecording}>Attach audio</button> : null}</div></section></div> : null}
+    </div> : null}
+  </>;
+}
+
+function InboxView({ conversations, courses, loading, error, threadLoadingId, onRead, onSent }: {
   conversations: InboxConversation[];
+  courses: Course[];
   loading: boolean;
   error: string | null;
   threadLoadingId: string | null;
   onRead: (conversation: InboxConversation) => void;
+  onSent: () => void;
 }) {
   return (
     <section className="inbox-view" aria-label="Canvas Inbox: the 10 most recent conversations">
+      <NewTeacherEmailFlow courses={courses} onSent={onSent} />
       {loading ? <div className="inbox-loading" role="status"><i aria-hidden="true" /><p>Loading the latest Canvas messages…</p></div> : null}
       {error ? <div className="inbox-error" role="alert"><strong>Inbox could not be loaded.</strong><p>{error}</p></div> : null}
       {!loading && !error && !conversations.length ? <div className="inbox-empty"><span aria-hidden="true">✓</span><p>No Canvas conversations were found.</p></div> : null}
@@ -2524,10 +2647,12 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
             <FeatureBackBar onBack={returnToDashboard} />
             {activeView === "grades" && selectedGradeCourse ? <CourseGradebookView course={selectedGradeCourse} assignments={courseGradeItems} loading={courseGradesLoading} error={courseGradesError} /> : activeView === "inbox" ? <InboxView
               conversations={inboxConversations}
+              courses={data.courses}
               loading={inboxLoading}
               error={inboxError}
               threadLoadingId={threadLoadingId}
               onRead={(conversation) => void openThread(conversation)}
+              onSent={() => void loadInbox()}
             /> : activeView === "classes" ? <ClassesView courses={data.courses} week={data.week} /> : activeView === "chat" ? <ChatView
               messages={chatMessages}
               viewer={data.viewer}
