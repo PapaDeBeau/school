@@ -1348,17 +1348,19 @@ function AdminView({ courses, settings, grades, loading, error, onSave }: {
   const [saveMessage, setSaveMessage] = useState("");
   const [pushSending, setPushSending] = useState(false);
   const [pushMessage, setPushMessage] = useState("");
+  const [pushComposerOpen, setPushComposerOpen] = useState(false);
 
   async function sendPush(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pushSending || !window.confirm("Send or schedule this notification for all subscribed School devices?")) return;
+    const formElement = event.currentTarget;
     setPushSending(true); setPushMessage("");
     try {
-      const response = await fetch(appPath("/api/admin/push"), { method: "POST", credentials: "same-origin", body: new FormData(event.currentTarget) });
+      const response = await fetch(appPath("/api/admin/push"), { method: "POST", credentials: "same-origin", body: new FormData(formElement) });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "The notification could not be created.");
       setPushMessage(body.scheduled ? "Notification scheduled." : "Notification sent.");
-      event.currentTarget.reset();
+      formElement.reset();
     } catch (caught) { setPushMessage(caught instanceof Error ? caught.message : "The notification could not be created."); }
     finally { setPushSending(false); }
   }
@@ -1422,9 +1424,16 @@ function AdminView({ courses, settings, grades, loading, error, onSave }: {
         {saveMessage ? <p className={`admin-message${saveMessage.startsWith("Saved") ? " is-success" : " is-error"}`} role="status">{saveMessage}</p> : null}
         <button className="admin-save" type="submit" disabled={saving || loading}>{saving ? "Saving…" : "Save dashboard settings"}</button>
       </form>
-      <form className="admin-form admin-push-form" onSubmit={(event) => void sendPush(event)}>
-        <section className="admin-section admin-push-section">
-          <header><p>OneSignal urgent alert</p><h2>Send a school banner</h2><small>Creates the large picture alert on subscribed School devices.</small></header>
+      <section className="admin-section admin-push-launcher">
+        <header><p>OneSignal</p><h2>Push notifications</h2><small>Send a large alert to subscribed School phones.</small></header>
+        <button className="admin-save admin-push-send" type="button" onClick={() => { setPushMessage(""); setPushComposerOpen(true); }}>Create a phone alert</button>
+      </section>
+      {pushComposerOpen ? <div className="admin-push-backdrop" role="presentation">
+        <button className="modal-backdrop-dismiss" type="button" onClick={() => setPushComposerOpen(false)} aria-label="Close push notification composer" />
+        <form className="admin-form admin-push-form admin-push-modal" role="dialog" aria-modal="true" aria-labelledby="admin-push-title" onSubmit={(event) => void sendPush(event)}>
+          <section className="admin-section admin-push-section">
+          <button className="admin-push-close" type="button" onClick={() => setPushComposerOpen(false)} aria-label="Close">×</button>
+          <header><p>OneSignal urgent alert</p><h2 id="admin-push-title">Send a school banner</h2><small>Creates the large picture alert on subscribed School devices.</small></header>
           <label><span>Subject</span><select name="title" required defaultValue=""><option value="" disabled>Choose a subject</option>{editableCourses.map((course) => <option value={course.name} key={`push-${course.id}`}>{course.name}</option>)}<option value="School">School</option><option value="Important">Important</option></select></label>
           <label><span>Short description</span><textarea name="message" required maxLength={500} rows={4} placeholder="What should the alert say?" /></label>
           <label className="admin-image-picker"><span>Large banner image</span><input name="image" type="file" accept="image/*" /></label>
@@ -1435,8 +1444,9 @@ function AdminView({ courses, settings, grades, loading, error, onSave }: {
           <label><span>Schedule (leave blank to send now)</span><input name="sendAfter" type="datetime-local" /></label>
           {pushMessage ? <p className={`admin-message${/sent|scheduled/i.test(pushMessage) ? " is-success" : " is-error"}`} role="status">{pushMessage}</p> : null}
           <button className="admin-save admin-push-send" type="submit" disabled={pushSending}>{pushSending ? "Creating alert…" : "Send now / schedule"}</button>
-        </section>
-      </form>
+          </section>
+        </form>
+      </div> : null}
     </section>
   );
 }
