@@ -1754,7 +1754,7 @@ function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect:
               <img src={playerItem.authorAvatarUrl} alt={playerItem.authorName || "Teacher"} referrerPolicy="no-referrer" />
             ) : <strong aria-hidden="true">{(playerItem.authorName || "Teacher").slice(0, 1).toUpperCase()}</strong>}
           </div>
-          <p>{playerItem.authorName || "Teacher"}</p>
+          <p className="announcement-player-teacher-name">{playerItem.authorName || "Teacher"}</p>
           <h2 id="announcement-player-title">{playerItem.title}</h2>
           <div className="announcement-player-time" aria-live="off"><strong>{audioTime(elapsed)}</strong><span>/</span><strong>{audioTime(duration)}</strong></div>
           <div className="announcement-player-controls">

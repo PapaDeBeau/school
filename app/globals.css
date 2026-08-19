@@ -1161,21 +1161,18 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .announcement-player-layer { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: start center; padding: min(25vh, 190px) 18px 24px; }
 .announcement-player-backdrop { position: absolute; inset: 64px 0 0; width: 100%; border: 0; background: rgba(3, 8, 24, .56); backdrop-filter: blur(14px) saturate(.62); -webkit-backdrop-filter: blur(14px) saturate(.62); animation: announcement-backdrop-in .2s ease-out both; }
 .announcement-player { --teacher-player-size: clamp(150px,50vw,260px); isolation: isolate; position: relative; width: min(430px, 100%); display: grid; justify-items: center; padding: calc(var(--teacher-player-size) / 2 + 22px) 22px 22px; border: 0; color: #10214c; background: transparent; }
-.announcement-player::before { content: ""; position: absolute; z-index: -1; inset: 0; border: 1px solid rgba(255,255,255,.9); border-radius: 28px; background-color: #f7f8fa; background-image: linear-gradient(rgba(255,255,255,.84),rgba(238,241,246,.88)),url("/school/panel-pattern-3.webp"); background-position: center; background-size: cover; box-shadow: 0 30px 90px rgba(0,18,70,.48),inset 0 1px 0 #fff; transform-origin: 50% 18%; animation: announcement-card-in .2s .15s cubic-bezier(.18,.9,.34,1.18) both; }
+.announcement-player::before { content: ""; position: absolute; z-index: -1; inset: 0; border: 1px solid rgba(255,255,255,.9); border-radius: 28px; background-color: #f7f8fa; background-image: linear-gradient(rgba(255,255,255,.84),rgba(238,241,246,.88)),url("/school/panel-pattern-3.webp"); background-position: center; background-size: cover; box-shadow: 0 30px 90px rgba(0,18,70,.48),inset 0 1px 0 #fff; transform-origin: 50% 18%; animation: announcement-card-in .2s .27s cubic-bezier(.18,.9,.34,1.18) both; }
 .announcement-player-teacher { position: absolute; z-index: 2; top: calc(var(--teacher-player-size) / -2); width: var(--teacher-player-size); height: var(--teacher-player-size); display: grid; place-items: center; overflow: hidden; border: 6px solid #fff; border-radius: 50%; color: #fff; background: linear-gradient(145deg,#328df5,#061b52); box-shadow: 0 13px 30px rgba(15,73,165,.4); animation: announcement-teacher-pop .18s cubic-bezier(.2,1.25,.36,1) both; }
 .announcement-player-teacher img { width: 100%; height: 100%; object-fit: cover; }
 .announcement-player-teacher strong { font-size: 42px; }
-.announcement-player > p { margin: 0; color: #2b66b8; font-size: 12px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.announcement-player > .announcement-player-teacher-name { position: absolute; z-index: 3; top: calc(var(--teacher-player-size) / 2 - 13px); margin: 0; padding: 7px 17px 6px; border: 1px solid rgba(72,113,175,.22); border-radius: 8px; color: #245fae; background: rgba(255,255,255,.96); box-shadow: 0 7px 16px rgba(15,54,113,.2); font-size: 12px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; transform: rotate(-3deg); animation: announcement-name-tag-in .2s .12s cubic-bezier(.2,1.2,.35,1) both; }
 .announcement-player > h2 { margin: 5px 0 12px; font-size: clamp(20px,5vw,27px); line-height: 1.08; text-align: center; }
 .announcement-player-time { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; color: #163c78; font-variant-numeric: tabular-nums; }
-.announcement-player > p { animation: announcement-detail-in .16s .27s ease-out both; }
-.announcement-player > h2 { animation: announcement-detail-in .16s .32s ease-out both; }
-.announcement-player-time { animation: announcement-detail-in .16s .37s ease-out both; }
-.announcement-player-controls { animation: announcement-detail-in .16s .42s ease-out both; }
+.announcement-player > h2,.announcement-player-time,.announcement-player-controls { animation: announcement-detail-in .24s .46s cubic-bezier(.2,1.12,.35,1) both; }
 .announcement-player-time strong { min-width: 38px; font-size: 18px; }
 .announcement-player-time span { opacity: .45; }
 .announcement-player-controls { width: 100%; display: grid; grid-template-columns: 62px minmax(0,1fr); align-items: center; gap: 12px; }
-.announcement-player-toggle { width: 62px; height: 62px; padding: 0; overflow: hidden; border: 0; border-radius: 50%; background: transparent; filter: drop-shadow(0 8px 12px rgba(30,77,164,.28)); cursor: pointer; }
+.announcement-player-toggle { width: 62px; height: 62px; padding: 0; overflow: visible; border: 0; border-radius: 0; background: transparent; filter: drop-shadow(0 8px 12px rgba(30,77,164,.28)); cursor: pointer; }
 .announcement-player-toggle img { width: 100%; height: 100%; object-fit: contain; }
 .announcement-wave { --announcement-progress: 0; position: relative; height: 70px; display: flex; align-items: center; gap: 3px; overflow: hidden; padding: 7px 9px; border-radius: 18px; background: rgba(255,255,255,.62); box-shadow: inset 0 0 0 1px rgba(90,139,211,.2); }
 .announcement-wave::after { content: ""; position: absolute; inset: 0; width: calc(var(--announcement-progress) * 100%); background: linear-gradient(90deg,rgba(36,99,235,.17),rgba(32,201,151,.23)); border-right: 2px solid #18a67a; pointer-events: none; }
@@ -1189,15 +1186,16 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .announcement-player:has(.announcement-player-toggle[aria-label^="Play"]) .announcement-wave i { animation-play-state: paused; opacity: .72; }
 .announcement-player-done { width: 100%; margin-top: 18px; padding: 0; overflow: hidden; border: 0; border-radius: 13px; background: transparent; box-shadow: 0 9px 20px rgba(18,139,52,.28); cursor: pointer; }
 .announcement-player-done img { width: 100%; height: auto; display: block; }
-.announcement-player-done { animation: announcement-done-bounce .3s .49s cubic-bezier(.2,1.5,.35,1) both; }
+.announcement-player-done { animation: announcement-done-bounce .32s .64s cubic-bezier(.2,1.5,.35,1) both; }
 .announcement-player-done:active { transform: translateY(1px); }
 @keyframes announcement-wave-pulse { from { transform: scaleY(.55); } to { transform: scaleY(1); } }
 @keyframes announcement-backdrop-in { from { opacity: 0; backdrop-filter: blur(0); } to { opacity: 1; } }
 @keyframes announcement-teacher-pop { from { opacity: 0; transform: scale(.18) translateY(18px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes announcement-name-tag-in { from { opacity: 0; transform: rotate(-3deg) scale(.16) translateY(10px); } to { opacity: 1; transform: rotate(-3deg) scale(1) translateY(0); } }
 @keyframes announcement-card-in { from { opacity: 0; transform: scale(.82) translateY(18px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-@keyframes announcement-detail-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes announcement-done-bounce { from { opacity: 0; transform: scale(.08); } 70% { opacity: 1; transform: scale(1.08); } to { opacity: 1; transform: scale(1); } }
-@media (prefers-reduced-motion: reduce) { .announcement-wave i { animation: none; } .announcement-player-backdrop,.announcement-player::before,.announcement-player-teacher,.announcement-player > p,.announcement-player > h2,.announcement-player-time,.announcement-player-controls,.announcement-player-done { animation: none; } }
+@keyframes announcement-detail-in { from { opacity: 0; transform: translateY(-9px) scale(.96); } 75% { opacity: 1; transform: translateY(1px) scale(1.015); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes announcement-done-bounce { from { opacity: 0; transform: scale(.08) translateY(16px); } 68% { opacity: 1; transform: scale(1.1) translateY(-2px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .announcement-wave i { animation: none; } .announcement-player-backdrop,.announcement-player::before,.announcement-player-teacher,.announcement-player-teacher-name,.announcement-player > h2,.announcement-player-time,.announcement-player-controls,.announcement-player-done { animation: none; } }
 .school-app.is-focus-mode { grid-template-columns: 150px minmax(0, 1fr); }
 .school-app.is-focus-mode .sidebar-brand > span:last-child,
 .school-app.is-focus-mode .school-nav,
