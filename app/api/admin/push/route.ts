@@ -3,6 +3,7 @@ import { familyUnauthorizedResponse, readFamilySession } from "../../../../lib/f
 import { isAuthorizedAppRequest, unauthorizedAppResponse } from "../../../../lib/request-auth";
 
 const sounds = new Set(["school_chime", "school_bell", "school_alert", "greatpower", "longbell"]);
+const soundChannels: Record<string, string> = { school_chime: "school_chime_v1", school_bell: "school_bell_v1", school_alert: "school_alert_v1", greatpower: "greatpower_v1", longbell: "longbell_v1" };
 const clean = (value: FormDataEntryValue | null, max: number) => typeof value === "string" ? value.trim().slice(0, max) : "";
 
 export async function POST(request: Request) {
@@ -20,13 +21,13 @@ export async function POST(request: Request) {
       if (!image.type.startsWith("image/") || image.size > 8_000_000) return Response.json({ error: "Choose an image under 8 MB." }, { status: 400 });
       const id = crypto.randomUUID();
       await getChatAudioBucket().put(`push-images/${id}`, image.stream(), { httpMetadata: { contentType: image.type } });
-      imageUrl = `${new URL(request.url).origin}/api/admin/push-image?id=${id}`;
+      imageUrl = new URL(`../push-image?id=${id}`, request.url).toString();
     }
     const env = getAppEnv();
     if (!env.ONESIGNAL_APP_ID || !env.ONESIGNAL_REST_API_KEY) throw new Error("OneSignal is not configured on the server.");
     const payload: Record<string, unknown> = {
       app_id: env.ONESIGNAL_APP_ID, target_channel: "push", included_segments: ["Total Subscriptions"],
-      headings: { en: title }, contents: { en: message }, android_sound: sound,
+      headings: { en: title }, contents: { en: message }, android_sound: sound, existing_android_channel_id: soundChannels[sound],
       data: { urgent_overlay: true, overlay_image: imageUrl || "", target_url: `${new URL(request.url).origin}/school`, button_label: buttonLabel },
       buttons: [{ id: "open_school", text: buttonLabel }],
     };
