@@ -359,6 +359,10 @@ test("grade artwork opens a mobile course gradebook sorted by course score", asy
   assert.match(gradeRoute, /submissionStatus/);
   assert.match(styles, /\.course-gradebook-view/);
   assert.match(styles, /\.gradebook-assignment-card/);
+  assert.match(dashboard, /className="gradebook-teacher-photo"/);
+  assert.match(dashboard, /className="gradebook-overall"/);
+  assert.match(styles, /\.gradebook-assignment-card dl \{[^}]*grid-template-columns: 1fr/);
+  assert.match(styles, /\.course-gradebook-view \{[^}]*background: none/);
 });
 
 test("Canvas Inbox loads the ten newest conversations and full message threads", async () => {

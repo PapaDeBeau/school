@@ -898,11 +898,20 @@ function CourseGradebookView({ course, assignments, loading, error }: {
   loading: boolean;
   error: string | null;
 }) {
+  const teacher = course.teachers[0] ?? null;
+  const percentage = course.score === null ? null : `${course.score.toFixed(course.score % 1 ? 1 : 0)}%`;
+  const grade = course.grade || (course.score === null ? "—" : letterGrade(course.score));
   return (
     <section className="course-gradebook-view" aria-label={`${course.name} gradebook`}>
       <header className="gradebook-hero">
-        <span aria-hidden="true">{course.score === null ? "—" : `${course.score.toFixed(course.score % 1 ? 1 : 0)}%`}</span>
-        <div><p>Canvas gradebook</p><h1>{course.name}</h1><small>{course.grade || (course.score === null ? "No overall grade yet" : "Current course score")}</small></div>
+        <div className="gradebook-teacher">
+          <span className="gradebook-teacher-photo">{teacher?.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={teacher.avatarUrl} alt={teacher.name} referrerPolicy="no-referrer" />
+          ) : <strong aria-hidden="true">{(teacher?.name || course.name).slice(0,1).toUpperCase()}</strong>}</span>
+          <small>{teacher?.name || "Teacher"}</small>
+        </div>
+        <div className="gradebook-hero-copy"><p>Canvas gradebook</p><h1>{course.name}</h1><div className="gradebook-overall"><strong>Grade:</strong><span>{percentage || "—"}</span><b aria-hidden="true">=</b><em>{grade}</em></div></div>
       </header>
       <div className="gradebook-column-key" aria-hidden="true"><span>Assignment</span><span>Progress</span></div>
       {loading ? <div className="gradebook-state" role="status"><i aria-hidden="true" /><p>Loading class work from Canvas…</p></div> : null}
