@@ -1159,14 +1159,19 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .announcement-card-actions button:focus-visible { outline: 3px solid rgba(36, 99, 235, .38); outline-offset: 2px; }
 .announcement-card-date { grid-column: 2; color: #53647f; font-size: 9px; font-weight: 800; line-height: 1.1; text-align: left; }
 .announcement-player-layer { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: start center; padding: min(25vh, 190px) 18px 24px; }
-.announcement-player-backdrop { position: absolute; inset: 0; width: 100%; border: 0; background: rgba(4, 16, 48, .34); backdrop-filter: blur(13px) saturate(.72); -webkit-backdrop-filter: blur(13px) saturate(.72); }
-.announcement-player { --teacher-player-size: clamp(150px,50vw,260px); position: relative; width: min(430px, 100%); display: grid; justify-items: center; padding: calc(var(--teacher-player-size) / 2 + 22px) 22px 22px; border: 1px solid rgba(255,255,255,.8); border-radius: 28px; color: #10214c; background: linear-gradient(160deg, rgba(255,255,255,.97), rgba(222,237,255,.96)); box-shadow: 0 30px 90px rgba(0,18,70,.42), inset 0 1px 0 #fff; }
-.announcement-player-teacher { position: absolute; top: calc(var(--teacher-player-size) / -2); width: var(--teacher-player-size); height: var(--teacher-player-size); display: grid; place-items: center; overflow: hidden; border: 6px solid #fff; border-radius: 50%; color: #fff; background: linear-gradient(145deg,#328df5,#061b52); box-shadow: 0 13px 30px rgba(15,73,165,.4); }
+.announcement-player-backdrop { position: absolute; inset: 64px 0 0; width: 100%; border: 0; background: rgba(3, 8, 24, .56); backdrop-filter: blur(14px) saturate(.62); -webkit-backdrop-filter: blur(14px) saturate(.62); animation: announcement-backdrop-in .2s ease-out both; }
+.announcement-player { --teacher-player-size: clamp(150px,50vw,260px); isolation: isolate; position: relative; width: min(430px, 100%); display: grid; justify-items: center; padding: calc(var(--teacher-player-size) / 2 + 22px) 22px 22px; border: 0; color: #10214c; background: transparent; }
+.announcement-player::before { content: ""; position: absolute; z-index: -1; inset: 0; border: 1px solid rgba(255,255,255,.9); border-radius: 28px; background-color: #f7f8fa; background-image: linear-gradient(rgba(255,255,255,.84),rgba(238,241,246,.88)),url("/school/panel-pattern-3.webp"); background-position: center; background-size: cover; box-shadow: 0 30px 90px rgba(0,18,70,.48),inset 0 1px 0 #fff; transform-origin: 50% 18%; animation: announcement-card-in .2s .15s cubic-bezier(.18,.9,.34,1.18) both; }
+.announcement-player-teacher { position: absolute; z-index: 2; top: calc(var(--teacher-player-size) / -2); width: var(--teacher-player-size); height: var(--teacher-player-size); display: grid; place-items: center; overflow: hidden; border: 6px solid #fff; border-radius: 50%; color: #fff; background: linear-gradient(145deg,#328df5,#061b52); box-shadow: 0 13px 30px rgba(15,73,165,.4); animation: announcement-teacher-pop .18s cubic-bezier(.2,1.25,.36,1) both; }
 .announcement-player-teacher img { width: 100%; height: 100%; object-fit: cover; }
 .announcement-player-teacher strong { font-size: 42px; }
 .announcement-player > p { margin: 0; color: #2b66b8; font-size: 12px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
 .announcement-player > h2 { margin: 5px 0 12px; font-size: clamp(20px,5vw,27px); line-height: 1.08; text-align: center; }
 .announcement-player-time { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; color: #163c78; font-variant-numeric: tabular-nums; }
+.announcement-player > p { animation: announcement-detail-in .16s .27s ease-out both; }
+.announcement-player > h2 { animation: announcement-detail-in .16s .32s ease-out both; }
+.announcement-player-time { animation: announcement-detail-in .16s .37s ease-out both; }
+.announcement-player-controls { animation: announcement-detail-in .16s .42s ease-out both; }
 .announcement-player-time strong { min-width: 38px; font-size: 18px; }
 .announcement-player-time span { opacity: .45; }
 .announcement-player-controls { width: 100%; display: grid; grid-template-columns: 62px minmax(0,1fr); align-items: center; gap: 12px; }
@@ -1184,9 +1189,15 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .announcement-player:has(.announcement-player-toggle[aria-label^="Play"]) .announcement-wave i { animation-play-state: paused; opacity: .72; }
 .announcement-player-done { width: 100%; margin-top: 18px; padding: 0; overflow: hidden; border: 0; border-radius: 13px; background: transparent; box-shadow: 0 9px 20px rgba(18,139,52,.28); cursor: pointer; }
 .announcement-player-done img { width: 100%; height: auto; display: block; }
+.announcement-player-done { animation: announcement-done-bounce .3s .49s cubic-bezier(.2,1.5,.35,1) both; }
 .announcement-player-done:active { transform: translateY(1px); }
 @keyframes announcement-wave-pulse { from { transform: scaleY(.55); } to { transform: scaleY(1); } }
-@media (prefers-reduced-motion: reduce) { .announcement-wave i { animation: none; } }
+@keyframes announcement-backdrop-in { from { opacity: 0; backdrop-filter: blur(0); } to { opacity: 1; } }
+@keyframes announcement-teacher-pop { from { opacity: 0; transform: scale(.18) translateY(18px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes announcement-card-in { from { opacity: 0; transform: scale(.82) translateY(18px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes announcement-detail-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes announcement-done-bounce { from { opacity: 0; transform: scale(.08); } 70% { opacity: 1; transform: scale(1.08); } to { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .announcement-wave i { animation: none; } .announcement-player-backdrop,.announcement-player::before,.announcement-player-teacher,.announcement-player > p,.announcement-player > h2,.announcement-player-time,.announcement-player-controls,.announcement-player-done { animation: none; } }
 .school-app.is-focus-mode { grid-template-columns: 150px minmax(0, 1fr); }
 .school-app.is-focus-mode .sidebar-brand > span:last-child,
 .school-app.is-focus-mode .school-nav,
