@@ -148,6 +148,10 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   const menuPopupArtwork = await stat(new URL("public/menu-popup-bg.webp", root));
   const seeInCanvasArtwork = await stat(new URL("public/see-in-canvas.webp", root));
   const assignmentDetailsPlayArtwork = await stat(new URL("public/assignment-details-play.webp", root));
+  const futureAssignmentPlaybackArtwork = await Promise.all([
+    "assignment-details-pause.webp",
+    "assignment-details-stop.webp",
+  ].map((file) => stat(new URL(`public/${file}`, root))));
   const panelPatterns = await Promise.all(Array.from({ length: 5 }, (_, index) => stat(new URL(`public/panel-pattern-${index + 1}.webp`, root))));
 
   assert.match(dashboard, /mobile-dashboard-bar/);
@@ -234,6 +238,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.ok(menuPopupArtwork.size < 40_000);
   assert.ok(seeInCanvasArtwork.size < 40_000);
   assert.ok(assignmentDetailsPlayArtwork.size < 30_000);
+  assert.ok(futureAssignmentPlaybackArtwork.every((asset) => asset.size < 30_000));
   assert.ok(logoutArtwork.size < 30_000);
   assert.ok(dueTodayArtwork.size < 100_000);
   assert.ok(dueTomorrowArtwork.size < 100_000);
