@@ -1861,7 +1861,7 @@ function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect:
             ) : <strong aria-hidden="true">{(playerItem.authorName || "Teacher").slice(0, 1).toUpperCase()}</strong>}
           </div>
           <p className="announcement-player-teacher-name">{playerItem.authorName || "Teacher"}</p>
-          <p className="announcement-player-subject">{playerItem.course}</p>
+          <p className="announcement-player-subject">{courseLabel(playerItem.course)}</p>
           <h2 id="announcement-player-title">{playerItem.title}</h2>
           <div className="announcement-player-time" aria-live="off"><strong>{audioTime(elapsed)}</strong><span>/</span><strong>{audioTime(duration)}</strong></div>
           <div className="announcement-player-controls">
@@ -1933,7 +1933,7 @@ function AssignmentAudioPlayer({ item, onClose }: { item: ActionItem; onClose: (
         ) : <strong aria-hidden="true">{(item.authorName || "Teacher").slice(0, 1).toUpperCase()}</strong>}
       </div>
       <p className="announcement-player-teacher-name">{item.authorName || "Teacher"}</p>
-      <p className="announcement-player-subject">{item.course}</p>
+      <p className="announcement-player-subject">{assignmentCourseLabel(item.course)}</p>
       <h2 id="assignment-player-title">{item.title}</h2>
       <div className="announcement-player-time" aria-live="off"><strong>{audioTime(elapsed)}</strong><span>/</span><strong>{audioTime(duration)}</strong></div>
       <div className="announcement-player-controls">
