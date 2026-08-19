@@ -334,7 +334,7 @@ test("assignments open a detailed accessible modal before leaving for Canvas", a
   assert.match(styles, /teacher-player-size\) \/ 2 - 28px/);
   assert.match(dashboard, /announcement-player-subject.*playerItem\.course/);
   assert.match(styles, /announcement-subject-gradient 4s/);
-  assert.match(styles, /teacher-player-size\) \/ -2 - 8px/);
+  assert.match(styles, /teacher-player-size\) \/ -2 - 4px/);
   assert.equal((dashboard.match(/className="announcement-player-close"/g) ?? []).length, 2);
   assert.match(styles, /\.announcement-player-done \{[^}]*box-shadow: none/);
   assert.match(styles, /\.announcement-modal-got-it \{[^}]*background: none/);
