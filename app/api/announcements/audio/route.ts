@@ -6,7 +6,7 @@ import { readXaiApiKey } from "../../xai/connection/route";
 const femaleTeachers = new Set(["marcela whitehead", "lauren garcia", "heather hathaway", "kristina knox"]);
 const maleTeachers = new Set(["clinton baier"]);
 const safeId = (value: unknown) => { const id = Number(value); return Number.isSafeInteger(id) && id > 0 ? id : null; };
-const audioKey = (courseId: number, itemId: number) => `announcements/v2/${courseId}/${itemId}.mp3`;
+const audioKey = (courseId: number, itemId: number) => `announcements/v3/${courseId}/${itemId}.mp3`;
 
 async function authorize(request: Request) {
   if (!isAuthorizedAppRequest(request)) return unauthorizedAppResponse();
@@ -37,6 +37,10 @@ export async function POST(request: Request) {
     if (!courseId || !itemId) return Response.json({ error: "Invalid announcement." }, { status: 400 });
     const key = audioKey(courseId, itemId); const bucket = getChatAudioBucket();
     if (await bucket.head(key)) return Response.json({ audioUrl: `/api/announcements/audio?course_id=${courseId}&item_id=${itemId}`, existing: true });
+    await bucket.delete([
+      `announcements/${courseId}/${itemId}.mp3`,
+      `announcements/v2/${courseId}/${itemId}.mp3`,
+    ]);
     const title = typeof payload.title === "string" ? payload.title.trim().slice(0, 500) : "";
     const course = typeof payload.course === "string" ? payload.course.trim().slice(0, 300) : "";
     const authorName = typeof payload.authorName === "string" ? payload.authorName.trim().slice(0, 200) : "Teacher";

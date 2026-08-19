@@ -1762,11 +1762,21 @@ function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect:
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={appPath(playing ? "/assignment-details-pause.webp" : "/assignment-details-play.webp")} alt="" aria-hidden="true" />
             </button>
-            <div className="announcement-wave" style={{ "--announcement-progress": progress } as CSSProperties} aria-hidden="true">
+            <div className="announcement-wave" style={{ "--announcement-progress": progress } as CSSProperties}>
               {Array.from({ length: 42 }, (_, index) => <i key={index} style={{ height: `${28 + ((index * 17) % 66)}%` }} />)}
+              <input type="range" min="0" max={duration || 0} step="0.1" value={Math.min(elapsed, duration || 0)} onChange={(event) => {
+                const audio = audioRef.current;
+                if (!audio) return;
+                const nextTime = Number(event.target.value);
+                audio.currentTime = nextTime;
+                setElapsed(nextTime);
+              }} aria-label={`Seek through ${playerItem.title}`} disabled={!duration} />
             </div>
           </div>
-          <button className="announcement-player-done" type="button" onClick={closePlayer}>OK, I got it</button>
+          <button className="announcement-player-done" type="button" onClick={closePlayer} aria-label="OK, I got it">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={appPath("/announcement-got-it.png")} alt="OK, I got it" />
+          </button>
         </section>
       </div> : null}
     </section>
