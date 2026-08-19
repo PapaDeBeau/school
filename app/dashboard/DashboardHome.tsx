@@ -1842,6 +1842,9 @@ function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect:
       {playerItem ? <div className="announcement-player-layer">
         <button className="announcement-player-backdrop" type="button" onClick={closePlayer} aria-label="Close announcement player" />
         <section className="announcement-player" role="dialog" aria-modal="true" aria-labelledby="announcement-player-title">
+          <button className="announcement-player-close" type="button" onClick={closePlayer} aria-label="Close announcement player">
+            {/* eslint-disable-next-line @next/next/no-img-element */}<img src={appPath("/logout-button.webp")} alt="" aria-hidden="true" />
+          </button>
           <div className="announcement-player-teacher">
             {playerItem.authorAvatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -1911,6 +1914,9 @@ function AssignmentAudioPlayer({ item, onClose }: { item: ActionItem; onClose: (
   return <div className="announcement-player-layer assignment-player-layer">
     <button className="announcement-player-backdrop" type="button" onClick={closePlayer} aria-label="Close assignment player" />
     <section className="announcement-player" role="dialog" aria-modal="true" aria-labelledby="assignment-player-title">
+      <button className="announcement-player-close" type="button" onClick={closePlayer} aria-label="Close assignment player">
+        {/* eslint-disable-next-line @next/next/no-img-element */}<img src={appPath("/logout-button.webp")} alt="" aria-hidden="true" />
+      </button>
       <div className="announcement-player-teacher">
         {item.authorAvatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
