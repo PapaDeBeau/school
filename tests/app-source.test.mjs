@@ -70,6 +70,12 @@ test("successful login changes scenes without navigating away from the school UR
   assert.match(styles, /\.school-app\.immersive-dashboard/);
 });
 
+test("mobile red X closes the Android wrapper while the menu keeps Log Out", async () => {
+  const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
+  assert.match(dashboard, /beauschool:\/\/close/);
+  assert.match(dashboard, /mobile-menu-logout-action[^>]*[\s\S]*?Log Out/);
+});
+
 test("login artwork uses lightweight WebP assets", async () => {
   const login = await readFile(new URL("app/FamilyLogin.tsx", root), "utf8");
   const styles = await readFile(new URL("app/globals.css", root), "utf8");
@@ -335,7 +341,7 @@ test("family chat is persistent, paginated, link-aware, and sender controlled", 
   assert.match(dashboard, /data-chat-message-id/);
   assert.match(dashboard, /className="chat-seen-row"/);
   assert.match(dashboard, /aria-label="Close school app"/);
-  assert.doesNotMatch(dashboard, /mobile-menu-logout-action/);
+  assert.match(dashboard, /mobile-menu-logout-action/);
   assert.match(styles, /\.chat-message\.is-mine/);
   assert.match(styles, /\.chat-message\.tone-girl/);
   assert.match(styles, /\.chat-seen-row/);

@@ -2254,9 +2254,9 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
   function closeApp() {
     setMobileMenuOpen(false);
-    window.close();
+    window.location.href = "beauschool://close";
     window.setTimeout(() => {
-      if (!document.hidden && window.history.length > 1) window.history.back();
+      if (!document.hidden) window.close();
     }, 150);
   }
 
@@ -2360,6 +2360,9 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
                 <img src={appPath(item.image)} alt={item.label} />
               </button>
             ))}
+            <button className="mobile-menu-action mobile-menu-logout-action" type="button" role="menuitem" onClick={() => void signOut()} tabIndex={mobileMenuOpen ? 0 : -1}>
+              Log Out
+            </button>
           </div>
         </div>
 
