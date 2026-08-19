@@ -465,19 +465,25 @@ function CanvasRichContent({ html, fallbackText, onImageOpen }: { html: string; 
 
 function AnnouncementImageViewer({ image, onClose }: { image: { src: string; alt: string }; onClose: () => void }) {
   const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
+  const imageRef = useRef<HTMLImageElement>(null);
   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
-  const gestureRef = useRef<{ distance: number; centerX: number; centerY: number; view: typeof view } | null>(null);
+  const gestureRef = useRef<{ distance: number; centerX: number; centerY: number; originX: number; originY: number; view: typeof view } | null>(null);
   const clampScale = (scale: number) => Math.min(5, Math.max(1, scale));
 
   const startGesture = () => {
     const points = Array.from(pointersRef.current.values());
-    if (points.length === 1) gestureRef.current = { distance: 0, centerX: points[0].x, centerY: points[0].y, view };
+    const rect = imageRef.current?.getBoundingClientRect();
+    const originX = rect ? (rect.left + rect.right) / 2 - view.x : window.innerWidth / 2;
+    const originY = rect ? (rect.top + rect.bottom) / 2 - view.y : window.innerHeight / 2;
+    if (points.length === 1) gestureRef.current = { distance: 0, centerX: points[0].x, centerY: points[0].y, originX, originY, view };
     if (points.length >= 2) {
       const [a, b] = points;
       gestureRef.current = {
         distance: Math.hypot(b.x - a.x, b.y - a.y),
         centerX: (a.x + b.x) / 2,
         centerY: (a.y + b.y) / 2,
+        originX,
+        originY,
         view,
       };
     }
@@ -511,14 +517,20 @@ function AnnouncementImageViewer({ image, onClose }: { image: { src: string; alt
             const [a, b] = points;
             const distance = Math.hypot(b.x - a.x, b.y - a.y);
             const scale = clampScale(gesture.view.scale * distance / Math.max(gesture.distance, 1));
-            setView({ x: gesture.view.x + (a.x + b.x) / 2 - gesture.centerX, y: gesture.view.y + (a.y + b.y) / 2 - gesture.centerY, scale });
+            const centerX = (a.x + b.x) / 2, centerY = (a.y + b.y) / 2;
+            const ratio = scale / gesture.view.scale;
+            setView({
+              x: centerX - gesture.originX - ratio * (gesture.centerX - gesture.originX - gesture.view.x),
+              y: centerY - gesture.originY - ratio * (gesture.centerY - gesture.originY - gesture.view.y),
+              scale,
+            });
           }
         }}
         onPointerUp={(event) => { pointersRef.current.delete(event.pointerId); startGesture(); }}
         onPointerCancel={(event) => { pointersRef.current.delete(event.pointerId); startGesture(); }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={image.src} alt={image.alt} draggable={false} style={{ transform: `translate3d(${view.x}px, ${view.y}px, 0) scale(${view.scale})` }} />
+        <img ref={imageRef} src={image.src} alt={image.alt} draggable={false} style={{ transform: `translate3d(${view.x}px, ${view.y}px, 0) scale(${view.scale})` }} />
       </div>
     </div>
   );
