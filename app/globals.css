@@ -2069,7 +2069,11 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
     margin: -10px -14px 0;
     padding: 9px 20px 7px;
   }
-  .mobile-dashboard-bar > strong { font-size: clamp(21px, 6vw, 27px); }
+  .mobile-dashboard-bar > strong {
+    min-width: 0;
+    font-size: clamp(16px, 4.6vw, 23px);
+    letter-spacing: 0;
+  }
   .mobile-family-greeting { gap: 12px; margin-inline: 5px; }
   .mobile-family-photo { width: 58px; height: 58px; flex-basis: 58px; }
   .mobile-family-greeting p { font-size: clamp(19px, 6.5vw, 24px); }
