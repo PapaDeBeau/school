@@ -1,4 +1,16 @@
+import { getAppEnv } from "../db";
+
 export const CANVAS_BASE_URL = "https://sequoiagrove.instructure.com";
+const CANVAS_RELAY_BASE_URL = "https://beauvizenor.com/school-canvas-relay";
+const CANVAS_USER_AGENT = "Beau-School-Dashboard/1.0 (+https://beauvizenor.com/school/)";
+
+function canvasRequestDestination(path: string) {
+  const relayKey = getAppEnv().BEAU_PROXY_ACCESS_KEY?.trim();
+  return {
+    url: relayKey ? `${CANVAS_RELAY_BASE_URL}${path}` : `${CANVAS_BASE_URL}${path}`,
+    relayKey,
+  };
+}
 
 export async function canvasGet<T>(path: string, token: string): Promise<T> {
   return canvasRequest<T>(path, token, "GET");
@@ -30,9 +42,7 @@ export async function canvasUploadConversationFile(file: File, token: string): P
   if (completionUrl) {
     const completion = new URL(completionUrl, CANVAS_BASE_URL);
     if (completion.origin !== new URL(CANVAS_BASE_URL).origin) throw new Error("Canvas returned an unsafe completion address.");
-    const finalized = await fetch(completion, { method: "POST", headers: { Authorization: `Bearer ${token.trim()}`, Accept: "application/json" } });
-    if (!finalized.ok) throw new Error(`Canvas could not finish the ${file.name} upload.`);
-    return await finalized.json() as CanvasUploadedFile;
+    return canvasRequest<CanvasUploadedFile>(`${completion.pathname}${completion.search}`, token, "POST");
   }
   if (!uploaded.ok) throw new Error(`Canvas could not upload ${file.name}.`);
   return await uploaded.json() as CanvasUploadedFile;
@@ -43,12 +53,14 @@ async function canvasRequest<T>(path: string, token: string, method: "GET" | "PO
   const timeout = setTimeout(() => controller.abort(), 12_000);
   let response: Response;
   try {
-    response = await fetch(`${CANVAS_BASE_URL}${path}`, {
+    const destination = canvasRequestDestination(path);
+    response = await fetch(destination.url, {
       method,
       headers: {
         Authorization: `Bearer ${token.trim()}`,
         Accept: "application/json",
-        "User-Agent": "Beau-School-Dashboard/1.0 (+https://beauvizenor.com/school/)",
+        "User-Agent": CANVAS_USER_AGENT,
+        ...(destination.relayKey ? { "X-Beau-Relay-Key": destination.relayKey } : {}),
         ...(body ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
       },
       body,

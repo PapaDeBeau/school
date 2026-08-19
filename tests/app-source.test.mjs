@@ -23,7 +23,19 @@ test("Canvas token routes remain server-only", async () => {
   assert.match(form, /type={showToken \? "text" : "password"}/);
   assert.doesNotMatch(form, /localStorage|sessionStorage/);
   assert.match(vault, /AES-GCM/);
-  assert.match(client, /"User-Agent": "Beau-School-Dashboard\/1\.0/);
+  assert.match(client, /"User-Agent": CANVAS_USER_AGENT/);
+});
+
+test("hosted Canvas requests use the protected BeauVizenor relay", async () => {
+  const client = await readFile(new URL("lib/canvas-client.ts", root), "utf8");
+
+  assert.match(client, /CANVAS_RELAY_BASE_URL = "https:\/\/beauvizenor\.com\/school-canvas-relay"/);
+  assert.match(client, /getAppEnv\(\)\.BEAU_PROXY_ACCESS_KEY\?\.trim\(\)/);
+  assert.match(client, /relayKey \? `\$\{CANVAS_RELAY_BASE_URL\}\$\{path\}` : `\$\{CANVAS_BASE_URL\}\$\{path\}`/);
+  assert.match(client, /"X-Beau-Relay-Key": destination\.relayKey/);
+  assert.match(client, /Authorization: `Bearer \$\{token\.trim\(\)\}`/);
+  assert.match(client, /"User-Agent": CANVAS_USER_AGENT/);
+  assert.doesNotMatch(client, /[?&](?:relay_key|access_key)=/i);
 });
 
 test("production Canvas APIs require the BeauVizenor proxy secret", async () => {
