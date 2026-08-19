@@ -962,7 +962,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .inbox-empty p { margin: 9px 0 0; font-size: 11px; }
 
 .inbox-thread-backdrop { position: fixed; z-index: 1001; inset: 0; display: grid; place-items: center; padding: 18px; background: rgba(0, 8, 24, .68); -webkit-backdrop-filter: blur(12px) saturate(115%); backdrop-filter: blur(12px) saturate(115%); }
-.email-teacher-launch { width: min(760px, 100%); display: block; margin: 0 auto 15px; padding: 0; overflow: hidden; border: 0; border-radius: 18px; background: #02050b; box-shadow: 0 12px 32px rgba(0, 25, 85, .3), 0 0 0 1px rgba(44, 143, 255, .38); cursor: pointer; }
+.email-teacher-launch { width: min(720px, calc(100% - 32px)); display: block; margin: 0 auto 15px; padding: 0; overflow: visible; border: 0; border-radius: 0; background: transparent; box-shadow: none; cursor: pointer; }
 .email-teacher-launch img { width: 100%; height: auto; display: block; }
 .email-teacher-launch:active { transform: translateY(1px); }
 .email-teacher-launch:focus-visible { outline: 3px solid #5bb5ff; outline-offset: 3px; }
@@ -989,6 +989,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .teacher-email-modal > header strong { color: #173f72; font-size: 16px; }
 .teacher-email-modal > header small { overflow: hidden; color: #5e7490; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .teacher-email-modal form { display: grid; gap: 13px; padding: 17px 20px 21px; }
+.teacher-email-modal .inbox-compose-tools { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 9px; }
 .teacher-email-modal form > label { display: grid; gap: 6px; }
 .teacher-email-modal form > label > span { color: #315880; font-size: 9px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
 .teacher-email-modal input,
@@ -1001,6 +1002,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .teacher-email-files button { width: 22px; min-height: 22px; padding: 0; border: 0; color: #bc1234; background: transparent; font-size: 18px; }
 .teacher-email-send { width: 100%; min-height: 50px; border: 1px solid #c10d35; border-radius: 12px; color: #fff; background: linear-gradient(135deg, #e11d48, #8d071f); box-shadow: 0 7px 18px rgba(177, 8, 44, .25); font: 900 12px/1 system-ui, sans-serif; cursor: pointer; }
 .teacher-email-send:disabled { opacity: .42; filter: grayscale(.35); cursor: not-allowed; box-shadow: none; }
+.teacher-email-backdrop .chat-recorder-backdrop { place-items: start center; padding-top: max(18px, env(safe-area-inset-top)); }
 .inbox-thread-modal {
   position: relative;
   z-index: 1;
@@ -2195,7 +2197,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   .inbox-conversation p { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; }
   .inbox-read-button { width: 100%; grid-column: 1 / -1; }
   .inbox-thread-backdrop { padding: 9px; }
-  .email-teacher-launch { margin-bottom: 12px; border-radius: 13px; }
+  .email-teacher-launch { width: calc(100% - 24px); margin-bottom: 12px; }
   .teacher-picker-backdrop,
   .teacher-email-backdrop { place-items: start center; padding: max(8px, env(safe-area-inset-top)) 8px 8px; }
   .teacher-picker-modal { max-height: calc(100dvh - max(16px, env(safe-area-inset-top))); padding: 25px 14px 24px; border-radius: 18px; }
@@ -2208,6 +2210,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   .teacher-email-modal > header { padding: 14px 58px 12px 14px; }
   .teacher-email-modal form { gap: 11px; padding: 14px; }
   .teacher-email-modal textarea { min-height: clamp(190px, 31dvh, 300px); }
+  .teacher-email-backdrop .chat-recorder-backdrop { padding: max(8px, env(safe-area-inset-top)) 8px 8px; }
   .inbox-thread-modal { max-height: calc(100dvh - 18px); border-radius: 18px; }
   .inbox-thread-header { padding: 20px 62px 14px 16px; }
   .inbox-replying-to { padding: 10px 14px; }
