@@ -748,9 +748,12 @@ function ChatAudioPlayer({ url, durationMs }: { url: string; durationMs: number 
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const bars = [9, 18, 27, 14, 32, 22, 12, 25, 36, 19, 29, 14, 23, 34, 17, 27, 12, 31, 21, 10, 26, 35, 18, 28, 13, 22, 30, 16];
   return <div className="chat-audio-player">
-    <button type="button" onClick={() => { const audio = audioRef.current; if (!audio) return; if (audio.paused) void audio.play(); else audio.pause(); }} aria-label={playing ? "Pause audio message" : "Play audio message"}>{playing ? "Ⅱ" : "▶"}</button>
-    <div className="chat-audio-track" aria-hidden="true"><i style={{ width: `${progress * 100}%` }} /></div>
+    <button type="button" onClick={() => { const audio = audioRef.current; if (!audio) return; if (audio.paused) void audio.play(); else audio.pause(); }} aria-label={playing ? "Pause audio message" : "Play audio message"}><span aria-hidden="true">{playing ? "Ⅱ" : "▶"}</span></button>
+    <div className="chat-audio-waveform" aria-hidden="true">
+      {bars.map((height, index) => <i className={index / bars.length <= progress ? "is-lit" : ""} style={{ height }} key={`${height}-${index}`} />)}
+    </div>
     <small>{formatAudioTime(durationMs ?? 0)}</small>
     <audio ref={audioRef} src={appPath(url)} preload="metadata" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => { setPlaying(false); setProgress(0); }} onTimeUpdate={(event) => setProgress(event.currentTarget.duration ? event.currentTarget.currentTime / event.currentTarget.duration : 0)} />
   </div>;
@@ -896,7 +899,7 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onL
               <img src={appPath(profilePhoto)} alt="" />
             ) : message.author.name.slice(0, 1).toUpperCase();
             return (
-              <article className={`chat-message${mine ? " is-mine" : ""} ${girl ? "tone-girl" : "tone-boy"} chat-tilt-${Number(message.id) % 5}`} key={message.id}>
+              <article className={`chat-message${mine ? " is-mine" : ""}${message.audio ? " has-audio" : ""} ${girl ? "tone-girl" : "tone-boy"} chat-tilt-${Number(message.id) % 5}`} key={message.id}>
                 {mine ? <button className="chat-profile-square chat-message-menu-trigger" type="button" aria-label={`Show actions for ${message.author.name}'s message`} aria-expanded={openActionsId === message.id} onClick={() => setOpenActionsId((current) => current === message.id ? null : message.id)}>{profileContents}</button> : <span className="chat-profile-square" aria-hidden="true">{profileContents}</span>}
                 {mine && openActionsId === message.id && editingId !== message.id ? <div className="chat-profile-actions" role="menu" aria-label="Message actions"><button type="button" role="menuitem" onClick={() => { setEditingId(message.id); setEditingBody(message.body); setOpenActionsId(null); }}>Edit</button><button type="button" role="menuitem" onClick={() => { setOpenActionsId(null); void remove(message.id); }} disabled={changingId === message.id}>Delete</button></div> : null}
                 <div className="chat-bubble">
@@ -906,10 +909,11 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onL
                       <textarea value={editingBody} onChange={(event) => setEditingBody(event.target.value)} maxLength={2000} rows={3} aria-label="Edit family chat message" />
                       <div><button type="button" onClick={() => void saveEdit(message.id)} disabled={changingId === message.id}>Save</button><button type="button" onClick={() => { setEditingId(null); setEditingBody(""); }} disabled={changingId === message.id}>Cancel</button></div>
                     </div>
-                  ) : <>{message.body ? <ChatMessageBody body={message.body} /> : null}{message.audio ? <ChatAudioPlayer url={message.audio.url} durationMs={message.audio.durationMs} /> : null}</>}
+                  ) : <>{message.body ? <ChatMessageBody body={message.body} /> : null}</>}
                   <footer>
                     {edited ? <small>Edited</small> : <span />}
                   </footer>
+                  {message.audio ? <ChatAudioPlayer url={message.audio.url} durationMs={message.audio.durationMs} /> : null}
                 </div>
               </article>
             );
@@ -918,20 +922,17 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onL
       </div>
 
       <form className="chat-composer" onSubmit={(event) => void submit(event)}>
-        <span className={`chat-composer-profile ${viewer.username === "mom" || viewer.username === "cathy" ? "tone-girl" : "tone-boy"}`} aria-hidden="true">
-          {familyProfilePhoto[viewer.username] ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={appPath(familyProfilePhoto[viewer.username])} alt="" />
-          ) : viewer.displayName.slice(0, 1).toUpperCase()}
-        </span>
-        <textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => {
-          if (event.key === "Enter" && !event.shiftKey) {
-            event.preventDefault();
-            event.currentTarget.form?.requestSubmit();
-          }
-        }} maxLength={2000} rows={2} placeholder="" aria-label={`Message the family as ${viewer.displayName}`} />
+        <div className="chat-compose-field">
+          <textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              event.currentTarget.form?.requestSubmit();
+            }
+          }} maxLength={2000} rows={2} placeholder="" aria-label={`Message the family as ${viewer.displayName}`} />
+          {recordedAudio ? <button className="chat-attachment-indicator" type="button" onClick={() => setRecorderOpen(true)} aria-label="Audio attached; review recording"><span aria-hidden="true">📎</span></button> : null}
+        </div>
         <button className="chat-send-button" type="submit" disabled={sending || (!draft.trim() && !recordedAudio)} aria-label="Send family chat message">{sending ? "…" : "➤"}</button>
-        <button className="chat-record-button" type="button" onClick={() => setRecorderOpen(true)} aria-label="Record an audio message"><span aria-hidden="true">♪</span></button>
+        <button className="chat-record-button" type="button" onClick={() => setRecorderOpen(true)} aria-label="Record an audio message"><span className="audio-wave-icon" aria-hidden="true"><i /><i /><i /><i /><i /></span></button>
       </form>
       {recorderOpen ? <div className="chat-recorder-backdrop">
         <button className="modal-backdrop-dismiss" type="button" onClick={() => { if (recording) stopRecording(); setRecorderOpen(false); }} aria-label="Close audio recorder" />
