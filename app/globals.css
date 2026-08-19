@@ -810,7 +810,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .chat-profile-actions { position: absolute; z-index: 4; top: 76px; right: 8px; display: flex; gap: 5px; padding: 6px; border: 1px solid rgba(var(--chat-tone-rgb), .7); border-radius: 10px; background: rgba(0, 8, 22, .96); box-shadow: 0 12px 24px rgba(0, 0, 0, .5), 0 0 18px rgba(var(--chat-tone-rgb), .2); }
 .chat-profile-actions button { min-height: 30px; padding: 6px 11px; border: 1px solid rgba(var(--chat-tone-rgb), .58); border-radius: 7px; color: #eaf5ff; background: rgba(var(--chat-tone-rgb), .18); font: 800 8px/1 system-ui, sans-serif; cursor: pointer; }
 .chat-profile-actions button:disabled { opacity: .55; cursor: wait; }
-.chat-bubble { position: relative; width: 100%; min-width: 0; padding: 13px 15px 10px 92px; overflow: hidden; border: 1px solid var(--chat-tone); border-radius: 16px; background: rgba(0, 10, 27, .9); box-shadow: 0 11px 29px rgba(0, 0, 0, .38), 0 0 18px rgba(var(--chat-tone-rgb), .11); }
+.chat-bubble { position: relative; width: 100%; min-width: 0; padding: 13px 15px 10px 92px; overflow: hidden; border: 1px solid var(--chat-tone); border-radius: 16px; background: rgba(var(--chat-tone-rgb), .12); box-shadow: 0 11px 29px rgba(0, 0, 0, .38), 0 0 18px rgba(var(--chat-tone-rgb), .11); }
 .chat-message.is-mine .chat-bubble { padding-right: 92px; padding-left: 15px; background: rgba(var(--chat-tone-rgb), .12); }
 .chat-message.has-audio .chat-bubble { min-height: 156px; padding-bottom: 70px; }
 .chat-bubble > header { min-width: 0; display: flex; align-items: baseline; justify-content: flex-start; gap: 9px; white-space: nowrap; }
