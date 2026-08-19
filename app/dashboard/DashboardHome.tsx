@@ -400,6 +400,16 @@ function CanvasRichContent({ html, fallbackText }: { html: string; fallbackText:
 
 function AssignmentModal({ item, loading, loadError, onClose }: { item: ActionItem; loading: boolean; loadError: string | null; onClose: () => void }) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closingRef = useRef(false);
+  const [isClosing, setIsClosing] = useState(false);
+
+  const requestClose = useCallback(() => {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    setIsClosing(true);
+    closeTimerRef.current = setTimeout(onClose, 240);
+  }, [onClose]);
 
   useEffect(() => {
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -408,15 +418,16 @@ function AssignmentModal({ item, loading, loadError, onClose }: { item: ActionIt
     closeButtonRef.current?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") requestClose();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
       document.body.style.overflow = previousOverflow;
       previousFocus?.focus();
     };
-  }, [onClose]);
+  }, [requestClose]);
 
   const isAnnouncement = item.kind === "announcement";
   const detailRows = isAnnouncement ? [
@@ -438,10 +449,10 @@ function AssignmentModal({ item, loading, loadError, onClose }: { item: ActionIt
   ];
 
   return (
-    <div className="assignment-modal-backdrop">
-      <button className="modal-backdrop-dismiss" type="button" onClick={onClose} aria-label={`Close ${isAnnouncement ? "announcement" : "assignment"} details`} />
+    <div className={`assignment-modal-backdrop${isClosing ? " is-closing" : ""}`}>
+      <button className="modal-backdrop-dismiss" type="button" onClick={requestClose} aria-label={`Close ${isAnnouncement ? "announcement" : "assignment"} details`} />
       <section className="assignment-modal" role="dialog" aria-modal="true" aria-labelledby="assignment-modal-title" aria-describedby="assignment-modal-description">
-        <button className="assignment-modal-x" type="button" onClick={onClose} aria-label={`Close ${isAnnouncement ? "announcement" : "assignment"} details`}>
+        <button className="assignment-modal-x" type="button" onClick={requestClose} aria-label={`Close ${isAnnouncement ? "announcement" : "assignment"} details`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={appPath("/logout-button.webp")} alt="" aria-hidden="true" />
         </button>
@@ -473,7 +484,7 @@ function AssignmentModal({ item, loading, loadError, onClose }: { item: ActionIt
               fallbackText={item.description || (isAnnouncement ? "Open this announcement in Canvas to read the teacher's full message." : "Canvas has not included written instructions for this item. Use the Canvas button below to check for files, worksheets, videos, rubrics, or teacher updates.")}
             />
           </section>
-          {isAnnouncement ? <button type="button" className="announcement-modal-got-it" onClick={onClose} aria-label="Got it — close announcement">
+          {isAnnouncement ? <button type="button" className="announcement-modal-got-it" onClick={requestClose} aria-label="Got it — close announcement">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={appPath("/announcement-got-it.png")} alt="Got It!" />
           </button> : null}
@@ -484,7 +495,7 @@ function AssignmentModal({ item, loading, loadError, onClose }: { item: ActionIt
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={appPath("/see-in-canvas.webp")} alt="See in Canvas" />
           </a>
-          <button className="assignment-modal-close" type="button" onClick={onClose} ref={closeButtonRef}>Close</button>
+          <button className="assignment-modal-close" type="button" onClick={requestClose} ref={closeButtonRef}>Close</button>
         </footer>
       </section>
     </div>
