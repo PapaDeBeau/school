@@ -1,5 +1,3 @@
-import { request as httpsRequest } from "node:https";
-
 export const CANVAS_BASE_URL = "https://sequoiagrove.instructure.com";
 
 export async function canvasGet<T>(path: string, token: string): Promise<T> {
@@ -41,40 +39,30 @@ export async function canvasUploadConversationFile(file: File, token: string): P
 }
 
 async function canvasRequest<T>(path: string, token: string, method: "GET" | "POST", body?: string): Promise<T> {
-  const response = await new Promise<{ status: number; body: string }>((resolve, reject) => {
-    const request = httpsRequest(
-      `${CANVAS_BASE_URL}${path}`,
-      {
-        method,
-        headers: {
-          Authorization: `Bearer ${token.trim()}`,
-          Accept: "application/json",
-          ...(body ? { "Content-Type": "application/x-www-form-urlencoded", "Content-Length": String(Buffer.byteLength(body)) } : {}),
-          "User-Agent": "Beau-School-Dashboard/0.1",
-        },
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12_000);
+  let response: Response;
+  try {
+    response = await fetch(`${CANVAS_BASE_URL}${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${token.trim()}`,
+        Accept: "application/json",
+        ...(body ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
       },
-      (incoming) => {
-        const chunks: Uint8Array[] = [];
-        incoming.on("data", (chunk: Uint8Array) => chunks.push(chunk));
-        incoming.on("end", () => {
-          const length = chunks.reduce((total, chunk) => total + chunk.byteLength, 0);
-          const body = new Uint8Array(length);
-          let offset = 0;
-          for (const chunk of chunks) {
-            body.set(chunk, offset);
-            offset += chunk.byteLength;
-          }
-          resolve({
-            status: incoming.statusCode ?? 500,
-            body: new TextDecoder().decode(body),
-          });
-        });
-      }
-    );
-    request.setTimeout(12_000, () => request.destroy(new Error("Canvas request timed out.")));
-    request.on("error", reject);
-    request.end(body);
-  });
+      body,
+      redirect: "manual",
+      cache: "no-store",
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") throw new Error("Canvas request timed out.");
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  const responseBody = await response.text();
 
   if (response.status >= 300 && response.status < 400) {
     throw new Error("Canvas redirected the request unexpectedly.");
@@ -87,7 +75,7 @@ async function canvasRequest<T>(path: string, token: string, method: "GET" | "PO
   }
 
   try {
-    return JSON.parse(response.body) as T;
+    return JSON.parse(responseBody) as T;
   } catch {
     throw new Error("Canvas returned an unreadable response.");
   }
