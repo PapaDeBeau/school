@@ -734,16 +734,17 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .portal-feature-view > .classes-view-header,
 .portal-feature-view > .admin-view-header { display: none !important; }
 .classes-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
-.class-box { min-width: 0; display: grid; align-content: start; padding: 18px; overflow: hidden; border: 1px solid rgba(219, 234, 252, .38); border-radius: 17px; background: rgba(0, 9, 25, .82); box-shadow: 0 13px 32px rgba(0, 0, 0, .34), inset 0 1px 0 rgba(255, 255, 255, .07); }
-.class-box > p { margin: 0 0 4px; color: #77baff; font-size: 8px; font-weight: 900; letter-spacing: .17em; text-transform: uppercase; }
-.class-box h2 { margin: 0; color: #fff; font-size: clamp(16px, 2.4vw, 22px); line-height: 1.14; letter-spacing: -.025em; }
+.portal-feature-view.classes-view { min-height: 0; padding: 0; border: 0; border-radius: 0; color: #10213b; background: none; box-shadow: none; }
+.class-box { min-width: 0; display: grid; align-content: start; padding: 20px; overflow: hidden; border: 1px solid rgba(190,220,250,.88); border-radius: 18px; background: rgba(255,255,255,.96); box-shadow: 0 18px 42px rgba(0,20,62,.22), inset 0 1px 0 #fff; }
+.class-box > p { margin: 0 0 4px; color: #3977db; font-size: 8px; font-weight: 900; letter-spacing: .17em; text-transform: uppercase; }
+.class-box h2 { margin: 0; color: #152945; font-size: clamp(16px, 2.4vw, 22px); line-height: 1.14; letter-spacing: -.025em; }
 .class-meetings { display: grid; gap: 7px; margin-top: 14px; }
-.class-meetings > div { display: grid; grid-template-columns: minmax(84px, .55fr) minmax(0, 1fr); align-items: center; gap: 4px 10px; padding: 10px 11px; border: 1px solid rgba(156, 205, 255, .22); border-radius: 11px; background: rgba(19, 61, 109, .32); }
-.class-meetings strong { color: #91caff; font-size: 10px; }
-.class-meetings time { color: #fff; font-size: 11px; font-weight: 800; text-align: right; }
-.class-meetings small { grid-column: 1 / -1; color: rgba(224, 238, 255, .67); font-size: 8px; }
-.class-box > a { justify-self: start; margin-top: 15px; color: #8dcaff; font-size: 9px; font-weight: 850; text-decoration: none; }
-.class-box > a:hover { color: #fff; }
+.class-meetings > div { display: grid; grid-template-columns: minmax(112px, .65fr) minmax(0, 1fr); align-items: center; gap: 4px 10px; padding: 11px 12px; border: 1px solid rgba(191,211,238,.78); border-radius: 11px; background: #f6f9fe; }
+.class-meetings strong { color: #286ac7; font-size: 10px; }
+.class-meetings time { color: #152945; font-size: 11px; font-weight: 850; text-align: right; }
+.class-meetings small { grid-column: 1 / -1; color: #697b95; font-size: 8px; }
+.class-box > a { min-height: 42px; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; padding: 10px 15px; border: 1px solid #5299ef; border-radius: 11px; color: #fff; background: linear-gradient(135deg,#268cff,#154aa8); box-shadow: 0 9px 20px rgba(22,96,199,.25), inset 0 1px 0 rgba(255,255,255,.25); font-size: 10px; font-weight: 900; text-decoration: none; }
+.class-box > a:hover { color: #fff; background: linear-gradient(135deg,#3297ff,#1954bd); }
 .class-box button:focus-visible,
 .class-box a:focus-visible,
 .post-board-view { max-height: calc(100dvh - 74px); grid-template-rows: minmax(0, 1fr) auto; }

@@ -852,13 +852,23 @@ function comparableCourseName(value: string) {
 }
 
 function ClassesView({ courses, week }: { courses: Course[]; week: WeekItem[] }) {
+  const combineMeetings = (meetings: WeekItem[]) => Array.from(meetings.reduce((groups, meeting) => {
+    const key = `${meeting.time}|${meeting.note}|${meeting.tentative}`;
+    const current = groups.get(key);
+    if (current) current.days.push(meeting.day);
+    else groups.set(key, { ...meeting, days: [meeting.day] });
+    return groups;
+  }, new Map<string, WeekItem & { days: string[] }>()).values()).map((meeting) => ({
+    ...meeting,
+    day: meeting.days.join(" / "),
+  }));
   const scheduled = Array.from(new Set(week.map((item) => item.course))).map((name) => {
     const comparableName = comparableCourseName(name);
     const course = courses.find((candidate) => {
       const comparableCandidate = comparableCourseName(candidate.name);
       return comparableCandidate === comparableName || comparableCandidate.includes(comparableName) || comparableName.includes(comparableCandidate);
     });
-    return { key: course?.id ?? name, name: course?.name ?? name, sourceUrl: course?.sourceUrl, meetings: week.filter((item) => item.course === name) };
+    return { key: course?.id ?? name, name: course?.name ?? name, sourceUrl: course?.sourceUrl, meetings: combineMeetings(week.filter((item) => item.course === name)) };
   });
   const unscheduled = courses
     .filter((course) => !scheduled.some((entry) => entry.key === course.id))
@@ -876,7 +886,7 @@ function ClassesView({ courses, week }: { courses: Course[]; week: WeekItem[] })
                 <div key={`${meeting.day}-${meeting.time}`}><strong>{meeting.day}</strong><time>{meeting.time}</time><small>{meeting.note}</small></div>
               )) : <div className="class-time-missing"><strong>Canvas course</strong><small>Meeting time is not listed.</small></div>}
             </div>
-            {course.sourceUrl ? <a href={course.sourceUrl} target="_blank" rel="noreferrer">Open class in Canvas <span aria-hidden="true">→</span></a> : null}
+            {course.sourceUrl ? <a href={course.sourceUrl} target="_blank" rel="noreferrer">Open Class in Canvas <span aria-hidden="true">→</span></a> : null}
           </article>
         ))}
       </div>
