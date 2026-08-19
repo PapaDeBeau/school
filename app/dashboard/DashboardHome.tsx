@@ -622,7 +622,7 @@ function AssignmentModal({ item, loading, loadError, onClose }: { item: ActionIt
             <CanvasRichContent
               html={item.descriptionHtml}
               fallbackText={item.description || (isAnnouncement ? "Open this announcement in Canvas to read the teacher's full message." : DEFAULT_ASSIGNMENT_INSTRUCTIONS)}
-              onImageOpen={isAnnouncement ? openExpandedImage : undefined}
+              onImageOpen={openExpandedImage}
             />
           </section>
           {isAnnouncement ? <button type="button" className="announcement-modal-got-it" onClick={requestClose} aria-label="Got it — close announcement">
