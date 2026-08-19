@@ -10,6 +10,36 @@ export async function canvasPostForm<T>(path: string, token: string, form: URLSe
   return canvasRequest<T>(path, token, "POST", form.toString());
 }
 
+type CanvasUploadTarget = { upload_url: string; upload_params: Record<string, string> };
+type CanvasUploadedFile = { id: number; url?: string; display_name?: string; filename?: string; "content-type"?: string; size?: number };
+
+export async function canvasUploadConversationFile(file: File, token: string): Promise<CanvasUploadedFile> {
+  const target = await canvasPostForm<CanvasUploadTarget>("/api/v1/users/self/files", token, new URLSearchParams({
+    name: file.name,
+    size: String(file.size),
+    content_type: file.type || "application/octet-stream",
+    parent_folder_path: "conversation attachments",
+    on_duplicate: "rename",
+  }));
+  const uploadUrl = new URL(target.upload_url);
+  if (uploadUrl.protocol !== "https:") throw new Error("Canvas returned an unsafe upload address.");
+
+  const uploadBody = new FormData();
+  for (const [key, value] of Object.entries(target.upload_params)) uploadBody.append(key, value);
+  uploadBody.append("file", file, file.name);
+  const uploaded = await fetch(uploadUrl, { method: "POST", body: uploadBody, redirect: "manual" });
+  const completionUrl = uploaded.headers.get("location");
+  if (completionUrl) {
+    const completion = new URL(completionUrl, CANVAS_BASE_URL);
+    if (completion.origin !== new URL(CANVAS_BASE_URL).origin) throw new Error("Canvas returned an unsafe completion address.");
+    const finalized = await fetch(completion, { method: "POST", headers: { Authorization: `Bearer ${token.trim()}`, Accept: "application/json" } });
+    if (!finalized.ok) throw new Error(`Canvas could not finish the ${file.name} upload.`);
+    return await finalized.json() as CanvasUploadedFile;
+  }
+  if (!uploaded.ok) throw new Error(`Canvas could not upload ${file.name}.`);
+  return await uploaded.json() as CanvasUploadedFile;
+}
+
 async function canvasRequest<T>(path: string, token: string, method: "GET" | "POST", body?: string): Promise<T> {
   const response = await new Promise<{ status: number; body: string }>((resolve, reject) => {
     const request = httpsRequest(

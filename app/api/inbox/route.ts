@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { ensureCanvasConnectionSchema, getDb } from "../../../db";
 import { canvasConnections } from "../../../db/schema";
-import { CANVAS_BASE_URL, canvasGet, canvasPostForm } from "../../../lib/canvas-client";
+import { CANVAS_BASE_URL, canvasGet, canvasPostForm, canvasUploadConversationFile } from "../../../lib/canvas-client";
 import { decryptCanvasToken } from "../../../lib/canvas-vault";
 import { familyUnauthorizedResponse, readFamilySession } from "../../../lib/family-auth";
 import { isAuthorizedAppRequest, unauthorizedAppResponse } from "../../../lib/request-auth";
@@ -19,6 +19,7 @@ type CanvasAttachment = {
   filename?: string;
   url?: string;
   size?: number;
+  "content-type"?: string;
 };
 
 type CanvasMessage = {
@@ -65,6 +66,7 @@ function serializeThread(conversation: CanvasConversation) {
         name: attachment.display_name?.trim() || attachment.filename?.trim() || "Attachment",
         url: safeCanvasUrl(attachment.url),
         size: attachment.size ?? null,
+        contentType: attachment["content-type"] ?? null,
       })),
     }));
 
@@ -75,6 +77,7 @@ function serializeThread(conversation: CanvasConversation) {
     workflowState: conversation.workflow_state ?? "read",
     sourceUrl: `${CANVAS_BASE_URL}/conversations#filter=type=inbox`,
     participants: (conversation.participants ?? []).map(participantData).filter(Boolean),
+    currentUserId: ownParticipant ? String(ownParticipant.id) : null,
     messages,
   };
 }
@@ -198,14 +201,20 @@ export async function POST(request: Request) {
   if (!await readFamilySession(request)) return familyUnauthorizedResponse();
 
   try {
-    const payload = await request.json() as { conversationId?: unknown; body?: unknown };
-    const conversationId = typeof payload.conversationId === "string" ? payload.conversationId : "";
-    const body = typeof payload.body === "string" ? payload.body.trim() : "";
+    const form = await request.formData();
+    const conversationId = typeof form.get("conversationId") === "string" ? String(form.get("conversationId")) : "";
+    const body = typeof form.get("body") === "string" ? String(form.get("body")).trim() : "";
     if (!/^\d{1,20}$/.test(conversationId)) return json({ error: "That Canvas conversation could not be opened." }, { status: 400 });
-    if (!body || body.length > 10_000) return json({ error: "Enter a reply between 1 and 10,000 characters." }, { status: 400 });
-
+    const files = form.getAll("attachments").filter((entry): entry is File => entry instanceof File && entry.size > 0);
+    if ((!body && !files.length) || body.length > 10_000) return json({ error: "Enter a reply or add an attachment." }, { status: 400 });
+    if (files.length > 4) return json({ error: "Attach no more than four files at once." }, { status: 400 });
+    if (files.some((file) => file.size > 15 * 1024 * 1024)) return json({ error: "Each attachment must be 15 MB or smaller." }, { status: 400 });
     const token = await readCanvasToken();
-    await canvasPostForm(`/api/v1/conversations/${conversationId}/add_message`, token, new URLSearchParams({ body }));
+    const uploaded = [];
+    for (const file of files) uploaded.push(await canvasUploadConversationFile(file, token));
+    const messageForm = new URLSearchParams({ body: body || "Attachment" });
+    for (const file of uploaded) messageForm.append("attachment_ids[]", String(file.id));
+    await canvasPostForm(`/api/v1/conversations/${conversationId}/add_message`, token, messageForm);
     const conversation = await canvasGet<CanvasConversation>(
       `/api/v1/conversations/${conversationId}?include[]=participant_avatars`,
       token

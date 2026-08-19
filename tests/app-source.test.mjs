@@ -269,9 +269,12 @@ test("Canvas Inbox loads the ten newest conversations and full message threads",
   assert.match(inboxRoute, /conversation_id/);
   assert.match(inboxRoute, /conversation\.messages/);
   assert.match(inboxRoute, /add_message/);
+  assert.match(inboxRoute, /attachment_ids\[\]/);
+  assert.match(inboxRoute, /canvasUploadConversationFile/);
   assert.match(inboxRoute, /isOwn/);
   assert.match(dashboard, /InboxThreadModal/);
   assert.match(dashboard, /Reply to this conversation/);
+  assert.match(dashboard, /Replying to/);
   assert.match(dashboard, /Canvas Inbox: the 10 most recent conversations/);
   assert.match(dashboard, /: "Read"/);
   assert.match(styles, /menu-popup-bg\.webp/);

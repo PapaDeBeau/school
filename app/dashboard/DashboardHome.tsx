@@ -130,6 +130,7 @@ type InboxAttachment = {
   name: string;
   url: string | null;
   size: number | null;
+  contentType: string | null;
 };
 
 type InboxMessage = {
@@ -149,6 +150,7 @@ type InboxThread = {
   workflowState: string;
   sourceUrl: string;
   participants: InboxPerson[];
+  currentUserId: string | null;
   messages: InboxMessage[];
 };
 
@@ -1048,27 +1050,34 @@ function AdminView({ courses, settings, grades, loading, error, onSave }: {
 function InboxThreadModal({ thread, onClose, onThreadChange }: { thread: InboxThread; onClose: () => void; onThreadChange: (thread: InboxThread) => void }) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const replyRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [reply, setReply] = useState("");
+  const [replyFiles, setReplyFiles] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
   const [replyError, setReplyError] = useState<string | null>(null);
 
   const sendReply = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const bodyText = reply.trim();
-    if (!bodyText || sending) return;
+    if ((!bodyText && !replyFiles.length) || sending) return;
     setSending(true);
     setReplyError(null);
     try {
+      const form = new FormData();
+      form.append("conversationId", thread.id);
+      form.append("body", bodyText);
+      for (const file of replyFiles) form.append("attachments", file, file.name);
       const response = await fetch(appPath("/api/inbox"), {
         method: "POST",
         credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId: thread.id, body: bodyText }),
+        body: form,
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Your reply could not be sent to Canvas.");
       onThreadChange(body.thread);
       setReply("");
+      setReplyFiles([]);
+      if (fileRef.current) fileRef.current.value = "";
       requestAnimationFrame(() => replyRef.current?.focus());
     } catch (caught) {
       setReplyError(caught instanceof Error ? caught.message : "Your reply could not be sent to Canvas.");
@@ -1076,6 +1085,8 @@ function InboxThreadModal({ thread, onClose, onThreadChange }: { thread: InboxTh
       setSending(false);
     }
   };
+
+  const replyingTo = thread.participants.find((person) => person.id !== thread.currentUserId) ?? thread.participants[0] ?? null;
 
   useEffect(() => {
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -1103,6 +1114,10 @@ function InboxThreadModal({ thread, onClose, onThreadChange }: { thread: InboxTh
           <p>{thread.contextName}</p><h2 id="inbox-thread-title">{thread.subject}</h2>
           <small>{thread.messages.length} message{thread.messages.length === 1 ? "" : "s"} · {thread.participants.map((person) => person.name).join(", ")}</small>
         </header>
+        <div className="inbox-replying-to">
+          <InboxAvatar person={replyingTo} label="Canvas" />
+          <div><span>Replying to</span><strong>{replyingTo?.name || "Canvas conversation"}</strong></div>
+        </div>
         <div className="inbox-thread-scroll">
           {thread.messages.map((message) => (
             <article className={`inbox-thread-message${message.isOwn ? " is-own" : ""}`} key={message.id}>
@@ -1110,6 +1125,14 @@ function InboxThreadModal({ thread, onClose, onThreadChange }: { thread: InboxTh
               <div>
                 <header><strong>{message.author?.name || (message.generated ? "Canvas" : "Unknown sender")}</strong><time dateTime={message.createdAt ?? undefined}>{formatInboxDate(message.createdAt)}</time></header>
                 <p>{message.body}</p>
+                {message.attachments.filter((attachment) => attachment.url && attachment.contentType?.startsWith("image/")).length ? (
+                  <div className="inbox-inline-images">
+                    {message.attachments.filter((attachment) => attachment.url && attachment.contentType?.startsWith("image/")).map((attachment) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <a href={attachment.url!} target="_blank" rel="noreferrer" key={`image-${attachment.id}`}><img src={attachment.url!} alt={attachment.name} /></a>
+                    ))}
+                  </div>
+                ) : null}
                 {message.attachments.length ? (
                   <div className="inbox-attachments" aria-label="Attachments">
                     {message.attachments.map((attachment) => attachment.url ? (
@@ -1126,8 +1149,16 @@ function InboxThreadModal({ thread, onClose, onThreadChange }: { thread: InboxTh
             <label htmlFor="canvas-thread-reply">Reply to this conversation</label>
             <div>
               <textarea id="canvas-thread-reply" ref={replyRef} value={reply} onChange={(event) => setReply(event.target.value)} maxLength={10000} placeholder="Type your reply…" disabled={sending} />
-              <button className="inbox-reply-send" type="submit" disabled={!reply.trim() || sending}>{sending ? "Sending…" : "Send"}</button>
+              <div className="inbox-reply-buttons">
+                <button className="inbox-attach-button" type="button" onClick={() => fileRef.current?.click()} disabled={sending}>📎 Attach</button>
+                <button className="inbox-reply-send" type="submit" disabled={(!reply.trim() && !replyFiles.length) || sending}>{sending ? "Sending…" : "Send"}</button>
+              </div>
             </div>
+            <input className="visually-hidden" ref={fileRef} type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv" onChange={(event) => setReplyFiles(Array.from(event.target.files ?? []).slice(0, 4))} />
+            {replyFiles.length ? <div className="inbox-selected-files">{replyFiles.map((file, index) => <div key={`${file.name}-${file.lastModified}`}>
+              {file.type.startsWith("image/") ? <img src={URL.createObjectURL(file)} alt="" /> : <span>📄</span>}
+              <strong>{file.name}</strong><button type="button" aria-label={`Remove ${file.name}`} onClick={() => setReplyFiles((files) => files.filter((_, fileIndex) => fileIndex !== index))}>×</button>
+            </div>)}</div> : null}
             {replyError ? <p className="inbox-reply-error" role="alert">{replyError}</p> : null}
           </form>
           <a href={thread.sourceUrl} target="_blank" rel="noreferrer">
