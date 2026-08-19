@@ -999,13 +999,13 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .inbox-thread-message header strong { color: #1768ca; font-size: 10px; }
 .inbox-thread-message time { color: #70839c; font-size: 8px; white-space: nowrap; }
 .inbox-thread-message p { margin: 8px 0 0; overflow-wrap: anywhere; color: #334967; font-size: 11px; line-height: 1.6; white-space: pre-line; }
-.inbox-thread-message.is-own { width: min(84%, 540px); grid-template-columns: minmax(0, 1fr) 42px; justify-self: end; border-color: rgba(219, 36, 75, .5); background: linear-gradient(135deg, rgba(104, 4, 24, .96), rgba(29, 7, 28, .96)); }
-.inbox-thread-message.is-own .inbox-avatar { grid-column: 2; grid-row: 1; }
-.inbox-thread-message.is-own > div { grid-column: 1; grid-row: 1; }
-.inbox-thread-message.is-own header { flex-direction: row-reverse; }
-.inbox-thread-message.is-own header strong { color: #ff5578; }
-.inbox-thread-message.is-own time { color: #f1b8c5; }
-.inbox-thread-message.is-own p { color: #fff; text-align: right; }
+.inbox-thread-message.is-own { width: min(84%, 540px); grid-template-columns: 42px minmax(0, 1fr); grid-template-rows: auto auto; justify-self: end; gap: 0 11px; padding: 0 13px 13px; overflow: hidden; border-color: rgba(219, 36, 75, .5); background: linear-gradient(135deg, rgba(104, 4, 24, .96), rgba(29, 7, 28, .96)); }
+.inbox-thread-message.is-own .inbox-message-date-bar { grid-column: 1 / -1; grid-row: 1; margin: 0 -13px; padding: 12px 14px; color: #fff; background: linear-gradient(135deg, #d51a40, #8c0927); box-shadow: 0 7px 18px rgba(0, 0, 0, .34), inset 0 -1px 0 rgba(255, 255, 255, .16); font-size: 14px; font-weight: 900; letter-spacing: .015em; line-height: 1.2; text-align: center; }
+.inbox-thread-message.is-own .inbox-avatar { grid-column: 1; grid-row: 2; margin-top: 12px; }
+.inbox-thread-message.is-own > div { grid-column: 2; grid-row: 2; padding-top: 12px; }
+.inbox-thread-message.is-own header { justify-content: flex-start; }
+.inbox-thread-message.is-own header strong { color: #ff7892; font-size: 11px; }
+.inbox-thread-message.is-own p { color: #fff; text-align: left; }
 .inbox-attachments { display: grid; gap: 6px; margin-top: 10px; }
 .inbox-attachments a,
 .inbox-attachments span { display: flex; justify-content: space-between; gap: 10px; padding: 8px 10px; border: 1px solid #bdd8f6; border-radius: 9px; color: #0e68d3; background: #f2f8ff; font-size: 9px; font-weight: 750; text-decoration: none; }
@@ -2162,7 +2162,8 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   .inbox-thread-scroll { padding: 14px 14px; }
   .inbox-thread-message { grid-template-columns: 36px minmax(0, 1fr); gap: 9px; padding: 11px 9px; }
   .inbox-thread-message .inbox-avatar { width: 34px; height: 34px; }
-  .inbox-thread-message.is-own { width: 91%; grid-template-columns: minmax(0, 1fr) 36px; }
+  .inbox-thread-message.is-own { width: 91%; grid-template-columns: 36px minmax(0, 1fr); padding: 0 9px 11px; }
+  .inbox-thread-message.is-own .inbox-message-date-bar { margin-inline: -9px; padding: 11px 9px; font-size: clamp(13px, 4vw, 16px); }
   .inbox-thread-message header { align-items: flex-start; flex-direction: column; gap: 2px; }
   .inbox-thread-actions { padding: 12px 14px 15px; }
   .inbox-reply-form > div { grid-template-columns: 1fr; }

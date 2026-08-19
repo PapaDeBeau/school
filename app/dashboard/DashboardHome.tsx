@@ -1254,9 +1254,10 @@ function InboxThreadModal({ thread, onClose, onThreadChange }: { thread: InboxTh
         <div className="inbox-thread-scroll">
           {thread.messages.map((message) => (
             <article className={`inbox-thread-message${message.isOwn ? " is-own" : ""}`} key={message.id}>
+              {message.isOwn ? <time className="inbox-message-date-bar" dateTime={message.createdAt ?? undefined}>{formatInboxDate(message.createdAt)}</time> : null}
               <InboxAvatar person={message.author} label="Canvas" />
               <div>
-                <header><strong>{message.author?.name || (message.generated ? "Canvas" : "Unknown sender")}</strong><time dateTime={message.createdAt ?? undefined}>{formatInboxDate(message.createdAt)}</time></header>
+                <header><strong>{message.author?.name || (message.generated ? "Canvas" : "Unknown sender")}</strong>{!message.isOwn ? <time dateTime={message.createdAt ?? undefined}>{formatInboxDate(message.createdAt)}</time> : null}</header>
                 <p>{message.body}</p>
                 {message.attachments.filter((attachment) => attachment.url && attachment.contentType?.startsWith("image/")).length ? (
                   <div className="inbox-inline-images">
