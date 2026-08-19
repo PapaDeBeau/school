@@ -1033,7 +1033,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .inbox-thread-actions .inbox-reply-launch,
 .inbox-thread-actions .inbox-thread-close { border-color: #c10d35; color: #fff; background: linear-gradient(135deg, #e11d48, #8d071f); box-shadow: 0 5px 14px rgba(177, 8, 44, .24); }
 .inbox-compose-backdrop { position: fixed; z-index: 1003; inset: 0; display: grid; place-items: center; padding: 16px; background: rgba(0, 5, 18, .78); backdrop-filter: blur(9px); }
-.inbox-compose-modal { position: relative; z-index: 1; width: min(720px, 100%); max-height: calc(100dvh - 32px); display: grid; overflow-y: auto; border: 1px solid #6caef6; border-radius: 22px; background: linear-gradient(155deg, #f8fbff, #eaf3ff); box-shadow: 0 30px 90px rgba(0, 0, 0, .64); }
+.inbox-compose-modal { position: relative; z-index: 1; width: min(720px, 100%); max-height: calc(100dvh - 32px); display: grid; overflow-y: auto; border: 1px solid #6caef6; border-radius: 22px; background-color: #fbfbfa; background-image: linear-gradient(rgba(255, 255, 255, .79), rgba(255, 255, 255, .79)), url("/school/panel-pattern-1.webp"); background-position: center; background-size: cover; box-shadow: 0 30px 90px rgba(0, 0, 0, .64); }
 .inbox-compose-modal > .inbox-thread-x { color: #cf1238; font-size: 32px; }
 .inbox-compose-modal .inbox-replying-to { padding: 20px 66px 16px 22px; }
 .inbox-compose-modal .inbox-replying-to small { color: #657a96; font-size: 9px; }
