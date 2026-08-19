@@ -182,6 +182,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(dashboard, /menu-calendar\.webp/);
   assert.match(dashboard, /menu-notes\.webp/);
   assert.match(dashboard, /menu-chat\.webp/);
+  assert.match(dashboard, /const mobileMenuItems:[\s\S]*?label: "To-Do List"[\s\S]*?label: "Inbox"[\s\S]*?label: "Chat"[\s\S]*?label: "Notes"[\s\S]*?label: "Classes"[\s\S]*?label: "Calendar"[\s\S]*?label: "Inspiration"[\s\S]*?label: "Resources"[\s\S]*?label: "Stats"[\s\S]*?label: "Admin"[\s\S]*?\];/);
   assert.match(dashboard, /menu-inspiration\.webp/);
   assert.match(dashboard, /menu-resources\.webp/);
   assert.match(dashboard, /menu-stats\.webp/);

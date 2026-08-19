@@ -1690,11 +1690,11 @@ type ActiveView = "dashboard" | "inbox" | "classes" | "grades" | "chat" | "admin
 
 const mobileMenuItems: Array<{ label: string; image: string; action?: Exclude<ActiveView, "dashboard"> }> = [
   { label: "To-Do List", image: "/menu-todo.webp" },
-  { label: "Classes", image: "/menu-classes.webp", action: "classes" },
   { label: "Inbox", image: "/menu-inbox.webp", action: "inbox" },
-  { label: "Calendar", image: "/menu-calendar.webp" },
-  { label: "Notes", image: "/menu-notes.webp" },
   { label: "Chat", image: "/menu-chat.webp", action: "chat" },
+  { label: "Notes", image: "/menu-notes.webp" },
+  { label: "Classes", image: "/menu-classes.webp", action: "classes" },
+  { label: "Calendar", image: "/menu-calendar.webp" },
   { label: "Inspiration", image: "/menu-inspiration.webp", action: "inspiration" },
   { label: "Resources", image: "/menu-resources.webp", action: "resources" },
   { label: "Stats", image: "/menu-stats.webp" },
