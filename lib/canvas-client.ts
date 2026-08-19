@@ -83,7 +83,7 @@ async function canvasRequest<T>(path: string, token: string, method: "GET" | "PO
     throw new Error(`Canvas authorization failed for ${path.split("?")[0]}.`);
   }
   if (response.status < 200 || response.status >= 300) {
-    throw new Error(`Canvas returned status ${response.status}.`);
+    throw new Error(`Canvas returned status ${response.status} for ${path.split("?")[0]}.`);
   }
 
   try {

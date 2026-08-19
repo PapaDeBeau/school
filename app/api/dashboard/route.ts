@@ -332,6 +332,27 @@ function classSchedule() {
   ];
 }
 
+function isCanvas406(error: unknown) {
+  return error instanceof Error && error.message.includes("status 406");
+}
+
+async function canvasGetWithFallback<T>(primaryPath: string, fallbackPath: string, token: string) {
+  try {
+    return await canvasGet<T>(primaryPath, token);
+  } catch (error) {
+    if (!isCanvas406(error)) throw error;
+    return canvasGet<T>(fallbackPath, token);
+  }
+}
+
+async function optionalCanvasGet<T>(primaryPath: string, fallbackPath: string, token: string, empty: T) {
+  try {
+    return await canvasGetWithFallback<T>(primaryPath, fallbackPath, token);
+  } catch {
+    return empty;
+  }
+}
+
 export async function GET(request: Request) {
   if (!isAuthorizedAppRequest(request)) return unauthorizedAppResponse();
   const familyUser = await readFamilySession(request);
@@ -354,14 +375,22 @@ export async function GET(request: Request) {
       `&end_date=${dateOffset(14)}&filter=incomplete_items&per_page=100`;
 
     const [courses, plannerItems, unreadConversations] = await Promise.all([
-      canvasGet<CanvasCourse[]>(
+      canvasGetWithFallback<CanvasCourse[]>(
         "/api/v1/courses?enrollment_state=active&include[]=total_scores&include[]=teachers&per_page=100",
+        "/api/v1/courses?enrollment_state=active&per_page=100",
         token
       ),
-      canvasGet<PlannerItem[]>(plannerPath, token),
-      canvasGet<Conversation[]>(
+      optionalCanvasGet<PlannerItem[]>(
+        plannerPath,
+        `/api/v1/planner/items?start_date=${dateOffset(-14)}&end_date=${dateOffset(14)}&per_page=100`,
+        token,
+        []
+      ),
+      optionalCanvasGet<Conversation[]>(
         "/api/v1/conversations?scope=unread&per_page=50",
-        token
+        "/api/v1/conversations?scope=unread",
+        token,
+        []
       ),
     ]);
 

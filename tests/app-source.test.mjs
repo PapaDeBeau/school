@@ -6,11 +6,14 @@ const root = new URL("../", import.meta.url);
 
 test("dashboard contains the priority due-date surfaces", async () => {
   const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
+  const dashboardRoute = await readFile(new URL("app/api/dashboard/route.ts", root), "utf8");
   assert.match(dashboard, /Critical information/);
   assert.match(dashboard, /Due tomorrow/);
   assert.match(dashboard, /This week/);
   assert.match(dashboard, /grades-banner\.webp/);
   assert.doesNotMatch(dashboard, /Courses &amp; grades/);
+  assert.match(dashboardRoute, /canvasGetWithFallback/);
+  assert.match(dashboardRoute, /optionalCanvasGet/);
 });
 
 test("Canvas token routes remain server-only", async () => {
