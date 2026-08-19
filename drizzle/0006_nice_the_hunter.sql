@@ -1,0 +1,1 @@
+ALTER TABLE `family_dashboard_settings` ADD `show_announcements` integer DEFAULT true NOT NULL;

@@ -43,6 +43,13 @@
       "when": 1787123986755,
       "tag": "0005_curved_demogoblin",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1787130542117,
+      "tag": "0006_nice_the_hunter",
+      "breakpoints": true
     }
   ]
 }

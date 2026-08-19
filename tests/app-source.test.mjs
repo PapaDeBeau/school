@@ -147,6 +147,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   const thisWeekArtwork = await stat(new URL("public/this-week-banner.webp", root));
   const menuPopupArtwork = await stat(new URL("public/menu-popup-bg.webp", root));
   const seeInCanvasArtwork = await stat(new URL("public/see-in-canvas.webp", root));
+  const assignmentDetailsPlayArtwork = await stat(new URL("public/assignment-details-play.webp", root));
   const panelPatterns = await Promise.all(Array.from({ length: 5 }, (_, index) => stat(new URL(`public/panel-pattern-${index + 1}.webp`, root))));
 
   assert.match(dashboard, /mobile-dashboard-bar/);
@@ -201,6 +202,11 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(dashboard, /spider-count-badge/);
   assert.match(dashboard, /Due tomorrow/);
   assert.match(dashboard, /Due this week/);
+  assert.match(dashboard, /function hasTeacherInstructions\(item: ActionItem\)/);
+  assert.match(dashboard, /const readableDescription = item\.description\.trim\(\)/);
+  assert.match(dashboard, /plainCanvasText\(readableDescription\) !== plainCanvasText\(DEFAULT_ASSIGNMENT_INSTRUCTIONS\)/);
+  assert.match(dashboard, /assignment-details-play\.webp/);
+  assert.match(styles, /\.assignment-instructions-play \{ width: 42px; height: 42px;/);
   assert.match(dashboard, /shortOrdinalDay\(tomorrow\)/);
   assert.match(dashboard, /tone="today"/);
   assert.match(dashboard, /tone="tomorrow"/);
@@ -227,6 +233,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.ok(menuArtwork.size < 30_000);
   assert.ok(menuPopupArtwork.size < 40_000);
   assert.ok(seeInCanvasArtwork.size < 40_000);
+  assert.ok(assignmentDetailsPlayArtwork.size < 30_000);
   assert.ok(logoutArtwork.size < 30_000);
   assert.ok(dueTodayArtwork.size < 100_000);
   assert.ok(dueTomorrowArtwork.size < 100_000);
@@ -377,7 +384,7 @@ test("family chat is persistent, paginated, link-aware, and sender controlled", 
   assert.match(dashboard, /\[firstMessageId, latestMessageId, loading, messages\.length\]/);
   assert.match(dashboard, /\[activeView, adminLoading, chatLoading, postBoardLoading, postsByBoard\]/);
   assert.doesNotMatch(dashboard, /\[activeView, adminLoading, chatLoading, chatMessages/);
-  assert.match(dashboard, /\[activeView, hasDashboardData\]/);
+  assert.match(dashboard, /\[activeView, dashboardPreferences\.showAnnouncements, dashboardPreferencesLoaded, hasDashboardData\]/);
   assert.match(dashboard, /aria-label="Close school app"/);
   assert.match(dashboard, /mobile-menu-logout-action/);
   assert.match(styles, /\.chat-message\.is-mine/);
@@ -405,15 +412,20 @@ test("Canvas Inbox can start a complete teacher email with required subject and 
   assert.match(inboxRoute, /force_new/);
 });
 
-test("admin stores percentages and controls empty due-card visibility", async () => {
+test("admin stores percentages and controls dashboard section visibility", async () => {
   const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
   const dashboardRoute = await readFile(new URL("app/api/dashboard/route.ts", root), "utf8");
   const styles = await readFile(new URL("app/globals.css", root), "utf8");
   const adminRoute = await readFile(new URL("app/api/admin/route.ts", root), "utf8");
   const schema = await readFile(new URL("db/schema.ts", root), "utf8");
+  const dbIndex = await readFile(new URL("db/index.ts", root), "utf8");
+  const migration = await readFile(new URL("drizzle/0006_nice_the_hunter.sql", root), "utf8");
 
   assert.match(dashboard, /action: "admin"/);
   assert.match(dashboard, /function AdminView/);
+  assert.match(dashboard, /showAnnouncements/);
+  assert.match(dashboard, /title: "Announcements"/);
+  assert.match(dashboard, /dashboardPreferencesLoaded && dashboardPreferences\.showAnnouncements \? <AnnouncementStack/);
   assert.match(dashboard, /showDueTodayWhenEmpty/);
   assert.match(dashboard, /showDueTomorrowWhenEmpty/);
   assert.match(dashboard, /showDueWeekWhenEmpty/);
@@ -452,7 +464,12 @@ test("admin stores percentages and controls empty due-card visibility", async ()
   assert.match(dashboard, /data-grade-rank/);
   assert.match(adminRoute, /isAuthorizedAppRequest/);
   assert.match(adminRoute, /readFamilySession/);
+  assert.match(adminRoute, /show_announcements/);
   assert.match(adminRoute, /ON CONFLICT\(course_key\) DO UPDATE/);
+  assert.match(schema, /showAnnouncements: integer\("show_announcements"/);
   assert.match(schema, /family_dashboard_settings/);
   assert.match(schema, /family_course_grades/);
+  assert.match(dbIndex, /PRAGMA table_info\(family_dashboard_settings\)/);
+  assert.match(dbIndex, /ALTER TABLE family_dashboard_settings ADD COLUMN show_announcements INTEGER NOT NULL DEFAULT 1/);
+  assert.match(migration, /ALTER TABLE `family_dashboard_settings` ADD `show_announcements` integer DEFAULT true NOT NULL/);
 });

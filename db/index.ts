@@ -136,6 +136,7 @@ export async function ensureFamilyAdminSchema() {
     d1.prepare(`
       CREATE TABLE IF NOT EXISTS family_dashboard_settings (
         id INTEGER PRIMARY KEY,
+        show_announcements INTEGER NOT NULL DEFAULT 1,
         show_due_today_when_empty INTEGER NOT NULL DEFAULT 1,
         show_due_tomorrow_when_empty INTEGER NOT NULL DEFAULT 1,
         show_due_week_when_empty INTEGER NOT NULL DEFAULT 1,
@@ -153,5 +154,15 @@ export async function ensureFamilyAdminSchema() {
       )
     `),
   ]);
+  const settingsColumns = await d1.prepare("PRAGMA table_info(family_dashboard_settings)").all<{ name: string }>();
+  const settingsColumnNames = new Set((settingsColumns.results ?? []).map((column) => column.name));
+  if (!settingsColumnNames.has("show_announcements")) {
+    try {
+      await d1.prepare("ALTER TABLE family_dashboard_settings ADD COLUMN show_announcements INTEGER NOT NULL DEFAULT 1").run();
+    } catch (error) {
+      const refreshedColumns = await d1.prepare("PRAGMA table_info(family_dashboard_settings)").all<{ name: string }>();
+      if (!(refreshedColumns.results ?? []).some((column) => column.name === "show_announcements")) throw error;
+    }
+  }
   await d1.prepare("PRAGMA optimize").run();
 }

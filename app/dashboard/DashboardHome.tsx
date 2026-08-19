@@ -31,6 +31,8 @@ type ActionItem = {
   authorAvatarUrl: string | null;
 };
 
+const DEFAULT_ASSIGNMENT_INSTRUCTIONS = "Canvas has not included written instructions for this item. Use the Canvas button below to check for files, worksheets, videos, rubrics, or teacher updates.";
+
 function plainCanvasText(value: string) {
   return value
     .replace(/<[^>]+>/g, " ")
@@ -197,6 +199,11 @@ function sameChatMessage(left: ChatMessage, right: ChatMessage) {
     && sameReaders;
 }
 
+function hasTeacherInstructions(item: ActionItem) {
+  const readableDescription = item.description.trim();
+  return item.kind === "assignment" && Boolean(readableDescription) && plainCanvasText(readableDescription) !== plainCanvasText(DEFAULT_ASSIGNMENT_INSTRUCTIONS);
+}
+
 function mergeChatRefresh(current: ChatMessage[], incoming: ChatMessage[]) {
   if (!incoming.length) return current;
   const refreshed = new Map(incoming.map((message) => [message.id, message] as const));
@@ -217,6 +224,7 @@ function mergeChatRefresh(current: ChatMessage[], incoming: ChatMessage[]) {
 }
 
 type DashboardPreferences = {
+  showAnnouncements: boolean;
   showDueTodayWhenEmpty: boolean;
   showDueTomorrowWhenEmpty: boolean;
   showDueWeekWhenEmpty: boolean;
@@ -521,7 +529,7 @@ function AssignmentModal({ item, loading, loadError, onClose }: { item: ActionIt
             {loadError ? <p className="assignment-description-fallback">{loadError}</p> : null}
             <CanvasRichContent
               html={item.descriptionHtml}
-              fallbackText={item.description || (isAnnouncement ? "Open this announcement in Canvas to read the teacher's full message." : "Canvas has not included written instructions for this item. Use the Canvas button below to check for files, worksheets, videos, rubrics, or teacher updates.")}
+              fallbackText={item.description || (isAnnouncement ? "Open this announcement in Canvas to read the teacher's full message." : DEFAULT_ASSIGNMENT_INSTRUCTIONS)}
             />
           </section>
           {isAnnouncement ? <button type="button" className="announcement-modal-got-it" onClick={requestClose} aria-label="Got it — close announcement">
@@ -1257,23 +1265,24 @@ function AdminView({ courses, settings, grades, loading, error, onSave }: {
     }
   }
 
-  const toggleRows: Array<{ key: keyof DashboardPreferences; title: string; detail: string }> = [
-    { key: "showDueTodayWhenEmpty", title: "Due Today", detail: "Show the Due Today card even when it has zero items." },
-    { key: "showDueTomorrowWhenEmpty", title: "Due Tomorrow", detail: "Show the Due Tomorrow card even when it has zero items." },
-    { key: "showDueWeekWhenEmpty", title: "This Week", detail: "Show the This Week card even when it has zero items." },
+  const toggleRows: Array<{ key: keyof DashboardPreferences; title: string; detail: string; ariaLabel: string }> = [
+    { key: "showAnnouncements", title: "Announcements", detail: "Show the entire Announcements section on the Home page.", ariaLabel: "Announcements: show on Home page" },
+    { key: "showDueTodayWhenEmpty", title: "Due Today", detail: "Show the Due Today card even when it has zero items.", ariaLabel: "Due Today: show when empty" },
+    { key: "showDueTomorrowWhenEmpty", title: "Due Tomorrow", detail: "Show the Due Tomorrow card even when it has zero items.", ariaLabel: "Due Tomorrow: show when empty" },
+    { key: "showDueWeekWhenEmpty", title: "This Week", detail: "Show the This Week card even when it has zero items.", ariaLabel: "This Week: show when empty" },
   ];
 
   return (
-    <section className="portal-feature-view admin-view" aria-label="Admin: grades and empty due-card display">
+    <section className="portal-feature-view admin-view" aria-label="Admin: grades and dashboard display">
       <form className="admin-form" onSubmit={(event) => void save(event)}>
         {loading ? <div className="admin-state" role="status"><i aria-hidden="true" /><p>Loading dashboard settings…</p></div> : null}
         <section className="admin-section">
-          <header><p>Dashboard display</p><h2>Show empty due cards</h2></header>
+          <header><p>Dashboard display</p><h2>Home page sections</h2></header>
           <div className="admin-toggle-list">
             {toggleRows.map((row) => (
               <label className="admin-toggle" key={row.key}>
                 <span><strong>{row.title}</strong><small>{row.detail}</small></span>
-                <input type="checkbox" checked={draftSettings[row.key]} onChange={(event) => setDraftSettings((current) => ({ ...current, [row.key]: event.target.checked }))} aria-label={`${row.title}: show when empty`} />
+                <input type="checkbox" checked={draftSettings[row.key]} onChange={(event) => setDraftSettings((current) => ({ ...current, [row.key]: event.target.checked }))} aria-label={row.ariaLabel} />
                 <i aria-hidden="true" />
               </label>
             ))}
@@ -1615,12 +1624,20 @@ function MobileDueCard({ title, items, empty, onSelectAssignment, featured = fal
       ) : <header><span aria-hidden="true">●</span><h2>{title}</h2><strong>{items.length}</strong></header>}
       {items.length ? (
         <div className="mobile-due-list">
-          {items.map((item) => (
-            <button type="button" key={item.id} onClick={() => onSelectAssignment(item)} aria-label={`View details for ${item.title}`}>
-              <AssignmentTeacher item={item} />
-              <span>{tone === "week" ? <em className="week-item-due"><b>Due:</b> {thisWeekDueLabel(item.dueAt)}</em> : null}<strong>{item.title}</strong><small>{item.authorName || "Teacher"}</small></span><i aria-hidden="true">›</i>
-            </button>
-          ))}
+          {items.map((item) => {
+            const teacherInstructions = hasTeacherInstructions(item);
+            return (
+              <button type="button" key={item.id} onClick={() => onSelectAssignment(item)} aria-label={teacherInstructions ? `View teacher instructions for ${item.title}` : `View details for ${item.title}`}>
+                <AssignmentTeacher item={item} />
+                <span>{tone === "week" ? <em className="week-item-due"><b>Due:</b> {thisWeekDueLabel(item.dueAt)}</em> : null}<strong>{item.title}</strong><small>{item.authorName || "Teacher"}</small></span>
+                {teacherInstructions ? (
+                  // Supplied play artwork marks assignments with readable teacher-written instructions.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img className="assignment-instructions-play" src={appPath("/assignment-details-play.webp")} alt="" aria-hidden="true" />
+                ) : <i aria-hidden="true">›</i>}
+              </button>
+            );
+          })}
         </div>
       ) : featured ? null : <p className="mobile-due-empty">{empty}</p>}
     </section>
@@ -1777,7 +1794,8 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const [chatHasMore, setChatHasMore] = useState(false);
   const [chatNextBefore, setChatNextBefore] = useState<string | null>(null);
   const [chatError, setChatError] = useState<string | null>(null);
-  const [dashboardPreferences, setDashboardPreferences] = useState<DashboardPreferences>({ showDueTodayWhenEmpty: true, showDueTomorrowWhenEmpty: true, showDueWeekWhenEmpty: true });
+  const [dashboardPreferences, setDashboardPreferences] = useState<DashboardPreferences>({ showAnnouncements: true, showDueTodayWhenEmpty: true, showDueTomorrowWhenEmpty: true, showDueWeekWhenEmpty: true });
+  const [dashboardPreferencesLoaded, setDashboardPreferencesLoaded] = useState(false);
   const [gradeOverrides, setGradeOverrides] = useState<GradeOverride[]>([]);
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminError, setAdminError] = useState<string | null>(null);
@@ -2041,6 +2059,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     } catch (caught) {
       setAdminError(caught instanceof Error ? caught.message : "Admin settings could not be loaded.");
     } finally {
+      setDashboardPreferencesLoaded(true);
       setAdminLoading(false);
     }
   }, [onExit]);
@@ -2278,7 +2297,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       gsap.killTweensOf([title, ...cards, underline]);
       gsap.set([title, ...cards, underline], { clearProps: "all" });
     };
-  }, [activeView, hasDashboardData]);
+  }, [activeView, dashboardPreferences.showAnnouncements, dashboardPreferencesLoaded, hasDashboardData]);
 
   useLayoutEffect(() => {
     const showcase = gradesShowcaseRef.current;
@@ -2616,7 +2635,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           {dueToday.length || dashboardPreferences.showDueTodayWhenEmpty ? <div className="today-featured-slot due-featured-slot" aria-label="Assignments due today">
             <MobileDueCard title="Due today" items={dueToday} empty="Nothing is due today." onSelectAssignment={openAssignment} featured tone="today" summary={todaySummary} />
           </div> : null}
-          <AnnouncementStack items={data.announcements ?? []} onSelect={openAssignment} />
+          {dashboardPreferencesLoaded && dashboardPreferences.showAnnouncements ? <AnnouncementStack items={data.announcements ?? []} onSelect={openAssignment} /> : null}
           {dueTomorrow.length || dashboardPreferences.showDueTomorrowWhenEmpty ? <div className="tomorrow-featured-slot due-featured-slot" aria-label="Assignments due tomorrow">
             <MobileDueCard title="Due tomorrow" items={dueTomorrow} empty="Nothing is due tomorrow." onSelectAssignment={openAssignment} featured banner="/due-tomorrow-banner.webp" tone="tomorrow" summary={tomorrowSummary} />
           </div> : null}
@@ -2710,7 +2729,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
               onDelete={deleteChatMessage}
               onSeen={markChatSeen}
             /> : activeView === "admin" ? <AdminView
-              key={`admin-${adminLoading}-${dashboardPreferences.showDueTodayWhenEmpty}-${dashboardPreferences.showDueTomorrowWhenEmpty}-${dashboardPreferences.showDueWeekWhenEmpty}-${gradeOverrides.map((grade) => `${grade.courseKey}:${grade.percentage}`).join("|")}`}
+              key={`admin-${adminLoading}-${dashboardPreferences.showAnnouncements}-${dashboardPreferences.showDueTodayWhenEmpty}-${dashboardPreferences.showDueTomorrowWhenEmpty}-${dashboardPreferences.showDueWeekWhenEmpty}-${gradeOverrides.map((grade) => `${grade.courseKey}:${grade.percentage}`).join("|")}`}
               courses={data.courses}
               settings={dashboardPreferences}
               grades={gradeOverrides}

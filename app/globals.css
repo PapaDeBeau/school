@@ -1135,6 +1135,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .due-featured-slot .week-item-due { margin-bottom: 1px; color: #216fd0; font-size: 9px; font-style: normal; font-weight: 850; letter-spacing: .025em; }
 .due-featured-slot .week-item-due b { color: #e56c13; font-weight: 950; text-transform: uppercase; }
 .due-featured-slot .mobile-due-list i { color: #65748f; font-size: 20px; font-style: normal; }
+.assignment-instructions-play { width: 42px; height: 42px; display: block; object-fit: contain; filter: drop-shadow(0 3px 7px rgba(10, 63, 178, .34)); }
 .assignment-teacher { width: 48px; min-width: 0; display: grid; justify-items: center; gap: 2px; }
 .assignment-teacher-photo { width: 38px; height: 38px; display: grid; place-items: center; overflow: hidden; border: 2px solid #2a82ed; border-radius: 50%; color: #fff; background: linear-gradient(145deg, #1277ee, #071e55); box-shadow: 0 3px 9px rgba(12, 70, 160, .25); }
 .assignment-teacher-photo img { width: 100%; height: 100%; display: block; object-fit: cover; }

@@ -61,6 +61,7 @@ export const familyChatMessageReads = sqliteTable("family_chat_message_reads", {
 
 export const familyDashboardSettings = sqliteTable("family_dashboard_settings", {
   id: integer("id").primaryKey(),
+  showAnnouncements: integer("show_announcements", { mode: "boolean" }).notNull().default(true),
   showDueTodayWhenEmpty: integer("show_due_today_when_empty", { mode: "boolean" }).notNull().default(true),
   showDueTomorrowWhenEmpty: integer("show_due_tomorrow_when_empty", { mode: "boolean" }).notNull().default(true),
   showDueWeekWhenEmpty: integer("show_due_week_when_empty", { mode: "boolean" }).notNull().default(true),
