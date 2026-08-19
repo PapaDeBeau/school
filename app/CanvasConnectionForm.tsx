@@ -130,6 +130,17 @@ export function CanvasConnectionForm() {
           <div><span>Verified</span><strong>{new Date(connection.verifiedAt).toLocaleString()}</strong></div>
         </div>
         <a className="primary-link" href={appPath("/dashboard")}>Open school dashboard</a>
+        <button
+          className="text-button"
+          type="button"
+          onClick={() => {
+            setConnection(null);
+            setStatus("idle");
+            setMessage("Paste the new Canvas token. The current connection stays saved until the replacement is verified.");
+          }}
+        >
+          Replace access token
+        </button>
         <button className="text-button" type="button" onClick={disconnect}>Remove secure connection</button>
       </section>
     );
