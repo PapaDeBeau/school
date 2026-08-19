@@ -310,6 +310,10 @@ test("Canvas Inbox loads the ten newest conversations and full message threads",
   assert.match(dashboard, /: "Read"/);
   assert.match(styles, /menu-popup-bg\.webp/);
   assert.match(styles, /\.inbox-conversation-list \{[^}]*overflow-y: auto/);
+  assert.match(styles, /\.inbox-thread-message\.is-own \{[^}]*width: 100%[^}]*justify-self: stretch/);
+  assert.match(styles, /\.inbox-thread-message\.is-own \.inbox-message-date-bar \{[^}]*justify-self: stretch[^}]*text-align: left/);
+  assert.match(styles, /\.inbox-thread-message\.is-own > div \{[^}]*width: 100%[^}]*min-width: 0/);
+  assert.doesNotMatch(styles, /\.inbox-thread-message\.is-own \{[^}]*width: 91%/);
   assert.match(styles, /\.mobile-menu-backdrop/);
 });
 
