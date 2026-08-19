@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       if (!image.type.startsWith("image/") || image.size > 8_000_000) return Response.json({ error: "Choose an image under 8 MB." }, { status: 400 });
       const id = crypto.randomUUID();
       await getChatAudioBucket().put(`push-images/${id}`, image.stream(), { httpMetadata: { contentType: image.type } });
-      imageUrl = new URL(`../push-image?id=${id}`, request.url).toString();
+      imageUrl = new URL(`./push-image?id=${id}`, request.url).toString();
     }
     const env = getAppEnv();
     if (!env.ONESIGNAL_APP_ID || !env.ONESIGNAL_REST_API_KEY) throw new Error("OneSignal is not configured on the server.");
