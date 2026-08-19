@@ -33,7 +33,8 @@ test("hosted Canvas requests use the protected BeauVizenor relay", async () => {
   assert.match(client, /getAppEnv\(\)\.BEAU_PROXY_ACCESS_KEY\?\.trim\(\)/);
   assert.match(client, /relayKey \? `\$\{CANVAS_RELAY_BASE_URL\}\$\{path\}` : `\$\{CANVAS_BASE_URL\}\$\{path\}`/);
   assert.match(client, /"X-Beau-Relay-Key": destination\.relayKey/);
-  assert.match(client, /Authorization: `Bearer \$\{token\.trim\(\)\}`/);
+  assert.match(client, /"X-Beau-Canvas-Authorization": `Bearer \$\{token\.trim\(\)\}`/);
+  assert.match(client, /: \{ Authorization: `Bearer \$\{token\.trim\(\)\}` \}/);
   assert.match(client, /"User-Agent": CANVAS_USER_AGENT/);
   assert.doesNotMatch(client, /[?&](?:relay_key|access_key)=/i);
 });

@@ -57,10 +57,14 @@ async function canvasRequest<T>(path: string, token: string, method: "GET" | "PO
     response = await fetch(destination.url, {
       method,
       headers: {
-        Authorization: `Bearer ${token.trim()}`,
         Accept: "application/json",
         "User-Agent": CANVAS_USER_AGENT,
-        ...(destination.relayKey ? { "X-Beau-Relay-Key": destination.relayKey } : {}),
+        ...(destination.relayKey
+          ? {
+              "X-Beau-Relay-Key": destination.relayKey,
+              "X-Beau-Canvas-Authorization": `Bearer ${token.trim()}`,
+            }
+          : { Authorization: `Bearer ${token.trim()}` }),
         ...(body ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
       },
       body,
