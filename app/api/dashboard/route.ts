@@ -14,7 +14,13 @@ type CanvasCourse = {
     computed_current_score?: number | null;
     computed_current_grade?: string | null;
   }>;
+  teachers?: Array<{
+    display_name?: string;
+    avatar_image_url?: string | null;
+  }>;
 };
+
+type CourseTeacher = { name: string | null; avatarUrl: string | null };
 
 type PlannerItem = {
   course_id?: number;
@@ -181,7 +187,7 @@ function detailIdForPlannerItem(item: PlannerItem, source: string) {
   return Number.isSafeInteger(plannerId) && plannerId > 0 ? plannerId : null;
 }
 
-function normalizePlannerItem(item: PlannerItem, courseNames: Map<number, string>): ActionItem | null {
+function normalizePlannerItem(item: PlannerItem, courseNames: Map<number, string>, courseTeachers: Map<number, CourseTeacher>): ActionItem | null {
   const itemType = item.plannable_type?.toLocaleLowerCase("en-US") ?? "";
   if (itemType === "announcement") return null;
 
@@ -209,6 +215,7 @@ function normalizePlannerItem(item: PlannerItem, courseNames: Map<number, string
   const descriptionHtml = canvasRichContent(item);
   const canvasItemId = detailIdForPlannerItem(item, source);
   const canvasItemType = itemType || null;
+  const teacher = item.course_id ? courseTeachers.get(item.course_id) : undefined;
 
   return {
     id: `assignment-${item.course_id ?? "canvas"}-${item.plannable?.id ?? title}`,
@@ -232,8 +239,8 @@ function normalizePlannerItem(item: PlannerItem, courseNames: Map<number, string
     gradingType: item.plannable?.grading_type ?? null,
     allowedAttempts: item.plannable?.allowed_attempts ?? null,
     published: item.plannable?.published ?? null,
-    authorName: null,
-    authorAvatarUrl: null,
+    authorName: teacher?.name ?? null,
+    authorAvatarUrl: teacher?.avatarUrl ?? null,
   };
 }
 
@@ -348,7 +355,7 @@ export async function GET(request: Request) {
 
     const [courses, plannerItems, unreadConversations] = await Promise.all([
       canvasGet<CanvasCourse[]>(
-        "/api/v1/courses?enrollment_state=active&include[]=total_scores&per_page=100",
+        "/api/v1/courses?enrollment_state=active&include[]=total_scores&include[]=teachers&per_page=100",
         token
       ),
       canvasGet<PlannerItem[]>(plannerPath, token),
@@ -359,6 +366,13 @@ export async function GET(request: Request) {
     ]);
 
     const courseNames = new Map(courses.map((course) => [course.id, course.name]));
+    const courseTeachers = new Map(courses.map((course) => {
+      const teacher = course.teachers?.[0];
+      return [course.id, {
+        name: teacher?.display_name?.trim() || null,
+        avatarUrl: teacher?.avatar_image_url?.trim() || null,
+      }] as const;
+    }));
     const announcementParams = new URLSearchParams({
       start_date: dateOffset(-14),
       end_date: dateOffset(14),
@@ -370,7 +384,7 @@ export async function GET(request: Request) {
       ? await canvasGet<CanvasAnnouncement[]>(`/api/v1/announcements?${announcementParams.toString()}`, token).catch(() => [])
       : [];
     const assignments = plannerItems
-      .map((item) => normalizePlannerItem(item, courseNames))
+      .map((item) => normalizePlannerItem(item, courseNames, courseTeachers))
       .filter((item): item is ActionItem => Boolean(item));
     const announcements = (canvasAnnouncements.length
       ? canvasAnnouncements.map((item) => normalizeCanvasAnnouncement(item, courseNames))

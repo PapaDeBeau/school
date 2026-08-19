@@ -509,7 +509,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .blue-count { min-width: 31px; height: 22px; display: grid; place-items: center; border-radius: 999px; color: #fff; background: var(--dash-blue); font-size: 10px; font-weight: 800; }
 
 .school-app .action-list { display: grid; }
-.school-app .action-item { min-height: 50px; grid-template-columns: 30px minmax(0, 1fr) auto 13px; gap: 10px; padding: 7px 3px; border-top: 1px solid #edf0f6; }
+.school-app .action-item { min-height: 58px; grid-template-columns: 48px minmax(0, 1fr) auto 13px; gap: 9px; padding: 6px 3px; border-top: 1px solid #edf0f6; }
 .school-app button.action-item { width: 100%; border-right: 0; border-bottom: 0; border-left: 0; background: transparent; font: inherit; text-align: left; cursor: pointer; }
 .school-app .action-item:focus-visible { position: relative; z-index: 1; outline: 3px solid rgba(36, 99, 235, .34); outline-offset: -2px; border-radius: 9px; }
 .school-app .action-icon { width: 27px; height: 27px; border-radius: 7px; color: var(--dash-blue); background: #eef4ff; font-size: 10px; }
@@ -1023,7 +1023,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   50% { color: #ff123a; transform: scale(1.035); }
 }
 .due-featured-slot .mobile-due-list { display: grid; margin: 8px 14px 0; }
-.due-featured-slot .mobile-due-list button { width: 100%; min-height: 49px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 4px 8px 20px; border: 0; border-top: 1px solid rgba(210, 223, 240, .76); color: var(--dash-ink); background: transparent; font: inherit; text-align: left; cursor: pointer; }
+.due-featured-slot .mobile-due-list button { width: 100%; min-height: 62px; display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 6px 4px 6px 7px; border: 0; border-top: 1px solid rgba(210, 223, 240, .76); color: var(--dash-ink); background: transparent; font: inherit; text-align: left; cursor: pointer; }
 .due-featured-slot .mobile-due-list button:focus-visible { outline: 3px solid rgba(36, 99, 235, .34); outline-offset: -2px; border-radius: 8px; }
 .due-featured-slot .mobile-due-list button > span { min-width: 0; display: grid; gap: 3px; }
 .due-featured-slot .mobile-due-list strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
@@ -1031,6 +1031,11 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .due-featured-slot .week-item-due { margin-bottom: 1px; color: #216fd0; font-size: 9px; font-style: normal; font-weight: 850; letter-spacing: .025em; }
 .due-featured-slot .week-item-due b { color: #e56c13; font-weight: 950; text-transform: uppercase; }
 .due-featured-slot .mobile-due-list i { color: #65748f; font-size: 20px; font-style: normal; }
+.assignment-teacher { width: 48px; min-width: 0; display: grid; justify-items: center; gap: 2px; }
+.assignment-teacher-photo { width: 38px; height: 38px; display: grid; place-items: center; overflow: hidden; border: 2px solid #2a82ed; border-radius: 50%; color: #fff; background: linear-gradient(145deg, #1277ee, #071e55); box-shadow: 0 3px 9px rgba(12, 70, 160, .25); }
+.assignment-teacher-photo img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.assignment-teacher-photo strong { font-size: 15px; }
+.assignment-teacher > small { width: 48px; overflow: hidden; color: #245fba !important; font-size: 7px !important; font-weight: 900; line-height: 1; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
 .dashboard-announcements { width: 100%; display: grid; gap: 10px; justify-items: center; padding: 2px 0 10px; background: transparent; }
 .announcements-title-art { width: 34%; min-width: 190px; max-width: 360px; height: auto; display: block; object-fit: contain; filter: drop-shadow(0 6px 12px rgba(0, 50, 170, .32)); }
 .announcement-card-list { width: 100%; display: grid; gap: 9px; }
@@ -1111,7 +1116,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   .critical-strip { grid-template-columns: 42px minmax(0, 1fr) auto; gap: 10px; padding: 13px; }
   .critical-strip strong { font-size: 10px; line-height: 1.35; }
   .dash-panel { padding: 14px 12px 11px; }
-  .school-app .action-item { grid-template-columns: 28px minmax(0, 1fr) 13px; }
+  .school-app .action-item { grid-template-columns: 45px minmax(0, 1fr) 13px; }
   .school-app .action-due { grid-column: 2; grid-row: 2; text-align: left; }
   .school-app .action-arrow { grid-column: 3; grid-row: 1 / 3; }
   .school-app .week-item { grid-template-columns: 28px 7px 82px minmax(0, 1fr); }
@@ -1987,7 +1992,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   .mobile-due-card.is-featured .mobile-due-list { margin: 8px 14px 0; }
   .mobile-due-card.is-featured > .mobile-due-summary { margin: 0; }
   .mobile-due-list { display: grid; margin-top: 9px; }
-  .mobile-due-list button { width: 100%; min-height: 49px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 4px 8px 20px; border: 0; border-top: 1px solid rgba(210, 223, 240, .76); color: var(--dash-ink); background: transparent; font: inherit; text-align: left; cursor: pointer; }
+  .mobile-due-list button { width: 100%; min-height: 62px; display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 6px 4px 6px 7px; border: 0; border-top: 1px solid rgba(210, 223, 240, .76); color: var(--dash-ink); background: transparent; font: inherit; text-align: left; cursor: pointer; }
   .mobile-due-list button:focus-visible { outline: 3px solid rgba(36, 99, 235, .34); outline-offset: -2px; border-radius: 8px; }
   .mobile-due-list button > span { min-width: 0; display: grid; gap: 3px; }
   .mobile-due-list strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }

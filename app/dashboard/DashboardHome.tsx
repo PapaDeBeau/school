@@ -1098,6 +1098,28 @@ function InboxThreadModal({ thread, onClose }: { thread: InboxThread; onClose: (
   );
 }
 
+function assignmentCourseLabel(course: string) {
+  const normalized = course.toLocaleLowerCase("en-US");
+  if (normalized.includes("hsva") || normalized.includes("orientation")) return "HSVA";
+  if (normalized.includes("world history") || normalized.includes("history")) return "History";
+  if (normalized.includes("algebra")) return "Algebra";
+  if (normalized.includes("english")) return "English";
+  if (normalized.includes("biology")) return "Biology";
+  return course.trim().split(/\s+/)[0] || "Canvas";
+}
+
+function AssignmentTeacher({ item }: { item: ActionItem }) {
+  return <span className="assignment-teacher">
+    <span className="assignment-teacher-photo">
+      {item.authorAvatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={item.authorAvatarUrl} alt={item.authorName || "Teacher"} referrerPolicy="no-referrer" />
+      ) : <strong aria-hidden="true">{(item.authorName || item.course || "T").slice(0, 1).toUpperCase()}</strong>}
+    </span>
+    <small>{assignmentCourseLabel(item.course)}</small>
+  </span>;
+}
+
 function ActionList({ items, empty, onSelectAssignment }: { items: ActionItem[]; empty: string; onSelectAssignment: (item: ActionItem) => void }) {
   if (!items.length) {
     return (
@@ -1112,10 +1134,8 @@ function ActionList({ items, empty, onSelectAssignment }: { items: ActionItem[];
     <div className="action-list">
       {items.map((item, index) => {
         const content = <>
-          <span className={`action-icon action-tone-${(index % 4) + 1}`} aria-hidden="true">
-            {item.kind === "message" ? "M" : "A"}
-          </span>
-          <span className="action-copy"><strong>{item.title}</strong><small>{item.course}</small></span>
+          {item.kind === "assignment" ? <AssignmentTeacher item={item} /> : <span className={`action-icon action-tone-${(index % 4) + 1}`} aria-hidden="true">M</span>}
+          <span className="action-copy"><strong>{item.title}</strong>{item.kind === "assignment" ? <small>{item.authorName || "Teacher"}</small> : <small>{item.course}</small>}</span>
           <span className="action-due">{item.kind === "message" ? "Unread" : formatDate(item.dueAt)}</span>
           <span className="action-arrow" aria-hidden="true">›</span>
         </>;
@@ -1203,7 +1223,8 @@ function MobileDueCard({ title, items, empty, onSelectAssignment, featured = fal
         <div className="mobile-due-list">
           {items.map((item) => (
             <button type="button" key={item.id} onClick={() => onSelectAssignment(item)} aria-label={`View details for ${item.title}`}>
-              <span>{tone === "week" ? <em className="week-item-due"><b>Due:</b> {thisWeekDueLabel(item.dueAt)}</em> : null}<strong>{item.title}</strong><small>{item.course}</small></span><i aria-hidden="true">›</i>
+              <AssignmentTeacher item={item} />
+              <span>{tone === "week" ? <em className="week-item-due"><b>Due:</b> {thisWeekDueLabel(item.dueAt)}</em> : null}<strong>{item.title}</strong><small>{item.authorName || "Teacher"}</small></span><i aria-hidden="true">›</i>
             </button>
           ))}
         </div>
