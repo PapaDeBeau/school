@@ -2530,7 +2530,10 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const familyGreeting = familyGreetings[greetingIndex](data.viewer.displayName);
   const gradeCards = data.courses.map((course) => {
     const manualGrade = gradeOverrides.find((entry) => entry.courseKey === String(course.id));
-    return { course, artwork: artworkForCourse(course.name), percentage: manualGrade?.percentage ?? course.score ?? null };
+    const displayCourse = manualGrade
+      ? { ...course, score: manualGrade.percentage, grade: letterGrade(manualGrade.percentage) }
+      : course;
+    return { course: displayCourse, artwork: artworkForCourse(course.name), percentage: displayCourse.score };
   }).sort((a, b) => {
     if (a.percentage === null && b.percentage === null) return a.course.name.localeCompare(b.course.name);
     if (a.percentage === null) return 1;

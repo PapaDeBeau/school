@@ -452,7 +452,9 @@ test("admin stores percentages and controls dashboard section visibility", async
   assert.match(dashboard, /\.to\(motion, \{ rotation: "\+=360"/);
   assert.match(dashboard, /startPersistentMotion\(value, motion\)/);
   assert.match(dashboard, /\}, \[activeView, gradeOverrides, hasDashboardData\]\);/);
-  assert.match(dashboard, /percentage: manualGrade\?\.percentage \?\? course\.score \?\? null/);
+  assert.match(dashboard, /const displayCourse = manualGrade[\s\S]*?score: manualGrade\.percentage, grade: letterGrade\(manualGrade\.percentage\)[\s\S]*?: course/);
+  assert.match(dashboard, /course: displayCourse, artwork: artworkForCourse\(course\.name\), percentage: displayCourse\.score/);
+  assert.match(dashboard, /gradeCards\.map\(\(\{ course, artwork: item, percentage \}\)[\s\S]*?openCourseGradebook\(course\)/);
   assert.doesNotMatch(dashboard, /percentage: course\.score \?\? manualGrade\?\.percentage/);
   assert.match(dashboardRoute, /function detailIdForPlannerItem\(/);
   assert.match(dashboardRoute, /discussion_topics/);
