@@ -1444,13 +1444,14 @@ function AdminView({ courses, settings, grades, loading, error, onSave }: {
           <section className="admin-section admin-push-section">
           <button className="admin-push-close" type="button" onClick={() => setPushComposerOpen(false)} aria-label="Close">×</button>
           <header><p>OneSignal urgent alert</p><h2 id="admin-push-title">Send a school banner</h2><small>Creates the large picture alert on subscribed School devices.</small></header>
-          <label><span>Subject</span><select name="title" required defaultValue=""><option value="" disabled>Choose a subject</option>{editableCourses.map((course) => <option value={course.name} key={`push-${course.id}`}>{course.name}</option>)}<option value="School">School</option><option value="Important">Important</option></select></label>
+          <label><span>Subject</span><input name="title" required maxLength={120} list="push-subject-suggestions" placeholder="Type any subject" /><datalist id="push-subject-suggestions">{editableCourses.map((course) => <option value={course.name} key={`push-${course.id}`} />)}<option value="School" /><option value="Important" /></datalist></label>
           <label><span>Short description</span><textarea name="message" required maxLength={500} rows={4} placeholder="What should the alert say?" /></label>
           <label className="admin-image-picker"><span>Large banner image</span><input name="image" type="file" accept="image/*" /></label>
           <div className="admin-push-grid">
             <label><span>Sound</span><select name="sound" defaultValue="school_bell"><option value="school_bell">School bell</option><option value="greatpower">With great power comes great responsibility</option><option value="school_chime">School chime</option><option value="school_alert">School alert</option><option value="longbell">Long bell</option></select></label>
             <label><span>Button text</span><input name="buttonLabel" maxLength={30} defaultValue="Open School" /></label>
           </div>
+          <label><span>Open URL (optional)</span><input name="destinationUrl" type="url" inputMode="url" placeholder="https://example.com/page" /></label>
           <label><span>Schedule date and time</span><input name="sendAfter" type="datetime-local" /></label>
           {pushMessage ? <p className={`admin-message${/sent|scheduled/i.test(pushMessage) ? " is-success" : " is-error"}`} role="status">{pushMessage}</p> : null}
           <div className="admin-push-actions"><button className="admin-save admin-push-send-now" type="submit" value="send-now" disabled={pushSending}>{pushSending ? "Working…" : "Send now"}</button><button className="admin-save admin-push-schedule" type="submit" value="schedule" disabled={pushSending}>{pushSending ? "Working…" : "Schedule"}</button></div>

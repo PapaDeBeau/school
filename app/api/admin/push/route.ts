@@ -19,8 +19,15 @@ export async function POST(request: Request) {
     const form = await request.formData();
     const title = clean(form.get("title"), 120), message = clean(form.get("message"), 500);
     const buttonLabel = clean(form.get("buttonLabel"), 30) || "Open School";
+    const destinationInput = clean(form.get("destinationUrl"), 2_000);
     const sound = clean(form.get("sound"), 40), sendAfter = clean(form.get("sendAfter"), 80), action = clean(form.get("action"), 20);
     if (!title || !message || !sounds.has(sound)) return Response.json({ error: "Add a subject, message, and valid sound." }, { status: 400 });
+    let destinationUrl = `${new URL(request.url).origin}/school`;
+    if (destinationInput) {
+      const parsed = new URL(destinationInput);
+      if (parsed.protocol !== "https:") return Response.json({ error: "The destination URL must begin with https://" }, { status: 400 });
+      destinationUrl = parsed.toString();
+    }
     let imageUrl: string | undefined;
     const image = form.get("image");
     if (image instanceof File && image.size) {
@@ -34,7 +41,8 @@ export async function POST(request: Request) {
     const payload: Record<string, unknown> = {
       app_id: env.ONESIGNAL_APP_ID, target_channel: "push", included_segments: ["Total Subscriptions"],
       headings: { en: title }, contents: { en: message }, android_channel_id: soundChannels[sound],
-      data: { urgent_overlay: true, overlay_image: imageUrl || "", target_url: `${new URL(request.url).origin}/school`, button_label: buttonLabel },
+      data: { urgent_overlay: true, overlay_image: imageUrl || "", target_url: destinationUrl, button_label: buttonLabel },
+      url: destinationUrl,
       buttons: [{ id: "open_school", text: buttonLabel }],
     };
     if (imageUrl) { payload.big_picture = imageUrl; payload.large_icon = imageUrl; }
