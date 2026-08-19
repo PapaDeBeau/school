@@ -1,0 +1,50 @@
+# Secret-free restore template for the Beau School Canvas relay.
+#
+# Installed location on the VPS:
+# /usr/local/apache/conf/userdata/ssl/2_4/beauvizenor/beauvizenor.com/canvas-relay.conf
+#
+# Replace the placeholder only on the server. Never commit the real relay key.
+
+SSLProxyEngine On
+ProxyRequests Off
+ProxyPass "/school-canvas-relay/" "https://sequoiagrove.instructure.com/" nocanon retry=0 timeout=60
+ProxyPassReverse "/school-canvas-relay/" "https://sequoiagrove.instructure.com/"
+
+SetEnvIf X-Beau-Relay-Key "^REPLACE_WITH_BE_AU_PROXY_ACCESS_KEY$" BEAU_RELAY_OK
+SetEnvIf X-Beau-Canvas-Authorization "^Bearer ([^[:space:],]+)$" BEAU_CANVAS_TOKEN=$1
+
+<LocationMatch "^/school-canvas-relay(?:/|$)">
+    <RequireAll>
+        Require ssl
+        Require method GET POST
+        Require env BEAU_RELAY_OK
+        Require env BEAU_CANVAS_TOKEN
+    </RequireAll>
+
+    ProxyAddHeaders Off
+    RequestHeader unset Authorization
+    RequestHeader set Authorization "Bearer %{BEAU_CANVAS_TOKEN}e" env=BEAU_CANVAS_TOKEN
+    RequestHeader unset X-Beau-Canvas-Authorization
+    RequestHeader unset X-Beau-Relay-Key
+    RequestHeader unset Forwarded
+    RequestHeader unset X-Forwarded-For
+    RequestHeader unset X-Forwarded-Host
+    RequestHeader unset X-Forwarded-Proto
+    RequestHeader unset X-Forwarded-Server
+    RequestHeader unset X-Real-IP
+    RequestHeader unset True-Client-IP
+    RequestHeader unset CF-Connecting-IP
+    RequestHeader unset CF-IPCountry
+    RequestHeader unset CF-Ray
+    RequestHeader unset CF-Visitor
+    RequestHeader unset CF-Worker
+    RequestHeader unset CDN-Loop
+    RequestHeader unset Cookie
+    RequestHeader unset Origin
+    RequestHeader unset Referer
+    RequestHeader unset Accept-Encoding
+    RequestHeader set Accept "application/json"
+    RequestHeader set User-Agent "Beau-School-Dashboard/1.0 (+https://beauvizenor.com/school/)"
+
+    Header always set Cache-Control "no-store, max-age=0"
+</LocationMatch>
