@@ -2292,7 +2292,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
             <img src={appPath("/menu-button.webp")} alt="" aria-hidden="true" />
           </button>
           <strong className="mobile-chalk-date">{ordinalDate(data.generatedAt)}</strong>
-          <button className="mobile-close-button" type="button" onClick={() => void signOut()} aria-label={`Sign out ${data.viewer.displayName}`}>
+          <button className="mobile-close-button" type="button" onClick={closeApp} aria-label="Close school app">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={appPath("/logout-button.webp")} alt="" aria-hidden="true" />
           </button>
