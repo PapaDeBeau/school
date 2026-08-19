@@ -1,4 +1,4 @@
-import { index, integer, primaryKey, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const canvasConnections = sqliteTable("canvas_connections", {
   id: integer("id").primaryKey(),
@@ -48,15 +48,6 @@ export const familyChatMessages = sqliteTable("family_chat_messages", {
   updatedAt: text("updated_at").notNull(),
 }, (table) => [
   index("idx_family_chat_messages_created_at").on(table.createdAt),
-]);
-
-export const familyChatMessageReads = sqliteTable("family_chat_message_reads", {
-  messageId: integer("message_id").notNull().references(() => familyChatMessages.id, { onDelete: "cascade" }),
-  username: text("username").notNull(),
-  displayName: text("display_name").notNull(),
-  seenAt: text("seen_at").notNull(),
-}, (table) => [
-  primaryKey({ columns: [table.messageId, table.username] }),
 ]);
 
 export const familyDashboardSettings = sqliteTable("family_dashboard_settings", {

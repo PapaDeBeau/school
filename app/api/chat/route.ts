@@ -14,12 +14,6 @@ type ChatRecord = {
   updated_at: string;
 };
 
-type SeenRecord = {
-  message_id: number;
-  username: string;
-  display_name: string;
-};
-
 const responseHeaders = {
   "Cache-Control": "no-store, max-age=0",
   "Referrer-Policy": "no-referrer",
@@ -30,7 +24,7 @@ function json(body: unknown, init?: ResponseInit) {
   return Response.json(body, { ...init, headers: { ...responseHeaders, ...init?.headers } });
 }
 
-function publicMessage(record: ChatRecord, seenBy: Array<{ username: string; name: string }> = []) {
+function publicMessage(record: ChatRecord) {
   return {
     id: String(record.id),
     body: record.body,
@@ -40,28 +34,9 @@ function publicMessage(record: ChatRecord, seenBy: Array<{ username: string; nam
       durationMs: record.audio_duration_ms,
     } : null,
     author: { username: record.author_username, name: record.author_name },
-    seenBy,
     createdAt: record.created_at,
     updatedAt: record.updated_at,
   };
-}
-
-async function publicMessages(records: ChatRecord[]) {
-  if (!records.length) return [];
-  const placeholders = records.map(() => "?").join(", ");
-  const seen = await getD1().prepare(`
-    SELECT message_id, username, display_name
-    FROM family_chat_message_reads
-    WHERE message_id IN (${placeholders})
-    ORDER BY seen_at ASC
-  `).bind(...records.map((record) => record.id)).all<SeenRecord>();
-  const byMessage = new Map<number, Array<{ username: string; name: string }>>();
-  for (const receipt of seen.results ?? []) {
-    const readers = byMessage.get(receipt.message_id) ?? [];
-    readers.push({ username: receipt.username, name: receipt.display_name });
-    byMessage.set(receipt.message_id, readers);
-  }
-  return records.map((record) => publicMessage(record, byMessage.get(record.id) ?? []));
 }
 
 async function authorize(request: Request) {
@@ -105,7 +80,7 @@ export async function GET(request: Request) {
       ORDER BY id ASC
       LIMIT 50
     `).bind(after).all<ChatRecord>();
-    return json({ messages: await publicMessages(result.results ?? []), hasMore: false, nextBefore: null });
+    return json({ messages: (result.results ?? []).map(publicMessage), hasMore: false, nextBefore: null });
   }
 
   const query = before
@@ -126,7 +101,7 @@ export async function GET(request: Request) {
   const records = result.results ?? [];
   const hasMore = records.length > 15;
   const page = records.slice(0, 15).reverse();
-  return json({ messages: await publicMessages(page), hasMore, nextBefore: page.length ? String(page[0].id) : null });
+  return json({ messages: page.map(publicMessage), hasMore, nextBefore: page.length ? String(page[0].id) : null });
 }
 
 export async function POST(request: Request) {
@@ -160,40 +135,14 @@ export async function POST(request: Request) {
       INSERT INTO family_chat_messages (body, audio_key, audio_content_type, audio_duration_ms, author_username, author_name, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(body, audioKey, audio?.type ?? null, durationMs, auth.user.username, auth.user.displayName, now, now).run();
-    const messageId = Number(insert.meta.last_row_id);
-    await getD1().prepare(`
-      INSERT OR IGNORE INTO family_chat_message_reads (message_id, username, display_name, seen_at)
-      VALUES (?, ?, ?, ?)
-    `).bind(messageId, auth.user.username, auth.user.displayName, now).run();
     return json({ message: publicMessage({
-      id: messageId, body,
+      id: Number(insert.meta.last_row_id), body,
       audio_key: audioKey, audio_content_type: audio?.type ?? null, audio_duration_ms: durationMs,
       author_username: auth.user.username, author_name: auth.user.displayName,
       created_at: now, updated_at: now,
-    }, [{ username: auth.user.username, name: auth.user.displayName }]) }, { status: 201 });
+    }) }, { status: 201 });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : "The message could not be sent." }, { status: 400 });
-  }
-}
-
-export async function PUT(request: Request) {
-  const auth = await authorize(request);
-  if (auth.response || !auth.user) return auth.response ?? familyUnauthorizedResponse();
-  try {
-    const payload = await request.json() as { ids?: unknown };
-    const ids = Array.isArray(payload.ids)
-      ? [...new Set(payload.ids.map((value) => positiveId(String(value))).filter((value): value is number => value !== null))].slice(0, 100)
-      : [];
-    if (!ids.length) return json({ seen: [] });
-    await ensureFamilyChatSchema();
-    const now = new Date().toISOString();
-    await getD1().batch(ids.map((id) => getD1().prepare(`
-      INSERT OR IGNORE INTO family_chat_message_reads (message_id, username, display_name, seen_at)
-      SELECT id, ?, ?, ? FROM family_chat_messages WHERE id = ?
-    `).bind(auth.user.username, auth.user.displayName, now, id)));
-    return json({ seen: ids.map((id) => ({ messageId: String(id), user: { username: auth.user!.username, name: auth.user!.displayName } })) });
-  } catch (error) {
-    return json({ error: error instanceof Error ? error.message : "Seen status could not be saved." }, { status: 400 });
   }
 }
 
@@ -215,7 +164,7 @@ export async function PATCH(request: Request) {
       SELECT ${chatColumns}
       FROM family_chat_messages WHERE id = ?
     `).bind(id).first<ChatRecord>();
-    return json({ message: updated ? (await publicMessages([updated]))[0] : null });
+    return json({ message: updated ? publicMessage(updated) : null });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : "The message could not be edited." }, { status: 400 });
   }
@@ -233,10 +182,7 @@ export async function DELETE(request: Request) {
     if (!existing) return json({ error: "That chat message no longer exists." }, { status: 404 });
     if (existing.author_username !== auth.user.username) return json({ error: "Only the sender can delete this message." }, { status: 403 });
     if (existing.audio_key) await getChatAudioBucket().delete(existing.audio_key);
-    await getD1().batch([
-      getD1().prepare(`DELETE FROM family_chat_message_reads WHERE message_id = ?`).bind(id),
-      getD1().prepare(`DELETE FROM family_chat_messages WHERE id = ?`).bind(id),
-    ]);
+    await getD1().prepare(`DELETE FROM family_chat_messages WHERE id = ?`).bind(id).run();
     return json({ deleted: String(id) });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : "The message could not be deleted." }, { status: 400 });

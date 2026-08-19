@@ -108,16 +108,6 @@ export async function ensureFamilyChatSchema() {
       CREATE INDEX IF NOT EXISTS idx_family_chat_messages_created_at
       ON family_chat_messages(created_at)
     `),
-    d1.prepare(`
-      CREATE TABLE IF NOT EXISTS family_chat_message_reads (
-        message_id INTEGER NOT NULL,
-        username TEXT NOT NULL,
-        display_name TEXT NOT NULL,
-        seen_at TEXT NOT NULL,
-        PRIMARY KEY (message_id, username),
-        FOREIGN KEY (message_id) REFERENCES family_chat_messages(id) ON DELETE CASCADE
-      )
-    `),
   ]);
   const columns = await d1.prepare("PRAGMA table_info(family_chat_messages)").all<{ name: string }>();
   const names = new Set((columns.results ?? []).map((column) => column.name));
