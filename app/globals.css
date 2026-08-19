@@ -662,8 +662,8 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .assignment-modal-actions a img { width: min(360px, 100%); height: auto; display: block; }
 .assignment-modal-actions button { border: 1px solid #ff5b75; color: #fff; background: linear-gradient(145deg, #d51639, #870b24); box-shadow: 0 8px 20px rgba(172, 9, 40, .3), inset 0 1px 0 rgba(255, 255, 255, .2); }
 .assignment-modal-actions button:active { transform: translateY(1px); }
-.announcement-modal-got-it { width: 100%; min-height: 46px; margin-top: 14px; padding: 0; overflow: hidden; border: 0; border-radius: 11px; background: transparent; cursor: pointer; }
-.announcement-modal-got-it img { width: 100%; height: auto; display: block; }
+.announcement-modal-got-it { width: 100%; min-height: 0; margin-top: 14px; padding: 0; overflow: visible; appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: none; box-shadow: none; cursor: pointer; }
+.announcement-modal-got-it img { width: 100%; height: auto; display: block; background: transparent; box-shadow: none; filter: none; }
 .announcement-modal-got-it:active { transform: translateY(1px); }
 .announcement-modal-got-it:focus-visible { outline: 3px solid rgba(21, 148, 71, .34); outline-offset: 2px; }
 .assignment-modal button:focus-visible,
@@ -1194,8 +1194,8 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .announcement-wave input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 3px solid #fff; border-radius: 50%; background: #12a978; box-shadow: 0 2px 9px rgba(4,48,79,.45); }
 .announcement-wave i:nth-child(3n) { animation-delay: -.35s; }.announcement-wave i:nth-child(4n) { animation-delay: -.6s; }
 .announcement-player:has(.announcement-player-toggle[aria-label^="Play"]) .announcement-wave i { animation-play-state: paused; opacity: .72; }
-.announcement-player-done { width: 100%; margin-top: 18px; padding: 0; overflow: hidden; border: 0; border-radius: 13px; background: transparent; box-shadow: 0 9px 20px rgba(18,139,52,.28); cursor: pointer; }
-.announcement-player-done img { width: 100%; height: auto; display: block; }
+.announcement-player-done { width: 100%; margin-top: 18px; padding: 0; overflow: visible; appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: none; box-shadow: none; cursor: pointer; }
+.announcement-player-done img { width: 100%; height: auto; display: block; background: transparent; box-shadow: none; filter: none; }
 .announcement-player-done { animation: announcement-done-bounce .32s .64s cubic-bezier(.2,1.5,.35,1) both; }
 .announcement-player-done:active { transform: translateY(1px); }
 @keyframes announcement-wave-pulse { from { transform: scaleY(.55); } to { transform: scaleY(1); } }
