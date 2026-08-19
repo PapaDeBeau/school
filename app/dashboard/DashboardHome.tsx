@@ -1836,6 +1836,7 @@ function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect:
             ) : <strong aria-hidden="true">{(playerItem.authorName || "Teacher").slice(0, 1).toUpperCase()}</strong>}
           </div>
           <p className="announcement-player-teacher-name">{playerItem.authorName || "Teacher"}</p>
+          <p className="announcement-player-subject">{playerItem.course}</p>
           <h2 id="announcement-player-title">{playerItem.title}</h2>
           <div className="announcement-player-time" aria-live="off"><strong>{audioTime(elapsed)}</strong><span>/</span><strong>{audioTime(duration)}</strong></div>
           <div className="announcement-player-controls">

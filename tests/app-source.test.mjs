@@ -315,6 +315,8 @@ test("assignments open a detailed accessible modal before leaving for Canvas", a
   assert.match(dashboard, /onImageOpen=\{isAnnouncement \? openExpandedImage : undefined\}/);
   assert.match(styles, /\.announcement-image-stage \{[^}]*touch-action: none/);
   assert.match(styles, /teacher-player-size\) \/ 2 - 28px/);
+  assert.match(dashboard, /announcement-player-subject.*playerItem\.course/);
+  assert.match(styles, /announcement-subject-gradient 4s/);
   assert.match(styles, /panel-pattern-2\.webp/);
   assert.match(dashboard, /see-in-canvas\.webp/);
   assert.match(dashboard, /logout-button\.webp/);
