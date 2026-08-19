@@ -1053,8 +1053,53 @@ function InboxThreadModal({ thread, onClose, onThreadChange }: { thread: InboxTh
   const fileRef = useRef<HTMLInputElement>(null);
   const [reply, setReply] = useState("");
   const [replyFiles, setReplyFiles] = useState<File[]>([]);
+  const [replyOpen, setReplyOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [replyError, setReplyError] = useState<string | null>(null);
+  const [recorderOpen, setRecorderOpen] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recordedAudio, setRecordedAudio] = useState<Blob | null>(null);
+  const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
+  const [recordedDuration, setRecordedDuration] = useState(0);
+  const [recordingError, setRecordingError] = useState("");
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recordingStartedRef = useRef(0);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  function clearRecording() {
+    if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+    setRecordedAudio(null); setRecordedUrl(null); setRecordedDuration(0); setRecordingError("");
+  }
+
+  async function startRecording() {
+    clearRecording();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+        setRecordedAudio(blob); setRecordedUrl(URL.createObjectURL(blob)); setRecordedDuration(Date.now() - recordingStartedRef.current);
+        stream.getTracks().forEach((track) => track.stop());
+      };
+      recorderRef.current = recorder; recordingStartedRef.current = Date.now();
+      setRecording(true); setRecordedDuration(0); recorder.start();
+      recordingTimerRef.current = setInterval(() => setRecordedDuration(Date.now() - recordingStartedRef.current), 250);
+    } catch { setRecordingError("Microphone access is needed to record an audio attachment."); }
+  }
+
+  function stopRecording() {
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    recordingTimerRef.current = null; setRecording(false); recorderRef.current?.stop();
+  }
+
+  function attachRecording() {
+    if (!recordedAudio) return;
+    const extension = recordedAudio.type.includes("mp4") ? "m4a" : recordedAudio.type.includes("ogg") ? "ogg" : "webm";
+    setReplyFiles((files) => [...files.filter((file) => !file.name.startsWith("audio-message-")), new File([recordedAudio], `audio-message-${Date.now()}.${extension}`, { type: recordedAudio.type })].slice(0, 4));
+    setRecorderOpen(false);
+  }
 
   const sendReply = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1077,6 +1122,7 @@ function InboxThreadModal({ thread, onClose, onThreadChange }: { thread: InboxTh
       onThreadChange(body.thread);
       setReply("");
       setReplyFiles([]);
+      setReplyOpen(false);
       if (fileRef.current) fileRef.current.value = "";
       requestAnimationFrame(() => replyRef.current?.focus());
     } catch (caught) {
@@ -1099,8 +1145,11 @@ function InboxThreadModal({ thread, onClose, onThreadChange }: { thread: InboxTh
       window.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = previousOverflow;
       previousFocus?.focus();
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      recorderRef.current?.stream.getTracks().forEach((track) => track.stop());
+      if (recordedUrl) URL.revokeObjectURL(recordedUrl);
     };
-  }, [onClose]);
+  }, [onClose, recordedUrl]);
 
   return (
     <div className="inbox-thread-backdrop">
@@ -1114,10 +1163,6 @@ function InboxThreadModal({ thread, onClose, onThreadChange }: { thread: InboxTh
           <p>{thread.contextName}</p><h2 id="inbox-thread-title">{thread.subject}</h2>
           <small>{thread.messages.length} message{thread.messages.length === 1 ? "" : "s"} · {thread.participants.map((person) => person.name).join(", ")}</small>
         </header>
-        <div className="inbox-replying-to">
-          <InboxAvatar person={replyingTo} label="Canvas" />
-          <div><span>Replying to</span><strong>{replyingTo?.name || "Canvas conversation"}</strong></div>
-        </div>
         <div className="inbox-thread-scroll">
           {thread.messages.map((message) => (
             <article className={`inbox-thread-message${message.isOwn ? " is-own" : ""}`} key={message.id}>
@@ -1145,29 +1190,48 @@ function InboxThreadModal({ thread, onClose, onThreadChange }: { thread: InboxTh
           ))}
         </div>
         <footer className="inbox-thread-actions">
+          <button className="inbox-reply-launch" type="button" onClick={() => setReplyOpen(true)}>Reply</button>
+          <button className="inbox-thread-close" type="button" onClick={onClose} ref={closeButtonRef}>Close</button>
+        </footer>
+      </section>
+      {replyOpen ? <div className="inbox-compose-backdrop">
+        <button className="modal-backdrop-dismiss" type="button" onClick={() => setReplyOpen(false)} aria-label="Close reply composer" />
+        <section className="inbox-compose-modal" role="dialog" aria-modal="true" aria-labelledby="inbox-compose-title">
+          <button className="inbox-thread-x" type="button" onClick={() => setReplyOpen(false)} aria-label="Close reply composer">×</button>
+          <div className="inbox-replying-to"><InboxAvatar person={replyingTo} label="Canvas" /><div><span>Replying to</span><strong id="inbox-compose-title">{replyingTo?.name || "Canvas conversation"}</strong><small>{thread.subject}</small></div></div>
           <form className="inbox-reply-form" onSubmit={sendReply}>
-            <label htmlFor="canvas-thread-reply">Reply to this conversation</label>
-            <div>
-              <textarea id="canvas-thread-reply" ref={replyRef} value={reply} onChange={(event) => setReply(event.target.value)} maxLength={10000} placeholder="Type your reply…" disabled={sending} />
-              <div className="inbox-reply-buttons">
-                <button className="inbox-attach-button" type="button" onClick={() => fileRef.current?.click()} disabled={sending}>📎 Attach</button>
-                <button className="inbox-reply-send" type="submit" disabled={(!reply.trim() && !replyFiles.length) || sending}>{sending ? "Sending…" : "Send"}</button>
-              </div>
+            <textarea id="canvas-thread-reply" ref={replyRef} value={reply} onChange={(event) => setReply(event.target.value)} maxLength={10000} placeholder="Type your reply…" disabled={sending} autoFocus />
+            <div className="inbox-compose-tools">
+              <label className="inbox-attach-button" htmlFor="canvas-reply-files">📎 Attach files</label>
+              <button className="inbox-record-button" type="button" onClick={() => setRecorderOpen(true)}>▥ Record audio</button>
             </div>
-            <input className="visually-hidden" ref={fileRef} type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv" onChange={(event) => setReplyFiles(Array.from(event.target.files ?? []).slice(0, 4))} />
+            <input className="inbox-file-input" id="canvas-reply-files" ref={fileRef} type="file" multiple accept="image/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv" onChange={(event) => setReplyFiles(Array.from(event.target.files ?? []).slice(0, 4))} />
             {replyFiles.length ? <div className="inbox-selected-files">{replyFiles.map((file, index) => <div key={`${file.name}-${file.lastModified}`}>
-              {file.type.startsWith("image/") ? <img src={URL.createObjectURL(file)} alt="" /> : <span>📄</span>}
+              {file.type.startsWith("image/") ? <img src={URL.createObjectURL(file)} alt="" /> : <span>{file.type.startsWith("audio/") ? "🔊" : "📄"}</span>}
               <strong>{file.name}</strong><button type="button" aria-label={`Remove ${file.name}`} onClick={() => setReplyFiles((files) => files.filter((_, fileIndex) => fileIndex !== index))}>×</button>
             </div>)}</div> : null}
             {replyError ? <p className="inbox-reply-error" role="alert">{replyError}</p> : null}
+            <button className="inbox-reply-send" type="submit" disabled={(!reply.trim() && !replyFiles.length) || sending}>{sending ? "Sending…" : "Send reply"}</button>
           </form>
-          <a href={thread.sourceUrl} target="_blank" rel="noreferrer">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={appPath("/see-in-canvas.webp")} alt="See in Canvas" />
-          </a>
-          <button type="button" onClick={onClose} ref={closeButtonRef}>Close</button>
-        </footer>
-      </section>
+        </section>
+      </div> : null}
+      {recorderOpen ? <div className="chat-recorder-backdrop inbox-audio-recorder">
+        <button className="modal-backdrop-dismiss" type="button" onClick={() => { if (recording) stopRecording(); setRecorderOpen(false); }} aria-label="Close audio recorder" />
+        <section className="chat-recorder" role="dialog" aria-modal="true" aria-labelledby="inbox-recorder-title">
+          <button className="chat-recorder-close" type="button" onClick={() => { if (recording) stopRecording(); setRecorderOpen(false); }} aria-label="Close audio recorder">×</button>
+          <span className={`chat-recorder-icon${recording ? " is-recording" : ""}`} aria-hidden="true">▥</span>
+          <h2 id="inbox-recorder-title">Audio attachment</h2>
+          <p>{recording ? "Recording…" : recordedAudio ? "Listen before attaching it." : "Tap record and speak your reply."}</p>
+          <strong className="chat-recorder-time">{formatAudioTime(recordedDuration)}</strong>
+          {recordedUrl ? <audio className="chat-recorder-preview" src={recordedUrl} controls /> : null}
+          {recordingError ? <div className="chat-error" role="alert">{recordingError}</div> : null}
+          <div className="chat-recorder-actions">
+            {!recording && !recordedAudio ? <button type="button" onClick={() => void startRecording()}>Record</button> : null}
+            {recording ? <button className="is-stop" type="button" onClick={stopRecording}>Stop</button> : null}
+            {recordedAudio ? <><button type="button" onClick={() => void startRecording()}>Record again</button><button className="is-attach" type="button" onClick={attachRecording}>Attach audio</button></> : null}
+          </div>
+        </section>
+      </div> : null}
     </div>
   );
 }
