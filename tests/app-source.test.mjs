@@ -19,9 +19,11 @@ test("dashboard contains the priority due-date surfaces", async () => {
 test("Canvas token routes remain server-only", async () => {
   const form = await readFile(new URL("app/CanvasConnectionForm.tsx", root), "utf8");
   const vault = await readFile(new URL("lib/canvas-vault.ts", root), "utf8");
+  const client = await readFile(new URL("lib/canvas-client.ts", root), "utf8");
   assert.match(form, /type={showToken \? "text" : "password"}/);
   assert.doesNotMatch(form, /localStorage|sessionStorage/);
   assert.match(vault, /AES-GCM/);
+  assert.match(client, /"User-Agent": "Beau-School-Dashboard\/1\.0/);
 });
 
 test("production Canvas APIs require the BeauVizenor proxy secret", async () => {

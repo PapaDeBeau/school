@@ -48,6 +48,7 @@ async function canvasRequest<T>(path: string, token: string, method: "GET" | "PO
       headers: {
         Authorization: `Bearer ${token.trim()}`,
         Accept: "application/json",
+        "User-Agent": "Beau-School-Dashboard/1.0 (+https://beauvizenor.com/school/)",
         ...(body ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
       },
       body,
