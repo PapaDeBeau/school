@@ -2413,6 +2413,8 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .alerts-device-status { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; margin-bottom: 14px; padding: 12px; border-radius: 12px; color: #eaf7ff; background: rgba(0,31,66,.78); }
 .alerts-device-status span { margin-right: auto; font-size: 12px; }
 .alerts-device-status button { padding: 7px 10px; border: 1px solid #6bc2ff; border-radius: 8px; color: #fff; background: transparent; font-weight: 800; }
+.alerts-device-status .large-alert-permission { width: 100%; min-height: 46px; border-color: #ff5268; background: #d91d32; font-size: 15px; }
+.large-alert-enabled { width: 100%; color: #73efad; text-align: center; }
 .alerts-list { display: grid; gap: 12px; }
 .alert-rule-card,.alerts-empty { padding: 16px; border: 1px solid rgba(169,210,255,.7); border-radius: 16px; background: rgba(255,255,255,.94); box-shadow: 0 14px 34px rgba(0,8,28,.2); }
 .alert-rule-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }

@@ -639,6 +639,8 @@ test("alarms are profile-owned, native-synced, and exposed from the menu", async
   assert.match(oneTimeMigration, /ADD `one_time_at` integer/);
   assert.match(dashboard, /<option value="once">One time<\/option>/);
   assert.match(dashboard, /requestNotificationAccess/);
+  assert.match(dashboard, /Allow large pop-up alerts/);
+  assert.match(dashboard, /requestLargeAlertAccess/);
   assert.match(serviceWorker, /beau-school-images-v2/);
   assert.match(serviceWorker, /\/school\/menu-alarms\.webp/);
 });
