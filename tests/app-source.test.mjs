@@ -17,7 +17,9 @@ test("dashboard contains the priority due-date surfaces", async () => {
   assert.match(dashboardRoute, /\/api\/v1\/calendar_events\?/);
   assert.match(dashboardRoute, /\/api\/v1\/users\/self\/upcoming_events/);
   assert.match(dashboardRoute, /plannerCalendarEvents/);
-  assert.match(dashboardRoute, /week: classSchedule\(scheduleEvents, courseNames\)/);
+  assert.match(dashboardRoute, /\/api\/v1\/courses\/\$\{course\.id\}\/modules\?include\[\]=items/);
+  assert.match(dashboardRoute, /classScheduleFromModules/);
+  assert.match(dashboardRoute, /week: \[\.\.\.moduleSchedule, \.\.\.calendarSchedule\]/);
   assert.doesNotMatch(dashboardRoute, /time: "8:45/);
 });
 

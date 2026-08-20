@@ -99,6 +99,13 @@ type CanvasCalendarEvent = {
   type?: string;
 };
 
+type CanvasModule = {
+  items?: Array<{
+    title?: string;
+    content_details?: { locked_for_user?: boolean };
+  }>;
+};
+
 type CanvasAssignmentDetails = {
   id: number;
   description?: string | null;
@@ -394,6 +401,31 @@ function classSchedule(events: CanvasCalendarEvent[], courseNames: Map<number, s
     .map(({ sortTime: _sortTime, ...meeting }) => meeting);
 }
 
+function classScheduleFromModules(courses: CanvasCourse[], modulesByCourse: Map<number, CanvasModule[]>) {
+  const dayOrder = new Map(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day, index) => [day, index]));
+  const meetings: Array<{ day: string; time: string; course: string; note: string; tentative: boolean }> = [];
+  for (const course of courses) {
+    const items = (modulesByCourse.get(course.id) ?? []).flatMap((module) => module.items ?? []);
+    const scheduleItem = items.find((item) => {
+      if (item.content_details?.locked_for_user) return false;
+      const title = item.title?.trim() ?? "";
+      return /(?:zoom|live)\s+class\s+link/i.test(title) && /(?:M\s*\/\s*W|T\s*\/\s*Th)/i.test(title);
+    });
+    const title = scheduleItem?.title?.trim();
+    if (!title) continue;
+    const match = title.match(/\((M\s*\/\s*W|T\s*\/\s*Th)\s+(.+?)\)\s*$/i);
+    if (!match) continue;
+    const days = /^M/i.test(match[1]) ? ["Monday", "Wednesday"] : ["Tuesday", "Thursday"];
+    const time = match[2]
+      .replace(/\s*-\s*/g, "–")
+      .replace(/\b([ap])\.?m\.?/gi, (_value, meridiem: string) => `${meridiem.toUpperCase()}M`)
+      .replace(/\s+/g, " ")
+      .trim();
+    days.forEach((day) => meetings.push({ day, time, course: course.name, note: "Canvas Zoom class", tentative: false }));
+  }
+  return meetings.sort((left, right) => (dayOrder.get(left.day) ?? 7) - (dayOrder.get(right.day) ?? 7));
+}
+
 function isCanvas406(error: unknown) {
   return error instanceof Error && error.message.includes("status 406");
 }
@@ -575,6 +607,14 @@ export async function GET(request: Request) {
       ...upcomingEvents.filter((event) => event.type?.toLocaleLowerCase("en-US") !== "assignment"),
       ...plannerCalendarEvents,
     ];
+    const modulesByCourse = new Map(await Promise.all(courses.map(async (course) => [
+      course.id,
+      await canvasGet<CanvasModule[]>(`/api/v1/courses/${course.id}/modules?include[]=items&include[]=content_details&per_page=100`, token).catch(() => []),
+    ] as const)));
+    const moduleSchedule = classScheduleFromModules(courses, modulesByCourse);
+    const moduleScheduledCourses = new Set(moduleSchedule.map((meeting) => meeting.course));
+    const calendarSchedule = classSchedule(scheduleEvents, courseNames)
+      .filter((meeting) => !moduleScheduledCourses.has(meeting.course));
     const announcementParams = new URLSearchParams({
       start_date: dateOffset(-14),
       end_date: dateOffset(14),
@@ -664,7 +704,7 @@ export async function GET(request: Request) {
       announcements,
       critical: criticalWithAudio,
       upcoming: upcomingWithAudio,
-      week: classSchedule(scheduleEvents, courseNames),
+      week: [...moduleSchedule, ...calendarSchedule],
       courses: courses.map((course) => ({
         id: course.id,
         name: course.name,
