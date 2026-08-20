@@ -86,6 +86,16 @@ type CanvasAnnouncement = {
   } | null;
 };
 
+type CanvasCalendarEvent = {
+  id: number;
+  title?: string;
+  start_at?: string | null;
+  end_at?: string | null;
+  all_day?: boolean;
+  all_day_date?: string | null;
+  context_code?: string | null;
+};
+
 type CanvasAssignmentDetails = {
   id: number;
   description?: string | null;
@@ -347,17 +357,38 @@ function normalizeCanvasAnnouncement(item: CanvasAnnouncement, courseNames: Map<
   };
 }
 
-function classSchedule() {
-  return [
-    { day: "Monday", time: "8:45–9:45 AM", course: "World History A", note: "Live class", tentative: false },
-    { day: "Monday", time: "10:00–11:00 AM", course: "Biology A - Baier", note: "Live class", tentative: false },
-    { day: "Monday", time: "2:00–3:00 PM", course: "English 10 A", note: "Live class", tentative: false },
-    { day: "Tuesday", time: "12:45 PM", course: "Algebra I A - Hathaway", note: "End time not listed", tentative: true },
-    { day: "Wednesday", time: "8:45–9:45 AM", course: "World History A", note: "Live class", tentative: false },
-    { day: "Wednesday", time: "10:00–11:00 AM", course: "Biology A - Baier", note: "Live class", tentative: false },
-    { day: "Wednesday", time: "2:00–3:00 PM", course: "English 10 A", note: "Live class", tentative: false },
-    { day: "Thursday", time: "12:45 PM", course: "Algebra I A - Hathaway", note: "End time not listed", tentative: true },
-  ];
+function classSchedule(events: CanvasCalendarEvent[], courseNames: Map<number, string>) {
+  const dayFormatter = new Intl.DateTimeFormat("en-US", { timeZone: PACIFIC_TIME_ZONE, weekday: "long" });
+  const timeFormatter = new Intl.DateTimeFormat("en-US", { timeZone: PACIFIC_TIME_ZONE, hour: "numeric", minute: "2-digit" });
+  const dayOrder = new Map(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day, index) => [day, index]));
+  const meetings = events.flatMap((event) => {
+    const courseId = Number(event.context_code?.match(/^course_(\d+)$/)?.[1] ?? 0);
+    const course = courseNames.get(courseId);
+    const startValue = event.start_at ?? event.all_day_date;
+    if (!course || !startValue) return [];
+    const start = new Date(startValue);
+    if (!Number.isFinite(start.getTime())) return [];
+    const end = event.end_at ? new Date(event.end_at) : null;
+    const hasEnd = Boolean(end && Number.isFinite(end.getTime()) && end.getTime() > start.getTime());
+    const time = event.all_day
+      ? "All day"
+      : hasEnd
+        ? `${timeFormatter.format(start)}–${timeFormatter.format(end!)}`
+        : timeFormatter.format(start);
+    return [{
+      day: dayFormatter.format(start),
+      time,
+      course,
+      note: event.title?.trim() || "Canvas calendar event",
+      tentative: !event.all_day && !hasEnd,
+      sortTime: start.getTime(),
+    }];
+  });
+  const unique = new Map<string, (typeof meetings)[number]>();
+  meetings.forEach((meeting) => unique.set(`${meeting.day}|${meeting.time}|${meeting.course}`, meeting));
+  return [...unique.values()]
+    .sort((left, right) => (dayOrder.get(left.day) ?? 7) - (dayOrder.get(right.day) ?? 7) || left.sortTime - right.sortTime)
+    .map(({ sortTime: _sortTime, ...meeting }) => meeting);
 }
 
 function isCanvas406(error: unknown) {
@@ -506,6 +537,16 @@ export async function GET(request: Request) {
         avatarUrl: teacher?.avatar_image_url?.trim() || null,
       }] as const;
     }));
+    const calendarParams = new URLSearchParams({
+      type: "event",
+      start_date: dateOffset(-7),
+      end_date: dateOffset(14),
+      per_page: "100",
+    });
+    courses.forEach((course) => calendarParams.append("context_codes[]", `course_${course.id}`));
+    const calendarEvents = courses.length
+      ? await canvasGet<CanvasCalendarEvent[]>(`/api/v1/calendar_events?${calendarParams.toString()}`, token).catch(() => [])
+      : [];
     const announcementParams = new URLSearchParams({
       start_date: dateOffset(-14),
       end_date: dateOffset(14),
@@ -595,7 +636,7 @@ export async function GET(request: Request) {
       announcements,
       critical: criticalWithAudio,
       upcoming: upcomingWithAudio,
-      week: classSchedule(),
+      week: classSchedule(calendarEvents, courseNames),
       courses: courses.map((course) => ({
         id: course.id,
         name: course.name,

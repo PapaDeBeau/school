@@ -14,6 +14,9 @@ test("dashboard contains the priority due-date surfaces", async () => {
   assert.doesNotMatch(dashboard, /Courses &amp; grades/);
   assert.match(dashboardRoute, /canvasGetWithFallback/);
   assert.match(dashboardRoute, /optionalCanvasGet/);
+  assert.match(dashboardRoute, /\/api\/v1\/calendar_events\?/);
+  assert.match(dashboardRoute, /week: classSchedule\(calendarEvents, courseNames\)/);
+  assert.doesNotMatch(dashboardRoute, /time: "8:45/);
 });
 
 test("Canvas token routes remain server-only", async () => {
