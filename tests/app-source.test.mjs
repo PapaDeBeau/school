@@ -15,7 +15,9 @@ test("dashboard contains the priority due-date surfaces", async () => {
   assert.match(dashboardRoute, /canvasGetWithFallback/);
   assert.match(dashboardRoute, /optionalCanvasGet/);
   assert.match(dashboardRoute, /\/api\/v1\/calendar_events\?/);
-  assert.match(dashboardRoute, /week: classSchedule\(calendarEvents, courseNames\)/);
+  assert.match(dashboardRoute, /\/api\/v1\/users\/self\/upcoming_events/);
+  assert.match(dashboardRoute, /plannerCalendarEvents/);
+  assert.match(dashboardRoute, /week: classSchedule\(scheduleEvents, courseNames\)/);
   assert.doesNotMatch(dashboardRoute, /time: "8:45/);
 });
 

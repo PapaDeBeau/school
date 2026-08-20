@@ -51,6 +51,8 @@ type PlannerItem = {
     grading_type?: string | null;
     allowed_attempts?: number | null;
     published?: boolean;
+    start_at?: string | null;
+    end_at?: string | null;
   };
   submissions?: {
     submitted?: boolean;
@@ -94,6 +96,7 @@ type CanvasCalendarEvent = {
   all_day?: boolean;
   all_day_date?: string | null;
   context_code?: string | null;
+  type?: string;
 };
 
 type CanvasAssignmentDetails = {
@@ -544,9 +547,34 @@ export async function GET(request: Request) {
       per_page: "100",
     });
     courses.forEach((course) => calendarParams.append("context_codes[]", `course_${course.id}`));
-    const calendarEvents = courses.length
-      ? await canvasGet<CanvasCalendarEvent[]>(`/api/v1/calendar_events?${calendarParams.toString()}`, token).catch(() => [])
-      : [];
+    const unfilteredCalendarParams = new URLSearchParams({
+      type: "event",
+      start_date: dateOffset(-7),
+      end_date: dateOffset(14),
+      per_page: "100",
+    });
+    const [calendarEvents, upcomingEvents] = courses.length
+      ? await Promise.all([
+          canvasGet<CanvasCalendarEvent[]>(`/api/v1/calendar_events?${calendarParams.toString()}`, token)
+            .catch(() => canvasGet<CanvasCalendarEvent[]>(`/api/v1/calendar_events?${unfilteredCalendarParams.toString()}`, token))
+            .catch(() => []),
+          canvasGet<CanvasCalendarEvent[]>("/api/v1/users/self/upcoming_events?per_page=100", token).catch(() => []),
+        ])
+      : [[], []];
+    const plannerCalendarEvents: CanvasCalendarEvent[] = plannerItems
+      .filter((item) => ["calendar_event", "event"].includes(item.plannable_type?.toLocaleLowerCase("en-US") ?? ""))
+      .map((item) => ({
+        id: Number(item.plannable_id ?? item.plannable?.id ?? 0),
+        title: item.plannable?.title,
+        start_at: item.plannable?.start_at ?? item.plannable_date ?? null,
+        end_at: item.plannable?.end_at ?? null,
+        context_code: item.course_id ? `course_${item.course_id}` : null,
+      }));
+    const scheduleEvents = [
+      ...calendarEvents,
+      ...upcomingEvents.filter((event) => event.type?.toLocaleLowerCase("en-US") !== "assignment"),
+      ...plannerCalendarEvents,
+    ];
     const announcementParams = new URLSearchParams({
       start_date: dateOffset(-14),
       end_date: dateOffset(14),
@@ -636,7 +664,7 @@ export async function GET(request: Request) {
       announcements,
       critical: criticalWithAudio,
       upcoming: upcomingWithAudio,
-      week: classSchedule(calendarEvents, courseNames),
+      week: classSchedule(scheduleEvents, courseNames),
       courses: courses.map((course) => ({
         id: course.id,
         name: course.name,
