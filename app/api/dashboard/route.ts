@@ -9,6 +9,7 @@ import { isAuthorizedAppRequest, unauthorizedAppResponse } from "../../../lib/re
 type CanvasCourse = {
   id: number;
   name: string;
+  original_name?: string;
   course_code?: string;
   enrollments?: Array<{
     computed_current_score?: number | null;
@@ -407,10 +408,14 @@ function classScheduleFromModules(courses: CanvasCourse[], modulesByCourse: Map<
   const meetings: Array<{ day: string; time: string; course: string; note: string; tentative: boolean }> = [];
   for (const course of courses) {
     const modules = modulesByCourse.get(course.id) ?? [];
-    const scheduleItems = modules.flatMap((module) => [
+    const scheduleItems = [
+      ...(course.original_name ? [{ title: course.original_name }] : []),
+      ...(course.course_code ? [{ title: course.course_code }] : []),
+      ...modules.flatMap((module) => [
       ...(module.name ? [{ title: module.name }] : []),
       ...(module.items ?? []).filter((item) => !item.content_details?.locked_for_user),
-    ]).flatMap((item) => {
+      ]),
+    ].flatMap((item) => {
       const title = item.title?.replace(/\s+/g, " ").trim() ?? "";
       const match = title.match(/\b(M\s*\/\s*W|T\s*\/\s*Th)\b[^\d]*(\d{1,2}(?::\d{2})?\s*(?:[ap](?:\.?m\.?)?)?(?:\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:[ap](?:\.?m\.?)?)?)?)/i);
       return match ? [{ title, daysText: match[1], timeText: match[2] }] : [];
