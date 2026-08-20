@@ -1555,7 +1555,7 @@ function AdminView({ courses, settings, grades, loading, error, onSave }: {
             <label><span>Sound</span><select name="sound" defaultValue="school_bell"><option value="school_bell">School bell</option><option value="greatpower">With great power comes great responsibility</option><option value="school_chime">School chime</option><option value="school_alert">School alert</option><option value="longbell">Long bell</option></select></label>
             <label><span>Button text</span><input name="buttonLabel" maxLength={30} defaultValue="Open School" /></label>
           </div>
-          <label><span>Open URL (optional)</span><input name="destinationUrl" type="url" inputMode="url" placeholder="https://example.com/page" /></label>
+          <p className="admin-push-fixed-destination">Every alert opens Beau&apos;s School app.</p>
           <label><span>Schedule date and time</span><input name="sendAfter" type="datetime-local" /></label>
           {pushMessage ? <p className={`admin-message${/sent|scheduled/i.test(pushMessage) ? " is-success" : " is-error"}`} role="status">{pushMessage}</p> : null}
           <div className="admin-push-actions"><button className="admin-save admin-push-send-now" type="submit" value="send-now" disabled={pushSending}>{pushSending ? "Working…" : "Send now"}</button><button className="admin-save admin-push-schedule" type="submit" value="schedule" disabled={pushSending}>{pushSending ? "Working…" : "Schedule"}</button></div>

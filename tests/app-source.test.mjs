@@ -132,6 +132,19 @@ test("production Canvas APIs require the BeauVizenor proxy secret", async () => 
   assert.match(config, /basePath:\s*"\/school"/);
 });
 
+test("OneSignal pushes always open the canonical Beau School app", async () => {
+  const pushRoute = await readFile(new URL("app/api/admin/push/route.ts", root), "utf8");
+  const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
+
+  assert.match(pushRoute, /const SCHOOL_APP_URL = "https:\/\/beauvizenor\.com\/school\/"/);
+  assert.match(pushRoute, /target_url: SCHOOL_APP_URL/);
+  assert.doesNotMatch(pushRoute, /^\s*url:\s/m);
+  assert.match(pushRoute, /new URL\("api\/admin\/push-image", SCHOOL_APP_URL\)/);
+  assert.doesNotMatch(pushRoute, /form\.get\("destinationUrl"\)|destinationInput|new URL\(request\.url\)\.origin/);
+  assert.doesNotMatch(dashboard, /name="destinationUrl"|Open URL \(optional\)/);
+  assert.match(dashboard, /Every alert opens Beau&apos;s School app\./);
+});
+
 test("internal navigation stays under the school base path", async () => {
   const form = await readFile(new URL("app/CanvasConnectionForm.tsx", root), "utf8");
   const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");

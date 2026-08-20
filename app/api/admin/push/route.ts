@@ -10,6 +10,7 @@ const soundChannels: Record<string, string> = {
   greatpower: "c6b29628-9251-4eb1-891c-4d21bab2fbf7",
   longbell: "44238e50-458b-4d3b-94cf-2c8d26d61f44",
 };
+const SCHOOL_APP_URL = "https://beauvizenor.com/school/";
 const clean = (value: FormDataEntryValue | null, max: number) => typeof value === "string" ? value.trim().slice(0, max) : "";
 
 export async function POST(request: Request) {
@@ -19,30 +20,26 @@ export async function POST(request: Request) {
     const form = await request.formData();
     const title = clean(form.get("title"), 120), message = clean(form.get("message"), 500);
     const buttonLabel = clean(form.get("buttonLabel"), 30) || "Open School";
-    const destinationInput = clean(form.get("destinationUrl"), 2_000);
     const sound = clean(form.get("sound"), 40), sendAfter = clean(form.get("sendAfter"), 80), action = clean(form.get("action"), 20);
     if (!title || !message || !sounds.has(sound)) return Response.json({ error: "Add a subject, message, and valid sound." }, { status: 400 });
-    let destinationUrl = `${new URL(request.url).origin}/school`;
-    if (destinationInput) {
-      const parsed = new URL(destinationInput);
-      if (parsed.protocol !== "https:") return Response.json({ error: "The destination URL must begin with https://" }, { status: 400 });
-      destinationUrl = parsed.toString();
-    }
     let imageUrl: string | undefined;
     const image = form.get("image");
     if (image instanceof File && image.size) {
       if (!image.type.startsWith("image/") || image.size > 8_000_000) return Response.json({ error: "Choose an image under 8 MB." }, { status: 400 });
       const id = crypto.randomUUID();
       await getChatAudioBucket().put(`push-images/${id}`, image.stream(), { httpMetadata: { contentType: image.type } });
-      imageUrl = new URL(`./push-image?id=${id}`, request.url).toString();
+      const canonicalImageUrl = new URL("api/admin/push-image", SCHOOL_APP_URL);
+      canonicalImageUrl.searchParams.set("id", id);
+      imageUrl = canonicalImageUrl.toString();
     }
     const env = getAppEnv();
     if (!env.ONESIGNAL_APP_ID || !env.ONESIGNAL_REST_API_KEY) throw new Error("OneSignal is not configured on the server.");
+    // The Android click listener opens this Additional Data URL inside School.
+    // A OneSignal Launch URL would make Android open an external browser instead.
     const payload: Record<string, unknown> = {
       app_id: env.ONESIGNAL_APP_ID, target_channel: "push", included_segments: ["Total Subscriptions"],
       headings: { en: title }, contents: { en: message }, android_channel_id: soundChannels[sound],
-      data: { urgent_overlay: true, overlay_image: imageUrl || "", target_url: destinationUrl, button_label: buttonLabel },
-      url: destinationUrl,
+      data: { urgent_overlay: true, overlay_image: imageUrl || "", target_url: SCHOOL_APP_URL, button_label: buttonLabel },
       buttons: [{ id: "open_school", text: buttonLabel }],
     };
     if (imageUrl) { payload.big_picture = imageUrl; payload.large_icon = imageUrl; }
