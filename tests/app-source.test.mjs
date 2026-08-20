@@ -623,6 +623,7 @@ test("alarms are profile-owned, native-synced, and exposed from the menu", async
   const db = await readFile(new URL("db/index.ts", root), "utf8");
   const migration = await readFile(new URL("drizzle/0008_stormy_toxin.sql", root), "utf8");
   const asset = await stat(new URL("public/menu-alarms.webp", root));
+  const serviceWorker = await readFile(new URL("public/image-cache-sw.js", root), "utf8");
   assert.ok(asset.size < 70_000, `menu-alarms.webp should stay tiny; got ${asset.size} bytes`);
   assert.match(dashboard, /label: "Alarms", image: "\/menu-alarms\.webp", action: "alerts"/);
   assert.match(dashboard, /function AlertsView/);
@@ -633,6 +634,8 @@ test("alarms are profile-owned, native-synced, and exposed from the menu", async
   assert.match(schema, /familyAlertRules = sqliteTable\("family_alert_rules"/);
   assert.match(db, /ensureFamilyAlertSchema/);
   assert.match(migration, /CREATE TABLE `family_alert_rules`/);
+  assert.match(serviceWorker, /beau-school-images-v2/);
+  assert.match(serviceWorker, /\/school\/menu-alarms\.webp/);
 });
 
 test("desktop preview defaults to the centered mobile presentation", async () => {

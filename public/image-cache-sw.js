@@ -1,4 +1,4 @@
-const IMAGE_CACHE = "beau-school-images-v1";
+const IMAGE_CACHE = "beau-school-images-v2";
 const MAX_RUNTIME_IMAGES = 180;
 
 const CORE_IMAGES = [
@@ -15,6 +15,7 @@ const CORE_IMAGES = [
   "/school/menu-classes.webp",
   "/school/menu-inbox.webp",
   "/school/menu-calendar.webp",
+  "/school/menu-alarms.webp",
   "/school/menu-chat.webp",
   "/school/menu-inspiration.webp",
   "/school/menu-resources.webp",
