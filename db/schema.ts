@@ -90,6 +90,8 @@ export const familyAlertRules = sqliteTable("family_alert_rules", {
   id: text("id").notNull(),
   ownerUsername: text("owner_username").notNull(),
   enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  scheduleType: text("schedule_type").notNull().default("recurring"),
+  oneTimeAt: integer("one_time_at", { mode: "number" }),
   weekdayMask: integer("weekday_mask").notNull().default(127),
   hour: integer("hour").notNull(),
   minute: integer("minute").notNull(),

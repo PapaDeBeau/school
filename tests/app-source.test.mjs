@@ -622,6 +622,7 @@ test("alarms are profile-owned, native-synced, and exposed from the menu", async
   const schema = await readFile(new URL("db/schema.ts", root), "utf8");
   const db = await readFile(new URL("db/index.ts", root), "utf8");
   const migration = await readFile(new URL("drizzle/0008_stormy_toxin.sql", root), "utf8");
+  const oneTimeMigration = await readFile(new URL("drizzle/0009_youthful_whizzer.sql", root), "utf8");
   const asset = await stat(new URL("public/menu-alarms.webp", root));
   const serviceWorker = await readFile(new URL("public/image-cache-sw.js", root), "utf8");
   assert.ok(asset.size < 70_000, `menu-alarms.webp should stay tiny; got ${asset.size} bytes`);
@@ -634,6 +635,10 @@ test("alarms are profile-owned, native-synced, and exposed from the menu", async
   assert.match(schema, /familyAlertRules = sqliteTable\("family_alert_rules"/);
   assert.match(db, /ensureFamilyAlertSchema/);
   assert.match(migration, /CREATE TABLE `family_alert_rules`/);
+  assert.match(oneTimeMigration, /ADD `schedule_type` text DEFAULT 'recurring' NOT NULL/);
+  assert.match(oneTimeMigration, /ADD `one_time_at` integer/);
+  assert.match(dashboard, /<option value="once">One time<\/option>/);
+  assert.match(dashboard, /requestNotificationAccess/);
   assert.match(serviceWorker, /beau-school-images-v2/);
   assert.match(serviceWorker, /\/school\/menu-alarms\.webp/);
 });

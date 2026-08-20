@@ -1415,7 +1415,7 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onL
 }
 
 type AlertRule = {
-  id: string; enabled: boolean; weekdayMask: number; hour: number; minute: number;
+  id: string; enabled: boolean; scheduleType: "recurring" | "once"; oneTimeAt: number | null; weekdayMask: number; hour: number; minute: number;
   title: string; message: string; soundKey: string; imageUrl: string | null;
 };
 
@@ -1425,6 +1425,7 @@ type SchoolAndroidBridge = {
   getAlertCapabilities?: () => string;
   requestExactAlarmAccess?: () => void;
   openNotificationSettings?: () => void;
+  requestNotificationAccess?: () => void;
   testAlert?: (ownerUsername: string, ruleId: string) => boolean;
 };
 
@@ -1465,8 +1466,9 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
 
   function addRule() {
     const now = new Date();
+    const oneTime = new Date(now.getTime() + 10 * 60_000);
     setRules((current) => [...current, {
-      id: `alarm_${Date.now().toString(36)}`, enabled: true, weekdayMask: 127,
+      id: `alarm_${Date.now().toString(36)}`, enabled: true, scheduleType: "recurring", oneTimeAt: oneTime.getTime(), weekdayMask: 127,
       hour: now.getHours(), minute: 0, title: "School reminder", message: "Time to check School.",
       soundKey: "chime", imageUrl: alertImages[0].url,
     }]);
@@ -1485,6 +1487,7 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Alarms could not be saved.");
       setRules(body.rules ?? rules); syncNative(body.rules ?? rules);
+      if (bridge?.requestNotificationAccess && capabilities?.notifications === false) bridge.requestNotificationAccess();
       setMessage(bridge?.syncAlerts ? "Saved to this profile and scheduled on this Android device." : "Saved to this profile. Open School in the Android app to schedule it on the device.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Alarms could not be saved."); }
     finally { setSaving(false); }
@@ -1492,14 +1495,17 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
 
   if (loading) return <section className="alerts-view"><p className="alerts-status">Loading alarms…</p></section>;
   return <section className="alerts-view" aria-label="Custom alarms">
-    <header className="alerts-header"><div><p>THIS PROFILE ONLY</p><h1>Alarms</h1><span>Set recurring reminders for {ownerUsername}.</span></div><button type="button" onClick={addRule}>+ Add alarm</button></header>
-    {capabilities?.native ? <div className="alerts-device-status"><strong>Android connected</strong><span>{capabilities.exact ? "Exact timing enabled" : "Timing may be slightly delayed"}</span>{!capabilities.exact ? <button type="button" onClick={() => bridge?.requestExactAlarmAccess?.()}>Allow exact alarms</button> : null}{!capabilities.notifications ? <button type="button" onClick={() => bridge?.openNotificationSettings?.()}>Turn on notifications</button> : null}</div> : null}
+    <header className="alerts-header"><div><p>THIS PROFILE ONLY</p><h1>Alarms</h1><span>Set one-time or recurring reminders for {ownerUsername}.</span></div><button type="button" onClick={addRule}>+ Add alarm</button></header>
+    {capabilities?.native ? <div className="alerts-device-status"><strong>Android connected</strong><span>{capabilities.exact ? "Exact timing enabled" : "Exact alarm permission is required for on-time alerts"}</span>{!capabilities.exact ? <button type="button" onClick={() => bridge?.requestExactAlarmAccess?.()}>Allow exact alarms</button> : null}{!capabilities.notifications ? <button type="button" onClick={() => bridge?.requestNotificationAccess?.()}>Allow notifications</button> : null}</div> : null}
     <div className="alerts-list">
       {rules.length ? rules.map((rule) => <article className="alert-rule-card" key={rule.id}>
         <div className="alert-rule-top"><label className="alert-enabled"><input type="checkbox" checked={rule.enabled} onChange={(event) => updateRule(rule.id, { enabled: event.target.checked })} /><span>{rule.enabled ? "On" : "Off"}</span></label><button className="alert-delete" type="button" onClick={() => setRules((current) => current.filter((item) => item.id !== rule.id))}>Remove</button></div>
         <div className="alert-rule-grid">
-          <label>Time<input type="time" value={`${String(rule.hour).padStart(2, "0")}:${String(rule.minute).padStart(2, "0")}`} onChange={(event) => { const [hour, minute] = event.target.value.split(":").map(Number); updateRule(rule.id, { hour, minute }); }} /></label>
-          <label>Days<select value={rule.weekdayMask} onChange={(event) => updateRule(rule.id, { weekdayMask: Number(event.target.value) })}><option value={127}>Every day</option><option value={62}>Weekdays</option><option value={65}>Weekends</option></select></label>
+          <label>Schedule<select value={rule.scheduleType} onChange={(event) => updateRule(rule.id, { scheduleType: event.target.value as "recurring" | "once" })}><option value="recurring">Recurring</option><option value="once">One time</option></select></label>
+          {rule.scheduleType === "once" ? <label>Date & time<input type="datetime-local" value={rule.oneTimeAt ? new Date(rule.oneTimeAt - new Date(rule.oneTimeAt).getTimezoneOffset() * 60_000).toISOString().slice(0,16) : ""} onChange={(event) => updateRule(rule.id, { oneTimeAt: event.target.value ? new Date(event.target.value).getTime() : null })} /></label> : <>
+            <label>Time<input type="time" value={`${String(rule.hour).padStart(2, "0")}:${String(rule.minute).padStart(2, "0")}`} onChange={(event) => { const [hour, minute] = event.target.value.split(":").map(Number); updateRule(rule.id, { hour, minute }); }} /></label>
+            <label>Days<select value={rule.weekdayMask} onChange={(event) => updateRule(rule.id, { weekdayMask: Number(event.target.value) })}><option value={127}>Every day</option><option value={62}>Weekdays</option><option value={65}>Weekends</option></select></label>
+          </>}
           <label>Sound<select value={rule.soundKey} onChange={(event) => updateRule(rule.id, { soundKey: event.target.value })}><option value="chime">School chime</option><option value="bell">School bell</option><option value="alert">School alert</option><option value="greatpower">With great power</option><option value="longbell">Long bell</option></select></label>
           <label>Image<select value={rule.imageUrl ?? ""} onChange={(event) => updateRule(rule.id, { imageUrl: event.target.value || null })}>{alertImages.map((image) => <option value={image.url} key={image.url}>{image.label}</option>)}</select></label>
           <label className="alert-wide">Title<input maxLength={80} value={rule.title} onChange={(event) => updateRule(rule.id, { title: event.target.value })} /></label>

@@ -190,6 +190,8 @@ export async function ensureFamilyAlertSchema() {
         id TEXT NOT NULL,
         owner_username TEXT NOT NULL,
         enabled INTEGER NOT NULL DEFAULT 1,
+        schedule_type TEXT NOT NULL DEFAULT 'recurring',
+        one_time_at INTEGER,
         weekday_mask INTEGER NOT NULL DEFAULT 127,
         hour INTEGER NOT NULL,
         minute INTEGER NOT NULL,
@@ -207,5 +209,9 @@ export async function ensureFamilyAlertSchema() {
       ON family_alert_rules(owner_username, updated_at)
     `),
   ]);
+  const columns = await d1.prepare("PRAGMA table_info(family_alert_rules)").all<{ name: string }>();
+  const names = new Set((columns.results ?? []).map((column) => column.name));
+  if (!names.has("schedule_type")) await d1.prepare("ALTER TABLE family_alert_rules ADD COLUMN schedule_type TEXT NOT NULL DEFAULT 'recurring'").run();
+  if (!names.has("one_time_at")) await d1.prepare("ALTER TABLE family_alert_rules ADD COLUMN one_time_at INTEGER").run();
   await d1.prepare("PRAGMA optimize").run();
 }
