@@ -406,11 +406,13 @@ function classScheduleFromModules(courses: CanvasCourse[], modulesByCourse: Map<
   const meetings: Array<{ day: string; time: string; course: string; note: string; tentative: boolean }> = [];
   for (const course of courses) {
     const items = (modulesByCourse.get(course.id) ?? []).flatMap((module) => module.items ?? []);
-    const scheduleItem = items.find((item) => {
+    const scheduleItems = items.filter((item) => {
       if (item.content_details?.locked_for_user) return false;
       const title = item.title?.trim() ?? "";
       return /(?:zoom|live)\s+class\s+link/i.test(title) && /(?:M\s*\/\s*W|T\s*\/\s*Th)/i.test(title);
     });
+    const preferredSectionIndex = /world history/i.test(course.name) ? 1 : 0;
+    const scheduleItem = scheduleItems[preferredSectionIndex] ?? scheduleItems[0];
     const title = scheduleItem?.title?.trim();
     if (!title) continue;
     const match = title.match(/\((M\s*\/\s*W|T\s*\/\s*Th)\s+(.+?)\)\s*$/i);
