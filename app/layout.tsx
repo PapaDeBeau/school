@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Schoolbell } from "next/font/google";
+import ImageCacheRegistration from "./ImageCacheRegistration";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -45,12 +46,17 @@ export default function RootLayout({
         <link rel="preload" as="image" href="/school/menu-popup-bg.webp" type="image/webp" />
         <link rel="preload" as="image" href="/school/see-in-canvas.webp" type="image/webp" />
         <link rel="preload" as="image" href="/school/announcement-got-it.webp" type="image/webp" />
+        <link rel="preload" as="image" href="/school/announcements-title.webp" type="image/webp" />
+        <link rel="preload" as="image" href="/school/announcements-underline.webp" type="image/webp" />
+        <link rel="preload" as="image" href="/school/announcement-view.webp" type="image/webp" />
+        <link rel="preload" as="image" href="/school/announcement-listen.webp" type="image/webp" />
         <link rel="preload" as="image" href="/school/assignment-details-play.webp" type="image/webp" />
         <link rel="preload" as="image" href="/school/assignment-details-pause.webp" type="image/webp" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${schoolbell.variable} antialiased`}
       >
+        <ImageCacheRegistration />
         {children}
       </body>
     </html>

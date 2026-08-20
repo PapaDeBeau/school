@@ -1898,7 +1898,7 @@ function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect:
     <section className="dashboard-announcements" aria-labelledby="dashboard-announcements-title">
       <h2 className="visually-hidden" id="dashboard-announcements-title">Announcements</h2>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img className="announcements-title-art" src={appPath("/announcements-title.png")} alt="Announcements" />
+      <img className="announcements-title-art" src={appPath("/announcements-title.webp")} alt="Announcements" />
       <div className="announcement-card-list">
         {items.map((item) => (
           <article className="announcement-card" key={item.id}>
@@ -1915,18 +1915,18 @@ function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect:
             <div className="announcement-card-actions" aria-label={`Actions for ${item.title}`}>
               <button type="button" className="announcement-action-view" onClick={() => onSelect(item)} aria-label={`View ${item.title}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={appPath("/announcement-view.png")} alt="View" />
+                <img src={appPath("/announcement-view.webp")} alt="View" />
               </button>
               {item.audioUrl ? <button type="button" className="announcement-action-listen" aria-label={`Listen to ${item.title}`} onClick={() => openPlayer(item)}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={appPath("/announcement-listen.png")} alt="Listen" />
+                <img src={appPath("/announcement-listen.webp")} alt="Listen" />
               </button> : null}
             </div>
           </article>
         ))}
       </div>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img className="announcements-section-underline" src={appPath("/announcements-underline.png")} alt="" aria-hidden="true" />
+      <img className="announcements-section-underline" src={appPath("/announcements-underline.webp")} alt="" aria-hidden="true" />
       {playerItem ? <div className="announcement-player-layer">
         <button className="announcement-player-backdrop" type="button" onClick={closePlayer} aria-label="Close announcement player" />
         <section className="announcement-player" role="dialog" aria-modal="true" aria-labelledby="announcement-player-title">
