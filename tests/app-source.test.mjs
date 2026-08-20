@@ -329,7 +329,7 @@ test("assignments open a detailed accessible modal before leaving for Canvas", a
   assert.match(styles, /\.canvas-rich-content iframe \{[^}]*aspect-ratio: 16 \/ 9/);
   assert.match(dashboard, /Pinch to zoom · drag to move/);
   assert.match(dashboard, /onPointerMove/);
-  assert.match(dashboard, /onImageOpen=\{isAnnouncement \? openExpandedImage : undefined\}/);
+  assert.match(dashboard, /onImageOpen=\{openExpandedImage\}/);
   assert.match(styles, /\.announcement-image-stage \{[^}]*touch-action: none/);
   assert.match(styles, /teacher-player-size\) \/ 2 - 28px/);
   assert.match(dashboard, /announcement-player-subject.*courseLabel\(playerItem\.course\)/);

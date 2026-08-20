@@ -349,14 +349,14 @@ function normalizeCanvasAnnouncement(item: CanvasAnnouncement, courseNames: Map<
 
 function classSchedule() {
   return [
-    { day: "Monday", time: "8:45–9:45 AM", course: "World History A", note: "Section needs confirmation", tentative: true },
     { day: "Monday", time: "10:00–11:00 AM", course: "Biology A - Baier", note: "Live class", tentative: false },
     { day: "Monday", time: "2:00–3:00 PM", course: "English 10 A", note: "Live class", tentative: false },
     { day: "Tuesday", time: "12:45 PM", course: "Algebra I A - Hathaway", note: "End time not listed", tentative: true },
-    { day: "Wednesday", time: "8:45–9:45 AM", course: "World History A", note: "Section needs confirmation", tentative: true },
+    { day: "Tuesday", time: "8:45 AM", course: "World History A", note: "End time not listed", tentative: true },
     { day: "Wednesday", time: "10:00–11:00 AM", course: "Biology A - Baier", note: "Live class", tentative: false },
     { day: "Wednesday", time: "2:00–3:00 PM", course: "English 10 A", note: "Live class", tentative: false },
     { day: "Thursday", time: "12:45 PM", course: "Algebra I A - Hathaway", note: "End time not listed", tentative: true },
+    { day: "Thursday", time: "8:45 AM", course: "World History A", note: "End time not listed", tentative: true },
   ];
 }
 
