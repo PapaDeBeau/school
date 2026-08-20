@@ -37,6 +37,7 @@ export default function RootLayout({
         <link rel="preload" as="image" href="/school/menu-classes.webp" type="image/webp" />
         <link rel="preload" as="image" href="/school/menu-inbox.webp" type="image/webp" />
         <link rel="preload" as="image" href="/school/menu-calendar.webp" type="image/webp" />
+        <link rel="preload" as="image" href="/school/menu-alarms.webp" type="image/webp" />
         <link rel="preload" as="image" href="/school/menu-notes.webp" type="image/webp" />
         <link rel="preload" as="image" href="/school/menu-chat.webp" type="image/webp" />
         <link rel="preload" as="image" href="/school/menu-inspiration.webp" type="image/webp" />

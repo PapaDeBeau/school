@@ -181,3 +181,31 @@ export async function ensureXaiConnectionSchema() {
     )
   `).run();
 }
+
+export async function ensureFamilyAlertSchema() {
+  const d1 = getD1();
+  await d1.batch([
+    d1.prepare(`
+      CREATE TABLE IF NOT EXISTS family_alert_rules (
+        id TEXT NOT NULL,
+        owner_username TEXT NOT NULL,
+        enabled INTEGER NOT NULL DEFAULT 1,
+        weekday_mask INTEGER NOT NULL DEFAULT 127,
+        hour INTEGER NOT NULL,
+        minute INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        sound_key TEXT NOT NULL DEFAULT 'chime',
+        image_url TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (owner_username, id)
+      )
+    `),
+    d1.prepare(`
+      CREATE INDEX IF NOT EXISTS idx_family_alert_rules_owner_updated
+      ON family_alert_rules(owner_username, updated_at)
+    `),
+  ]);
+  await d1.prepare("PRAGMA optimize").run();
+}

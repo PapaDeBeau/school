@@ -85,3 +85,21 @@ export const familyCourseGrades = sqliteTable("family_course_grades", {
   updatedBy: text("updated_by").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
+
+export const familyAlertRules = sqliteTable("family_alert_rules", {
+  id: text("id").notNull(),
+  ownerUsername: text("owner_username").notNull(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  weekdayMask: integer("weekday_mask").notNull().default(127),
+  hour: integer("hour").notNull(),
+  minute: integer("minute").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  soundKey: text("sound_key").notNull().default("chime"),
+  imageUrl: text("image_url"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.ownerUsername, table.id] }),
+  index("idx_family_alert_rules_owner_updated").on(table.ownerUsername, table.updatedAt),
+]);

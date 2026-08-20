@@ -1414,6 +1414,105 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onL
   );
 }
 
+type AlertRule = {
+  id: string; enabled: boolean; weekdayMask: number; hour: number; minute: number;
+  title: string; message: string; soundKey: string; imageUrl: string | null;
+};
+
+type SchoolAndroidBridge = {
+  close?: () => void;
+  syncAlerts?: (ownerUsername: string, rulesJson: string) => string;
+  getAlertCapabilities?: () => string;
+  requestExactAlarmAccess?: () => void;
+  openNotificationSettings?: () => void;
+  testAlert?: (ownerUsername: string, ruleId: string) => boolean;
+};
+
+const alertImages = [
+  { label: "School", url: "https://beauvizenor.com/school/due-today-banner.webp" },
+  { label: "Tomorrow", url: "https://beauvizenor.com/school/due-tomorrow-banner.webp" },
+  { label: "This week", url: "https://beauvizenor.com/school/this-week-banner.webp" },
+];
+
+function AlertsView({ ownerUsername }: { ownerUsername: string }) {
+  const [rules, setRules] = useState<AlertRule[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [capabilities, setCapabilities] = useState<{ native?: boolean; exact?: boolean; notifications?: boolean } | null>(null);
+  const bridge = typeof window === "undefined" ? undefined : (window as Window & { BeauSchoolApp?: SchoolAndroidBridge }).BeauSchoolApp;
+
+  const syncNative = useCallback((nextRules: AlertRule[]) => {
+    try {
+      bridge?.syncAlerts?.(ownerUsername, JSON.stringify(nextRules));
+      const raw = bridge?.getAlertCapabilities?.();
+      if (raw) setCapabilities(JSON.parse(raw));
+    } catch { setCapabilities(null); }
+  }, [bridge, ownerUsername]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch(appPath("/api/alerts"), { cache: "no-store", credentials: "same-origin" })
+      .then(async (response) => {
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || "Alarms could not be loaded.");
+        if (!cancelled) { setRules(body.rules ?? []); syncNative(body.rules ?? []); }
+      })
+      .catch((error) => { if (!cancelled) setMessage(error instanceof Error ? error.message : "Alarms could not be loaded."); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [syncNative]);
+
+  function addRule() {
+    const now = new Date();
+    setRules((current) => [...current, {
+      id: `alarm_${Date.now().toString(36)}`, enabled: true, weekdayMask: 127,
+      hour: now.getHours(), minute: 0, title: "School reminder", message: "Time to check School.",
+      soundKey: "chime", imageUrl: alertImages[0].url,
+    }]);
+  }
+
+  function updateRule(id: string, patch: Partial<AlertRule>) {
+    setRules((current) => current.map((rule) => rule.id === id ? { ...rule, ...patch } : rule));
+  }
+
+  async function saveRules() {
+    setSaving(true); setMessage("");
+    try {
+      const response = await fetch(appPath("/api/alerts"), {
+        method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rules }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Alarms could not be saved.");
+      setRules(body.rules ?? rules); syncNative(body.rules ?? rules);
+      setMessage(bridge?.syncAlerts ? "Saved to this profile and scheduled on this Android device." : "Saved to this profile. Open School in the Android app to schedule it on the device.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Alarms could not be saved."); }
+    finally { setSaving(false); }
+  }
+
+  if (loading) return <section className="alerts-view"><p className="alerts-status">Loading alarms…</p></section>;
+  return <section className="alerts-view" aria-label="Custom alarms">
+    <header className="alerts-header"><div><p>THIS PROFILE ONLY</p><h1>Alarms</h1><span>Set recurring reminders for {ownerUsername}.</span></div><button type="button" onClick={addRule}>+ Add alarm</button></header>
+    {capabilities?.native ? <div className="alerts-device-status"><strong>Android connected</strong><span>{capabilities.exact ? "Exact timing enabled" : "Timing may be slightly delayed"}</span>{!capabilities.exact ? <button type="button" onClick={() => bridge?.requestExactAlarmAccess?.()}>Allow exact alarms</button> : null}{!capabilities.notifications ? <button type="button" onClick={() => bridge?.openNotificationSettings?.()}>Turn on notifications</button> : null}</div> : null}
+    <div className="alerts-list">
+      {rules.length ? rules.map((rule) => <article className="alert-rule-card" key={rule.id}>
+        <div className="alert-rule-top"><label className="alert-enabled"><input type="checkbox" checked={rule.enabled} onChange={(event) => updateRule(rule.id, { enabled: event.target.checked })} /><span>{rule.enabled ? "On" : "Off"}</span></label><button className="alert-delete" type="button" onClick={() => setRules((current) => current.filter((item) => item.id !== rule.id))}>Remove</button></div>
+        <div className="alert-rule-grid">
+          <label>Time<input type="time" value={`${String(rule.hour).padStart(2, "0")}:${String(rule.minute).padStart(2, "0")}`} onChange={(event) => { const [hour, minute] = event.target.value.split(":").map(Number); updateRule(rule.id, { hour, minute }); }} /></label>
+          <label>Days<select value={rule.weekdayMask} onChange={(event) => updateRule(rule.id, { weekdayMask: Number(event.target.value) })}><option value={127}>Every day</option><option value={62}>Weekdays</option><option value={65}>Weekends</option></select></label>
+          <label>Sound<select value={rule.soundKey} onChange={(event) => updateRule(rule.id, { soundKey: event.target.value })}><option value="chime">School chime</option><option value="bell">School bell</option><option value="alert">School alert</option><option value="greatpower">With great power</option><option value="longbell">Long bell</option></select></label>
+          <label>Image<select value={rule.imageUrl ?? ""} onChange={(event) => updateRule(rule.id, { imageUrl: event.target.value || null })}>{alertImages.map((image) => <option value={image.url} key={image.url}>{image.label}</option>)}</select></label>
+          <label className="alert-wide">Title<input maxLength={80} value={rule.title} onChange={(event) => updateRule(rule.id, { title: event.target.value })} /></label>
+          <label className="alert-wide">Message<textarea maxLength={300} value={rule.message} onChange={(event) => updateRule(rule.id, { message: event.target.value })} /></label>
+        </div>
+        {capabilities?.native ? <button className="alert-test" type="button" onClick={() => bridge?.testAlert?.(ownerUsername, rule.id)}>Test this alarm</button> : null}
+      </article>) : <div className="alerts-empty"><strong>No alarms yet</strong><p>Add one to create a daily or weekday reminder.</p></div>}
+    </div>
+    <button className="alerts-save" type="button" onClick={() => void saveRules()} disabled={saving}>{saving ? "Saving…" : "Save alarms"}</button>
+    {message ? <p className="alerts-message" role="status">{message}</p> : null}
+  </section>;
+}
+
 function letterGrade(percentage: number) {
   if (percentage >= 90) return "A";
   if (percentage >= 80) return "B";
@@ -2119,7 +2218,7 @@ const canvasLinks = [
   { label: "Settings", icon: "⚙", href: appPath("/settings"), local: true },
 ];
 
-type ActiveView = "dashboard" | "inbox" | "classes" | "grades" | "chat" | "admin" | PostBoard;
+type ActiveView = "dashboard" | "inbox" | "classes" | "grades" | "chat" | "alerts" | "admin" | PostBoard;
 
 const mobileMenuItems: Array<{ label: string; image: string; action?: Exclude<ActiveView, "dashboard"> }> = [
   { label: "To-Do List", image: "/menu-todo.webp" },
@@ -2128,6 +2227,7 @@ const mobileMenuItems: Array<{ label: string; image: string; action?: Exclude<Ac
   { label: "Notes", image: "/menu-notes.webp" },
   { label: "Classes", image: "/menu-classes.webp", action: "classes" },
   { label: "Calendar", image: "/menu-calendar.webp" },
+  { label: "Alarms", image: "/menu-alarms.webp", action: "alerts" },
   { label: "Inspiration", image: "/menu-inspiration.webp", action: "inspiration" },
   { label: "Resources", image: "/menu-resources.webp", action: "resources" },
   { label: "Stats", image: "/menu-stats.webp" },
@@ -3264,7 +3364,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
               onEdit={editChatMessage}
               onDelete={deleteChatMessage}
               onSeen={markChatSeen}
-            /> : activeView === "admin" ? <AdminView
+            /> : activeView === "alerts" ? <AlertsView ownerUsername={data.viewer.username} /> : activeView === "admin" ? <AdminView
               key={`admin-${adminLoading}-${dashboardPreferences.showAnnouncements}-${dashboardPreferences.showDueTodayWhenEmpty}-${dashboardPreferences.showDueTomorrowWhenEmpty}-${dashboardPreferences.showDueWeekWhenEmpty}-${gradeOverrides.map((grade) => `${grade.courseKey}:${grade.percentage}`).join("|")}`}
               courses={data.courses}
               settings={dashboardPreferences}

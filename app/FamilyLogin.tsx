@@ -70,6 +70,7 @@ export function FamilyLogin() {
   const [status, setStatus] = useState<"checking" | "idle" | "submitting">("checking");
   const [message, setMessage] = useState("");
   const [view, setView] = useState<"checking" | "login" | "dashboard">("checking");
+  const [desktopPreview, setDesktopPreview] = useState<"mobile" | "desktop">("mobile");
   const selectedTheme = selectedProfile
     ? selectedProfile.username === "beau" || selectedProfile.username === "dad" ? "boy" : "girl"
     : null;
@@ -215,7 +216,11 @@ export function FamilyLogin() {
   }
 
   return (
-    <div className={`family-login-shell school-portal-shell${view === "dashboard" ? " dashboard-active" : ""}`} ref={shellRef}>
+    <div className={`family-login-shell school-portal-shell preview-${desktopPreview}${view === "dashboard" ? " dashboard-active" : ""}`} ref={shellRef}>
+      <div className="desktop-preview-switch" role="group" aria-label="Desktop preview size">
+        <button className="preview-mobile-button" type="button" aria-pressed={desktopPreview === "mobile"} onClick={() => setDesktopPreview("mobile")}>Mobile</button>
+        <button className="preview-desktop-button" type="button" aria-pressed={desktopPreview === "desktop"} onClick={() => setDesktopPreview("desktop")}>Desktop</button>
+      </div>
       {view === "checking" ? (
         <div className="portal-session-check" role="status"><span aria-hidden="true" />Checking family session…</div>
       ) : null}

@@ -287,7 +287,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(dashboard, /menu-calendar\.webp/);
   assert.match(dashboard, /menu-notes\.webp/);
   assert.match(dashboard, /menu-chat\.webp/);
-  assert.match(dashboard, /const mobileMenuItems:[\s\S]*?label: "To-Do List"[\s\S]*?label: "Inbox"[\s\S]*?label: "Chat"[\s\S]*?label: "Notes"[\s\S]*?label: "Classes"[\s\S]*?label: "Calendar"[\s\S]*?label: "Inspiration"[\s\S]*?label: "Resources"[\s\S]*?label: "Stats"[\s\S]*?label: "Admin"[\s\S]*?\];/);
+  assert.match(dashboard, /const mobileMenuItems:[\s\S]*?label: "To-Do List"[\s\S]*?label: "Inbox"[\s\S]*?label: "Chat"[\s\S]*?label: "Notes"[\s\S]*?label: "Classes"[\s\S]*?label: "Calendar"[\s\S]*?label: "Alarms"[\s\S]*?label: "Inspiration"[\s\S]*?label: "Resources"[\s\S]*?label: "Stats"[\s\S]*?label: "Admin"[\s\S]*?\];/);
   assert.match(dashboard, /menu-inspiration\.webp/);
   assert.match(dashboard, /menu-resources\.webp/);
   assert.match(dashboard, /menu-stats\.webp/);
@@ -614,4 +614,34 @@ test("admin stores percentages and controls dashboard section visibility", async
   assert.match(dbIndex, /PRAGMA table_info\(family_dashboard_settings\)/);
   assert.match(dbIndex, /ALTER TABLE family_dashboard_settings ADD COLUMN show_announcements INTEGER NOT NULL DEFAULT 1/);
   assert.match(migration, /ALTER TABLE `family_dashboard_settings` ADD `show_announcements` integer DEFAULT true NOT NULL/);
+});
+
+test("alarms are profile-owned, native-synced, and exposed from the menu", async () => {
+  const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
+  const route = await readFile(new URL("app/api/alerts/route.ts", root), "utf8");
+  const schema = await readFile(new URL("db/schema.ts", root), "utf8");
+  const db = await readFile(new URL("db/index.ts", root), "utf8");
+  const migration = await readFile(new URL("drizzle/0008_stormy_toxin.sql", root), "utf8");
+  const asset = await stat(new URL("public/menu-alarms.webp", root));
+  assert.ok(asset.size < 70_000, `menu-alarms.webp should stay tiny; got ${asset.size} bytes`);
+  assert.match(dashboard, /label: "Alarms", image: "\/menu-alarms\.webp", action: "alerts"/);
+  assert.match(dashboard, /function AlertsView/);
+  assert.match(dashboard, /syncAlerts\?\.\(ownerUsername, JSON\.stringify\(nextRules\)\)/);
+  assert.match(dashboard, /activeView === "alerts" \? <AlertsView ownerUsername=\{data\.viewer\.username\}/);
+  assert.match(route, /WHERE owner_username = \?/);
+  assert.match(route, /auth\.user\.username/);
+  assert.match(schema, /familyAlertRules = sqliteTable\("family_alert_rules"/);
+  assert.match(db, /ensureFamilyAlertSchema/);
+  assert.match(migration, /CREATE TABLE `family_alert_rules`/);
+});
+
+test("desktop preview defaults to the centered mobile presentation", async () => {
+  const login = await readFile(new URL("app/FamilyLogin.tsx", root), "utf8");
+  const styles = await readFile(new URL("app/globals.css", root), "utf8");
+  assert.match(login, /useState<"mobile" \| "desktop">\("mobile"\)/);
+  assert.match(login, />Mobile<\/button>/);
+  assert.match(login, />Desktop<\/button>/);
+  assert.match(login, /preview-\$\{desktopPreview\}/);
+  assert.match(styles, /\.school-portal-shell\.preview-mobile\.dashboard-active > \.school-app \{ width: min\(520px, 100%\)/);
+  assert.match(styles, /@media \(max-width: 820px\)[\s\S]*?\.desktop-preview-switch \{ display: none; \}/);
 });
