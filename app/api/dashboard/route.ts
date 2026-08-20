@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { ensureCanvasConnectionSchema, getChatAudioBucket, getDb } from "../../../db";
+import { ensureCanvasConnectionSchema, getDb } from "../../../db";
 import { canvasConnections } from "../../../db/schema";
 import { CANVAS_BASE_URL, canvasGet } from "../../../lib/canvas-client";
 import { decryptCanvasToken } from "../../../lib/canvas-vault";
@@ -73,62 +73,6 @@ type Conversation = {
   context_name?: string;
   workflow_state?: string;
   participants?: Array<{ id: number; name?: string }>;
-};
-
-type CanvasAnnouncement = {
-  id: number;
-  title?: string;
-  message?: string | null;
-  html_url?: string;
-  posted_at?: string | null;
-  published?: boolean;
-  context_code?: string;
-  author?: {
-    display_name?: string;
-    avatar_image_url?: string | null;
-  } | null;
-};
-
-type CanvasCalendarEvent = {
-  id: number;
-  title?: string;
-  start_at?: string | null;
-  end_at?: string | null;
-  all_day?: boolean;
-  all_day_date?: string | null;
-  context_code?: string | null;
-  type?: string;
-};
-
-type CanvasModule = {
-  name?: string;
-  items?: Array<{
-    title?: string;
-    content_details?: { locked_for_user?: boolean };
-  }>;
-};
-
-type CanvasAssignmentDetails = {
-  id: number;
-  description?: string | null;
-  due_at?: string | null;
-  points_possible?: number | null;
-  html_url?: string;
-  unlock_at?: string | null;
-  lock_at?: string | null;
-  submission_types?: string[];
-  allowed_extensions?: string[];
-  grading_type?: string | null;
-  allowed_attempts?: number | null;
-  published?: boolean;
-};
-
-type CanvasDiscussionDetails = {
-  id: number;
-  message?: string | null;
-  html_url?: string;
-  posted_at?: string | null;
-  published?: boolean;
 };
 
 type ActionItem = {
@@ -292,153 +236,6 @@ function normalizePlannerItem(item: PlannerItem, courseNames: Map<number, string
   };
 }
 
-function normalizeAnnouncement(item: PlannerItem, courseNames: Map<number, string>): ActionItem | null {
-  const itemType = item.plannable_type?.toLocaleLowerCase("en-US") ?? "";
-  if (itemType !== "announcement") return null;
-
-  const title = item.plannable?.title?.trim();
-  if (!title) return null;
-
-  const course =
-    (item.course_id ? courseNames.get(item.course_id) : undefined) ??
-    item.context_name ??
-    "Canvas";
-  const source = item.html_url ?? item.plannable?.html_url ?? CANVAS_BASE_URL;
-  const descriptionHtml = canvasRichContent(item);
-
-  return {
-    id: `announcement-${item.course_id ?? "canvas"}-${item.plannable?.id ?? item.plannable_id ?? title}`,
-    kind: "announcement",
-    canvasCourseId: item.course_id ?? null,
-    canvasItemId: detailIdForPlannerItem(item, source),
-    canvasItemType: "announcement",
-    title,
-    course,
-    dueAt: item.plannable_date ?? null,
-    points: null,
-    state: "announcement",
-    detail: "Canvas announcement",
-    sourceUrl: source.startsWith("http") ? source : `${CANVAS_BASE_URL}${source}`,
-    description: canvasHtmlToText(descriptionHtml),
-    descriptionHtml,
-    availableFrom: null,
-    availableUntil: null,
-    submissionTypes: [],
-    allowedExtensions: [],
-    gradingType: null,
-    allowedAttempts: null,
-    published: item.plannable?.published ?? null,
-    authorName: null,
-    authorAvatarUrl: null,
-    audioUrl: null,
-  };
-}
-
-function normalizeCanvasAnnouncement(item: CanvasAnnouncement, courseNames: Map<number, string>): ActionItem | null {
-  const title = item.title?.trim();
-  if (!title) return null;
-  const courseId = Number(item.context_code?.match(/^course_(\d+)$/)?.[1] ?? 0) || null;
-  const descriptionHtml = item.message?.trim() ?? "";
-  const source = item.html_url ?? (courseId ? `${CANVAS_BASE_URL}/courses/${courseId}/discussion_topics/${item.id}` : CANVAS_BASE_URL);
-
-  return {
-    id: `announcement-${courseId ?? "canvas"}-${item.id}`,
-    kind: "announcement",
-    canvasCourseId: courseId,
-    canvasItemId: item.id,
-    canvasItemType: "announcement",
-    title,
-    course: (courseId ? courseNames.get(courseId) : undefined) ?? "Canvas",
-    dueAt: item.posted_at ?? null,
-    points: null,
-    state: "announcement",
-    detail: "Canvas announcement",
-    sourceUrl: source.startsWith("http") ? source : `${CANVAS_BASE_URL}${source}`,
-    description: canvasHtmlToText(descriptionHtml),
-    descriptionHtml,
-    availableFrom: null,
-    availableUntil: null,
-    submissionTypes: [],
-    allowedExtensions: [],
-    gradingType: null,
-    allowedAttempts: null,
-    published: item.published ?? null,
-    authorName: item.author?.display_name?.trim() || null,
-    authorAvatarUrl: item.author?.avatar_image_url?.trim() || null,
-    audioUrl: null,
-  };
-}
-
-function classSchedule(events: CanvasCalendarEvent[], courseNames: Map<number, string>) {
-  const dayFormatter = new Intl.DateTimeFormat("en-US", { timeZone: PACIFIC_TIME_ZONE, weekday: "long" });
-  const timeFormatter = new Intl.DateTimeFormat("en-US", { timeZone: PACIFIC_TIME_ZONE, hour: "numeric", minute: "2-digit" });
-  const dayOrder = new Map(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day, index) => [day, index]));
-  const meetings = events.flatMap((event) => {
-    const courseId = Number(event.context_code?.match(/^course_(\d+)$/)?.[1] ?? 0);
-    const course = courseNames.get(courseId);
-    const startValue = event.start_at ?? event.all_day_date;
-    if (!course || !startValue) return [];
-    const start = new Date(startValue);
-    if (!Number.isFinite(start.getTime())) return [];
-    const end = event.end_at ? new Date(event.end_at) : null;
-    const hasEnd = Boolean(end && Number.isFinite(end.getTime()) && end.getTime() > start.getTime());
-    const time = event.all_day
-      ? "All day"
-      : hasEnd
-        ? `${timeFormatter.format(start)}–${timeFormatter.format(end!)}`
-        : timeFormatter.format(start);
-    return [{
-      day: dayFormatter.format(start),
-      time,
-      course,
-      note: event.title?.trim() || "Canvas calendar event",
-      tentative: !event.all_day && !hasEnd,
-      sortTime: start.getTime(),
-    }];
-  });
-  const unique = new Map<string, (typeof meetings)[number]>();
-  meetings.forEach((meeting) => unique.set(`${meeting.day}|${meeting.time}|${meeting.course}`, meeting));
-  return [...unique.values()]
-    .sort((left, right) => (dayOrder.get(left.day) ?? 7) - (dayOrder.get(right.day) ?? 7) || left.sortTime - right.sortTime)
-    .map(({ sortTime: _sortTime, ...meeting }) => meeting);
-}
-
-function classScheduleFromModules(courses: CanvasCourse[], modulesByCourse: Map<number, CanvasModule[]>) {
-  const dayOrder = new Map(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day, index) => [day, index]));
-  const meetings: Array<{ day: string; time: string; course: string; note: string; tentative: boolean }> = [];
-  for (const course of courses) {
-    const modules = modulesByCourse.get(course.id) ?? [];
-    const scheduleItems = [
-      ...(course.original_name ? [{ title: course.original_name }] : []),
-      ...(course.course_code ? [{ title: course.course_code }] : []),
-      ...modules.flatMap((module) => [
-      ...(module.name ? [{ title: module.name }] : []),
-      ...(module.items ?? []).filter((item) => !item.content_details?.locked_for_user),
-      ]),
-    ].flatMap((item) => {
-      const title = item.title?.replace(/\s+/g, " ").trim() ?? "";
-      const match = title.match(/\b(M\s*\/\s*W|T\s*\/\s*Th)\b[^\d]*(\d{1,2}(?::\d{2})?\s*(?:[ap](?:\.?m\.?)?)?(?:\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:[ap](?:\.?m\.?)?)?)?)/i);
-      return match ? [{ title, daysText: match[1], timeText: match[2] }] : [];
-    });
-    const preferredSectionIndex = /world history/i.test(course.name) ? 1 : 0;
-    const scheduleItem = scheduleItems[preferredSectionIndex] ?? scheduleItems[0];
-    if (!scheduleItem) continue;
-    const days = /^M/i.test(scheduleItem.daysText) ? ["Monday", "Wednesday"] : ["Tuesday", "Thursday"];
-    let time = scheduleItem.timeText
-      .replace(/\s*-\s*/g, "–")
-      .replace(/(\d)\s*([ap])(?:\.?m\.?)?/gi, (_value, digit: string, meridiem: string) => `${digit} ${meridiem.toUpperCase()}M`)
-      .replace(/\s+/g, " ")
-      .trim();
-    if (!/[AP]M/i.test(time)) {
-      time = time.replace(/\b(\d{1,2})(?=\s*(?:–|$))/g, "$1:00");
-      time = `${time} PM`;
-    }
-    const hasEnd = time.includes("–");
-    days.forEach((day) => meetings.push({ day, time, course: course.name, note: "Canvas Zoom class", tentative: !hasEnd }));
-  }
-  return meetings.sort((left, right) => (dayOrder.get(left.day) ?? 7) - (dayOrder.get(right.day) ?? 7));
-}
-
 function isCanvas406(error: unknown) {
   return error instanceof Error && error.message.includes("status 406");
 }
@@ -458,82 +255,6 @@ async function optionalCanvasGet<T>(primaryPath: string, fallbackPath: string, t
   } catch {
     return empty;
   }
-}
-
-async function enrichDueAssignmentInstructions(items: ActionItem[], token: string) {
-  const assignmentsByCourse = new Map<number, Set<number>>();
-  const discussionItems = new Map<string, { courseId: number; itemId: number }>();
-  for (const item of items) {
-    if (
-      item.kind !== "assignment"
-      || !item.canvasCourseId
-      || !item.canvasItemId
-    ) continue;
-    if (item.canvasItemType?.toLocaleLowerCase("en-US") === "discussion_topic") {
-      discussionItems.set(`${item.canvasCourseId}:${item.canvasItemId}`, {
-        courseId: item.canvasCourseId,
-        itemId: item.canvasItemId,
-      });
-      continue;
-    }
-    const ids = assignmentsByCourse.get(item.canvasCourseId) ?? new Set<number>();
-    ids.add(item.canvasItemId);
-    assignmentsByCourse.set(item.canvasCourseId, ids);
-  }
-
-  const details = new Map<string, CanvasAssignmentDetails>();
-  await Promise.all([
-    ...[...assignmentsByCourse].map(async ([courseId, itemIds]) => {
-      const params = new URLSearchParams({ per_page: "100" });
-      [...itemIds].forEach((itemId) => params.append("assignment_ids[]", String(itemId)));
-      const assignments = await canvasGet<CanvasAssignmentDetails[]>(
-        `/api/v1/courses/${courseId}/assignments?${params.toString()}`,
-        token
-      ).catch(() => []);
-      assignments.forEach((assignment) => details.set(`assignment:${courseId}:${assignment.id}`, assignment));
-    }),
-    ...[...discussionItems.values()].map(async ({ courseId, itemId }) => {
-      const topic = await canvasGet<CanvasDiscussionDetails>(
-        `/api/v1/courses/${courseId}/discussion_topics/${itemId}`,
-        token
-      ).catch(() => null);
-      if (!topic) return;
-      details.set(`discussion_topic:${courseId}:${itemId}`, {
-        id: itemId,
-        description: topic.message,
-        html_url: topic.html_url,
-        published: topic.published,
-      });
-    }),
-  ]);
-
-  if (!details.size) return items;
-  return items.map((item) => {
-    if (!item.canvasCourseId || !item.canvasItemId) return item;
-    const itemType = item.canvasItemType?.toLocaleLowerCase("en-US") === "discussion_topic"
-      ? "discussion_topic"
-      : "assignment";
-    const assignment = details.get(`${itemType}:${item.canvasCourseId}:${item.canvasItemId}`);
-    if (!assignment) return item;
-    const descriptionHtml = assignment.description?.trim() ?? "";
-    return {
-      ...item,
-      descriptionHtml,
-      description: canvasHtmlToText(descriptionHtml),
-      dueAt: assignment.due_at ?? item.dueAt,
-      points: assignment.points_possible ?? item.points,
-      sourceUrl: assignment.html_url
-        ? assignment.html_url.startsWith("http") ? assignment.html_url : `${CANVAS_BASE_URL}${assignment.html_url}`
-        : item.sourceUrl,
-      availableFrom: assignment.unlock_at ?? item.availableFrom,
-      availableUntil: assignment.lock_at ?? item.availableUntil,
-      submissionTypes: assignment.submission_types ?? item.submissionTypes,
-      allowedExtensions: assignment.allowed_extensions ?? item.allowedExtensions,
-      gradingType: assignment.grading_type ?? item.gradingType,
-      allowedAttempts: assignment.allowed_attempts ?? item.allowedAttempts,
-      published: assignment.published ?? item.published,
-    };
-  });
 }
 
 export async function GET(request: Request) {
@@ -585,73 +306,9 @@ export async function GET(request: Request) {
         avatarUrl: teacher?.avatar_image_url?.trim() || null,
       }] as const;
     }));
-    const calendarParams = new URLSearchParams({
-      type: "event",
-      start_date: dateOffset(-7),
-      end_date: dateOffset(14),
-      per_page: "100",
-    });
-    courses.forEach((course) => calendarParams.append("context_codes[]", `course_${course.id}`));
-    const unfilteredCalendarParams = new URLSearchParams({
-      type: "event",
-      start_date: dateOffset(-7),
-      end_date: dateOffset(14),
-      per_page: "100",
-    });
-    const [calendarEvents, upcomingEvents] = courses.length
-      ? await Promise.all([
-          canvasGet<CanvasCalendarEvent[]>(`/api/v1/calendar_events?${calendarParams.toString()}`, token)
-            .catch(() => canvasGet<CanvasCalendarEvent[]>(`/api/v1/calendar_events?${unfilteredCalendarParams.toString()}`, token))
-            .catch(() => []),
-          canvasGet<CanvasCalendarEvent[]>("/api/v1/users/self/upcoming_events?per_page=100", token).catch(() => []),
-        ])
-      : [[], []];
-    const plannerCalendarEvents: CanvasCalendarEvent[] = plannerItems
-      .filter((item) => ["calendar_event", "event"].includes(item.plannable_type?.toLocaleLowerCase("en-US") ?? ""))
-      .map((item) => ({
-        id: Number(item.plannable_id ?? item.plannable?.id ?? 0),
-        title: item.plannable?.title,
-        start_at: item.plannable?.start_at ?? item.plannable_date ?? null,
-        end_at: item.plannable?.end_at ?? null,
-        context_code: item.course_id ? `course_${item.course_id}` : null,
-      }));
-    const scheduleEvents = [
-      ...calendarEvents,
-      ...upcomingEvents.filter((event) => event.type?.toLocaleLowerCase("en-US") !== "assignment"),
-      ...plannerCalendarEvents,
-    ];
-    const modulesByCourse = new Map(await Promise.all(courses.map(async (course) => [
-      course.id,
-      await canvasGet<CanvasModule[]>(`/api/v1/courses/${course.id}/modules?include[]=items&include[]=content_details&per_page=100`, token).catch(() => []),
-    ] as const)));
-    const moduleSchedule = classScheduleFromModules(courses, modulesByCourse);
-    const moduleScheduledCourses = new Set(moduleSchedule.map((meeting) => meeting.course));
-    const calendarSchedule = classSchedule(scheduleEvents, courseNames)
-      .filter((meeting) => !moduleScheduledCourses.has(meeting.course));
-    const announcementParams = new URLSearchParams({
-      start_date: dateOffset(-14),
-      end_date: dateOffset(14),
-      active_only: "true",
-      per_page: "100",
-    });
-    courses.forEach((course) => announcementParams.append("context_codes[]", `course_${course.id}`));
-    const canvasAnnouncements = courses.length
-      ? await canvasGet<CanvasAnnouncement[]>(`/api/v1/announcements?${announcementParams.toString()}`, token).catch(() => [])
-      : [];
     const assignments = plannerItems
       .map((item) => normalizePlannerItem(item, courseNames, courseTeachers))
       .filter((item): item is ActionItem => Boolean(item));
-    const normalizedAnnouncements = (canvasAnnouncements.length
-      ? canvasAnnouncements.map((item) => normalizeCanvasAnnouncement(item, courseNames))
-      : plannerItems.map((item) => normalizeAnnouncement(item, courseNames)))
-      .filter((item): item is ActionItem => Boolean(item))
-      .sort((a, b) => new Date(b.dueAt ?? 0).getTime() - new Date(a.dueAt ?? 0).getTime());
-    const announcements = await Promise.all(normalizedAnnouncements.map(async (item) => {
-      if (!item.canvasCourseId || !item.canvasItemId) return item;
-      const key = `announcements/v4/${item.canvasCourseId}/${item.canvasItemId}.mp3`;
-      const object = await getChatAudioBucket().head(key).catch(() => null);
-      return object ? { ...item, audioUrl: `/api/announcements/audio?course_id=${item.canvasCourseId}&item_id=${item.canvasItemId}&v=4` } : item;
-    }));
     const messages: ActionItem[] = unreadConversations.map((conversation) => ({
       id: `message-${conversation.id}`,
       kind: "message",
@@ -694,33 +351,25 @@ export async function GET(request: Request) {
         return due <= inSevenDays;
       })
       .sort((a, b) => new Date(a.dueAt ?? 0).getTime() - new Date(b.dueAt ?? 0).getTime());
-    const enrichedDueItems = await enrichDueAssignmentInstructions([...critical, ...upcoming], token);
-    const enrichedById = new Map(enrichedDueItems.map((item) => [item.id, item] as const));
-    const enrichedCritical = critical.map((item) => enrichedById.get(item.id) ?? item);
-    const enrichedUpcoming = upcoming.map((item) => enrichedById.get(item.id) ?? item);
-    const assignmentAudio = new Map(await Promise.all([...enrichedCritical, ...enrichedUpcoming]
-      .filter((item, index, items) => item.kind === "assignment" && item.canvasCourseId && item.canvasItemId && items.findIndex((candidate) => candidate.id === item.id) === index)
-      .map(async (item) => {
-        const key = `assignments/v1/${item.canvasCourseId}/${item.canvasItemId}.mp3`;
-        const object = await getChatAudioBucket().head(key).catch(() => null);
-        return [item.id, object ? `/api/assignments/audio?course_id=${item.canvasCourseId}&item_id=${item.canvasItemId}&v=1` : null] as const;
-      })));
-    const criticalWithAudio = enrichedCritical.map((item) => assignmentAudio.get(item.id) ? { ...item, audioUrl: assignmentAudio.get(item.id)! } : item);
-    const upcomingWithAudio = enrichedUpcoming.map((item) => assignmentAudio.get(item.id) ? { ...item, audioUrl: assignmentAudio.get(item.id)! } : item);
-
+    const generatedAt = new Date().toISOString();
     return json({
-      generatedAt: new Date().toISOString(),
+      generatedAt,
+      syncId: generatedAt,
+      enrichmentPending: true,
+      announcementPlaceholderCount: Math.min(6, plannerItems.filter((item) => item.plannable_type?.toLocaleLowerCase("en-US") === "announcement").length),
       viewer: familyUser,
       student: connection.displayName,
       courseCount: courses.length,
       unreadCount: unreadConversations.length,
-      announcements,
-      critical: criticalWithAudio,
-      upcoming: upcomingWithAudio,
-      week: [...moduleSchedule, ...calendarSchedule],
+      announcements: [],
+      critical,
+      upcoming,
+      week: [],
       courses: courses.map((course) => ({
         id: course.id,
         name: course.name,
+        originalName: course.original_name ?? null,
+        courseCode: course.course_code ?? null,
         sourceUrl: `${CANVAS_BASE_URL}/courses/${course.id}`,
         grade: course.enrollments?.[0]?.computed_current_grade ?? null,
         score: course.enrollments?.[0]?.computed_current_score ?? null,

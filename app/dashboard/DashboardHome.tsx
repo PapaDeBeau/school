@@ -30,6 +30,7 @@ type ActionItem = {
   authorName: string | null;
   authorAvatarUrl: string | null;
   audioUrl: string | null;
+  hasTeacherInstructions?: boolean | null;
 };
 
 const DEFAULT_ASSIGNMENT_INSTRUCTIONS = "Canvas has not included written instructions for this item. Use the Canvas button below to check for files, worksheets, videos, rubrics, or teacher updates.";
@@ -76,6 +77,8 @@ type WeekItem = {
 type Course = {
   id: number;
   name: string;
+  originalName: string | null;
+  courseCode: string | null;
   sourceUrl: string;
   grade: string | null;
   score: number | null;
@@ -97,6 +100,9 @@ type CourseGradeItem = {
 
 type DashboardData = {
   generatedAt: string;
+  syncId: string;
+  enrichmentPending: boolean;
+  announcementPlaceholderCount: number;
   viewer: {
     username: string;
     displayName: string;
@@ -109,6 +115,17 @@ type DashboardData = {
   upcoming: ActionItem[];
   week: WeekItem[];
   courses: Course[];
+};
+
+type ActionItemPatch = Pick<ActionItem, "id"> & Partial<Pick<ActionItem,
+  "description" | "descriptionHtml" | "audioUrl" | "hasTeacherInstructions"
+>>;
+
+type DashboardEnrichment = {
+  syncId: string;
+  announcements: ActionItem[];
+  itemPatches: ActionItemPatch[];
+  week: WeekItem[];
 };
 
 type InboxPerson = {
@@ -201,8 +218,68 @@ function sameChatMessage(left: ChatMessage, right: ChatMessage) {
 }
 
 function hasTeacherInstructions(item: ActionItem) {
-  const readableDescription = item.description.trim();
-  return item.kind === "assignment" && Boolean(readableDescription) && plainCanvasText(readableDescription) !== plainCanvasText(DEFAULT_ASSIGNMENT_INSTRUCTIONS);
+  return item.kind === "assignment" && item.hasTeacherInstructions === true;
+}
+
+function preserveDashboardEnrichment(current: DashboardData | null, core: DashboardData) {
+  if (!current) return core;
+  const previousItems = new Map([...current.critical, ...current.upcoming].map((item) => [item.id, item] as const));
+  const preserveItem = (item: ActionItem) => {
+    const previous = previousItems.get(item.id);
+    if (!previous) return item;
+    return {
+      ...item,
+      description: previous.hasTeacherInstructions !== undefined ? previous.description : item.description,
+      descriptionHtml: previous.hasTeacherInstructions !== undefined ? previous.descriptionHtml : item.descriptionHtml,
+      hasTeacherInstructions: previous.hasTeacherInstructions,
+      audioUrl: previous.audioUrl,
+    };
+  };
+  return {
+    ...core,
+    announcements: current.announcements,
+    critical: core.critical.map(preserveItem),
+    upcoming: core.upcoming.map(preserveItem),
+    week: current.week,
+    announcementPlaceholderCount: Math.max(core.announcementPlaceholderCount, current.announcements.length),
+  };
+}
+
+function applyDashboardEnrichment(current: DashboardData, enrichment: DashboardEnrichment) {
+  const patches = new Map(enrichment.itemPatches.map((patch) => [patch.id, patch] as const));
+  const patchItem = (item: ActionItem) => {
+    const patch = patches.get(item.id);
+    if (!patch) return item;
+    return {
+      ...item,
+      ...patch,
+      audioUrl: patch.audioUrl || item.audioUrl,
+    };
+  };
+  const previousAnnouncements = new Map(current.announcements.map((item) => [item.id, item] as const));
+  const announcements = enrichment.announcements.length
+    ? enrichment.announcements.map((item) => ({ ...item, audioUrl: item.audioUrl || previousAnnouncements.get(item.id)?.audioUrl || null }))
+    : current.announcements;
+  return {
+    ...current,
+    enrichmentPending: false,
+    announcements,
+    critical: current.critical.map(patchItem),
+    upcoming: current.upcoming.map(patchItem),
+    week: enrichment.week.length ? enrichment.week : current.week,
+    announcementPlaceholderCount: Math.max(current.announcementPlaceholderCount, announcements.length),
+  };
+}
+
+async function runWithConcurrency<T>(items: T[], limit: number, task: (item: T) => Promise<void>) {
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(Math.max(1, limit), items.length) }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex++;
+      await task(items[index]);
+    }
+  });
+  await Promise.all(workers);
 }
 
 function mergeChatRefresh(current: ChatMessage[], incoming: ChatMessage[]) {
@@ -1827,7 +1904,7 @@ function MobileDueCard({ title, items, empty, onSelectAssignment, onPlayAssignme
   );
 }
 
-function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect: (item: ActionItem) => void }) {
+function AnnouncementStack({ items, onSelect, pending = false, placeholderCount = 0 }: { items: ActionItem[]; onSelect: (item: ActionItem) => void; pending?: boolean; placeholderCount?: number }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playerItem, setPlayerItem] = useState<ActionItem | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -1895,11 +1972,11 @@ function AnnouncementStack({ items, onSelect }: { items: ActionItem[]; onSelect:
   const progress = duration > 0 ? Math.min(1, elapsed / duration) : 0;
 
   return (
-    <section className="dashboard-announcements" aria-labelledby="dashboard-announcements-title">
+    <section className={`dashboard-announcements${pending ? " is-loading" : ""}`} aria-labelledby="dashboard-announcements-title" aria-busy={pending}>
       <h2 className="visually-hidden" id="dashboard-announcements-title">Announcements</h2>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img className="announcements-title-art" src={appPath("/announcements-title.webp")} alt="Announcements" />
-      <div className="announcement-card-list">
+      <div className="announcement-card-list" style={pending ? { "--announcement-placeholder-height": `${Math.max(1, placeholderCount) * 73}px` } as CSSProperties : undefined}>
         {items.map((item) => (
           <article className="announcement-card" key={item.id}>
             <span className="announcement-teacher">
@@ -2107,8 +2184,14 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const homeContentRef = useRef<HTMLDivElement>(null);
   const featureViewRef = useRef<HTMLDivElement>(null);
   const gradesShowcaseRef = useRef<HTMLElement>(null);
+  const dashboardDataRef = useRef<DashboardData | null>(null);
+  const enrichmentControllerRef = useRef<AbortController | null>(null);
+  const dashboardSyncVersionRef = useRef(0);
+  const audioRequestsRef = useRef(new Set<string>());
+  const announcementEntrancePlayedRef = useRef(false);
   const [data, setData] = useState<DashboardData | null>(null);
   const hasDashboardData = Boolean(data);
+  const announcementsReady = Boolean(data && !data.enrichmentPending && data.announcements.length);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [focusMode, setFocusMode] = useState(false);
@@ -2440,7 +2523,108 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     return () => window.clearInterval(interval);
   }, [activeView]);
 
+  const generateReadyAudio = useCallback(async (hydrated: DashboardData, syncVersion: number) => {
+    const assignmentCandidates = Array.from(new Map(
+      [...hydrated.critical, ...hydrated.upcoming].map((item) => [item.id, item] as const)
+    ).values()).filter((item) => hasTeacherInstructions(item) && !item.audioUrl && item.canvasCourseId && item.canvasItemId);
+    const announcementCandidates = hydrated.announcements.filter((item) => !item.audioUrl && item.canvasCourseId && item.canvasItemId && item.description.trim());
+    const jobs = [
+      ...announcementCandidates.map((item) => ({ item, kind: "announcement" as const, endpoint: "/api/announcements/audio" })),
+      ...assignmentCandidates.map((item) => ({ item, kind: "assignment" as const, endpoint: "/api/assignments/audio" })),
+    ];
+
+    await runWithConcurrency(jobs, 2, async ({ item, kind, endpoint }) => {
+      const requestKey = `${kind}:${item.canvasCourseId}:${item.canvasItemId}`;
+      if (audioRequestsRef.current.has(requestKey)) return;
+      audioRequestsRef.current.add(requestKey);
+      try {
+        const response = await fetch(appPath(endpoint), {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            courseId: item.canvasCourseId,
+            itemId: item.canvasItemId,
+            title: item.title,
+            authorName: item.authorName,
+            description: item.description,
+          }),
+        });
+        if (!response.ok) return;
+        const body = await response.json() as { audioUrl?: string };
+        if (!body.audioUrl || syncVersion !== dashboardSyncVersionRef.current) return;
+        const current = dashboardDataRef.current;
+        if (!current || current.syncId !== hydrated.syncId) return;
+        const addAudio = (candidate: ActionItem) => candidate.id === item.id ? { ...candidate, audioUrl: body.audioUrl! } : candidate;
+        const next = kind === "announcement"
+          ? { ...current, announcements: current.announcements.map(addAudio) }
+          : { ...current, critical: current.critical.map(addAudio), upcoming: current.upcoming.map(addAudio) };
+        dashboardDataRef.current = next;
+        setData(next);
+      } catch {
+        // A later background refresh can retry without interrupting the dashboard.
+      } finally {
+        audioRequestsRef.current.delete(requestKey);
+      }
+    });
+  }, []);
+
+  const hydrateDashboard = useCallback(async (core: DashboardData, syncVersion: number) => {
+    const controller = new AbortController();
+    enrichmentControllerRef.current?.abort();
+    enrichmentControllerRef.current = controller;
+    const markFinished = () => {
+      const current = dashboardDataRef.current;
+      if (!current || current.syncId !== core.syncId || syncVersion !== dashboardSyncVersionRef.current) return;
+      const next = { ...current, enrichmentPending: false };
+      dashboardDataRef.current = next;
+      setData(next);
+    };
+    try {
+      const assignmentItems = Array.from(new Map(
+        [...core.critical, ...core.upcoming]
+          .filter((item) => item.kind === "assignment" && item.canvasCourseId && item.canvasItemId)
+          .map((item) => [item.id, item] as const)
+      ).values());
+      const response = await fetch(appPath("/api/dashboard/enrichment"), {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+        signal: controller.signal,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          syncId: core.syncId,
+          courses: core.courses.map((course) => ({ id: course.id, name: course.name, originalName: course.originalName, courseCode: course.courseCode })),
+          items: assignmentItems.map((item) => ({ id: item.id, courseId: item.canvasCourseId, itemId: item.canvasItemId, itemType: item.canvasItemType })),
+        }),
+      });
+      if (response.status === 401) {
+        if (onExit) onExit();
+        else window.location.replace(appPath("/"));
+        return;
+      }
+      if (!response.ok) {
+        markFinished();
+        return;
+      }
+      const enrichment = await response.json() as DashboardEnrichment;
+      if (controller.signal.aborted || enrichment.syncId !== core.syncId || syncVersion !== dashboardSyncVersionRef.current) return;
+      const current = dashboardDataRef.current;
+      if (!current || current.syncId !== core.syncId) return;
+      const next = applyDashboardEnrichment(current, enrichment);
+      dashboardDataRef.current = next;
+      setData(next);
+      void generateReadyAudio(next, syncVersion);
+    } catch (caught) {
+      if (!(caught instanceof DOMException && caught.name === "AbortError")) markFinished();
+    } finally {
+      if (enrichmentControllerRef.current === controller) enrichmentControllerRef.current = null;
+    }
+  }, [generateReadyAudio, onExit]);
+
   const sync = useCallback(async () => {
+    const syncVersion = ++dashboardSyncVersionRef.current;
+    enrichmentControllerRef.current?.abort();
     setLoading(true);
     setError(null);
     try {
@@ -2452,51 +2636,18 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
         return;
       }
       if (!response.ok) throw new Error(body.error || "Canvas could not be synced.");
-      setData(body);
-      const missingAudio = (body.announcements ?? []).filter((item: ActionItem) => !item.audioUrl && item.canvasCourseId && item.canvasItemId && item.description.trim());
-      for (const item of missingAudio) {
-        void fetch(appPath("/api/announcements/audio"), {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            courseId: item.canvasCourseId,
-            itemId: item.canvasItemId,
-            title: item.title,
-            course: item.course,
-            authorName: item.authorName,
-            description: item.description,
-          }),
-        }).then(async (audioResponse) => {
-          if (!audioResponse.ok) return;
-          const audioBody = await audioResponse.json() as { audioUrl?: string };
-          if (!audioBody.audioUrl) return;
-          setData((current) => current ? { ...current, announcements: current.announcements.map((announcement) => announcement.id === item.id ? { ...announcement, audioUrl: audioBody.audioUrl! } : announcement) } : current);
-        }).catch(() => { /* A later dashboard refresh will retry missing audio. */ });
-      }
-      const assignmentCandidates = [...(body.critical ?? []), ...(body.upcoming ?? [])] as ActionItem[];
-      const missingAssignmentAudio = Array.from(new Map(assignmentCandidates.map((item) => [item.id, item])).values())
-        .filter((item) => item.kind === "assignment" && !item.audioUrl && item.canvasCourseId && item.canvasItemId && item.description.trim());
-      for (const item of missingAssignmentAudio) {
-        void fetch(appPath("/api/assignments/audio"), {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ courseId: item.canvasCourseId, itemId: item.canvasItemId, title: item.title, authorName: item.authorName, description: item.description }),
-        }).then(async (audioResponse) => {
-          if (!audioResponse.ok) return;
-          const audioBody = await audioResponse.json() as { audioUrl?: string };
-          if (!audioBody.audioUrl) return;
-          const addAudio = (assignment: ActionItem) => assignment.id === item.id ? { ...assignment, audioUrl: audioBody.audioUrl! } : assignment;
-          setData((current) => current ? { ...current, critical: current.critical.map(addAudio), upcoming: current.upcoming.map(addAudio) } : current);
-        }).catch(() => { /* A later dashboard refresh will retry missing assignment audio. */ });
-      }
+      const core = preserveDashboardEnrichment(dashboardDataRef.current, body as DashboardData);
+      dashboardDataRef.current = core;
+      setData(core);
+      window.setTimeout(() => {
+        if (syncVersion === dashboardSyncVersionRef.current) void hydrateDashboard(core, syncVersion);
+      }, 0);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Canvas could not be synced.");
     } finally {
       setLoading(false);
     }
-  }, [onExit]);
+  }, [hydrateDashboard, onExit]);
 
   useEffect(() => {
     const initialSync = window.setTimeout(() => void sync(), 0);
@@ -2506,6 +2657,9 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       window.clearTimeout(initialSync);
       window.clearTimeout(initialAdminLoad);
       window.clearInterval(autoRefresh);
+      dashboardSyncVersionRef.current += 1;
+      enrichmentControllerRef.current?.abort();
+      enrichmentControllerRef.current = null;
     };
   }, [loadAdmin, sync]);
 
@@ -2642,7 +2796,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   }, [activeView, adminLoading, chatLoading, postBoardLoading, postsByBoard]);
 
   useLayoutEffect(() => {
-    if (activeView !== "dashboard") return;
+    if (activeView !== "dashboard" || !announcementsReady || announcementEntrancePlayedRef.current) return;
     const section = homeContentRef.current?.querySelector<HTMLElement>(".dashboard-announcements");
     if (!section) return;
     const title = section.querySelector<HTMLElement>(".announcements-title-art");
@@ -2655,6 +2809,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     gsap.set(underline, { autoAlpha: 0, y: -10, scaleX: 0.65, transformOrigin: "50% 50%" });
     let animation: gsap.core.Timeline | null = null;
     const play = () => {
+      announcementEntrancePlayedRef.current = true;
       animation?.kill();
       animation = gsap.timeline({ delay: 0.5 })
         .to(title, { autoAlpha: 1, scale: 1, y: 0, duration: 0.9, ease: "elastic.out(1.18, 0.34)" })
@@ -2675,7 +2830,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       gsap.killTweensOf([title, ...cards, underline]);
       gsap.set([title, ...cards, underline], { clearProps: "all" });
     };
-  }, [activeView, dashboardPreferences.showAnnouncements, dashboardPreferencesLoaded, hasDashboardData]);
+  }, [activeView, announcementsReady, dashboardPreferences.showAnnouncements, dashboardPreferencesLoaded]);
 
   useLayoutEffect(() => {
     const showcase = gradesShowcaseRef.current;
@@ -3016,7 +3171,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           {dueToday.length || dashboardPreferences.showDueTodayWhenEmpty ? <div className="today-featured-slot due-featured-slot" aria-label="Assignments due today">
             <MobileDueCard title="Due today" items={dueToday} empty="Nothing is due today." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured tone="today" summary={todaySummary} />
           </div> : null}
-          {dashboardPreferencesLoaded && dashboardPreferences.showAnnouncements ? <AnnouncementStack items={data.announcements ?? []} onSelect={openAssignment} /> : null}
+          {dashboardPreferencesLoaded && dashboardPreferences.showAnnouncements ? <AnnouncementStack items={data.announcements ?? []} onSelect={openAssignment} pending={data.enrichmentPending && !data.announcements.length} placeholderCount={data.announcementPlaceholderCount} /> : null}
           {dueTomorrow.length || dashboardPreferences.showDueTomorrowWhenEmpty ? <div className="tomorrow-featured-slot due-featured-slot" aria-label="Assignments due tomorrow">
             <MobileDueCard title="Due tomorrow" items={dueTomorrow} empty="Nothing is due tomorrow." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured banner="/due-tomorrow-banner.webp" tone="tomorrow" summary={tomorrowSummary} />
           </div> : null}

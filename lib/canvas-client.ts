@@ -73,13 +73,20 @@ async function canvasRequest<T>(path: string, token: string, method: "GET" | "PO
       signal: controller.signal,
     });
   } catch (error) {
+    clearTimeout(timeout);
+    if (error instanceof Error && error.name === "AbortError") throw new Error("Canvas request timed out.");
+    throw error;
+  }
+
+  let responseBody: string;
+  try {
+    responseBody = await response.text();
+  } catch (error) {
     if (error instanceof Error && error.name === "AbortError") throw new Error("Canvas request timed out.");
     throw error;
   } finally {
     clearTimeout(timeout);
   }
-
-  const responseBody = await response.text();
 
   if (response.status >= 300 && response.status < 400) {
     throw new Error("Canvas redirected the request unexpectedly.");

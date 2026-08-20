@@ -7,6 +7,7 @@ const root = new URL("../", import.meta.url);
 test("dashboard contains the priority due-date surfaces", async () => {
   const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
   const dashboardRoute = await readFile(new URL("app/api/dashboard/route.ts", root), "utf8");
+  const enrichmentRoute = await readFile(new URL("app/api/dashboard/enrichment/route.ts", root), "utf8");
   assert.match(dashboard, /Critical information/);
   assert.match(dashboard, /Due tomorrow/);
   assert.match(dashboard, /This week/);
@@ -14,13 +15,49 @@ test("dashboard contains the priority due-date surfaces", async () => {
   assert.doesNotMatch(dashboard, /Courses &amp; grades/);
   assert.match(dashboardRoute, /canvasGetWithFallback/);
   assert.match(dashboardRoute, /optionalCanvasGet/);
-  assert.match(dashboardRoute, /\/api\/v1\/calendar_events\?/);
-  assert.match(dashboardRoute, /\/api\/v1\/users\/self\/upcoming_events/);
-  assert.match(dashboardRoute, /plannerCalendarEvents/);
-  assert.match(dashboardRoute, /\/api\/v1\/courses\/\$\{course\.id\}\/modules\?include\[\]=items/);
-  assert.match(dashboardRoute, /classScheduleFromModules/);
-  assert.match(dashboardRoute, /week: \[\.\.\.moduleSchedule, \.\.\.calendarSchedule\]/);
+  assert.match(dashboardRoute, /syncId: generatedAt/);
+  assert.match(dashboardRoute, /enrichmentPending: true/);
+  assert.match(dashboardRoute, /announcements: \[\]/);
+  assert.match(dashboardRoute, /week: \[\]/);
+  assert.doesNotMatch(dashboardRoute, /\/api\/v1\/calendar_events\?|\/users\/self\/upcoming_events|\/modules\?include|\/announcements\?|getChatAudioBucket/);
+  assert.match(enrichmentRoute, /\/api\/v1\/calendar_events\?/);
+  assert.match(enrichmentRoute, /\/api\/v1\/users\/self\/upcoming_events/);
+  assert.match(enrichmentRoute, /\/api\/v1\/courses\/\$\{course\.id\}\/modules\?include\[\]=items/);
+  assert.match(enrichmentRoute, /classScheduleFromModules/);
+  assert.match(enrichmentRoute, /week: \[\.\.\.moduleSchedule, \.\.\.calendarSchedule\]/);
+  assert.match(enrichmentRoute, /Promise\.all\(\[/);
+  assert.match(enrichmentRoute, /listAudioKeys\("assignments\/v1\/"\)/);
+  assert.match(enrichmentRoute, /listAudioKeys\("announcements\/v4\/"\)/);
   assert.doesNotMatch(dashboardRoute, /time: "8:45/);
+});
+
+test("dashboard renders core data before quiet enrichment and ignores stale work", async () => {
+  const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
+  const dashboardRoute = await readFile(new URL("app/api/dashboard/route.ts", root), "utf8");
+  const enrichmentRoute = await readFile(new URL("app/api/dashboard/enrichment/route.ts", root), "utf8");
+  const styles = await readFile(new URL("app/globals.css", root), "utf8");
+
+  assert.match(dashboardRoute, /const \[courses, plannerItems, unreadConversations\] = await Promise\.all/);
+  assert.match(dashboardRoute, /syncId: generatedAt/);
+  assert.match(dashboardRoute, /enrichmentPending: true/);
+  assert.doesNotMatch(dashboardRoute, /calendar_events|upcoming_events|\/modules\?|\/announcements\?|getChatAudioBucket/);
+  assert.match(enrichmentRoute, /isAuthorizedAppRequest\(request\)/);
+  assert.match(enrichmentRoute, /readFamilySession\(request\)/);
+  assert.match(enrichmentRoute, /parseSelectors\(payload\.items, new Set\(courses\.map/);
+  assert.match(enrichmentRoute, /const \[calendarEvents, upcomingEvents, moduleEntries, canvasAnnouncements, rawItemPatches, assignmentAudioKeys, announcementAudioKeys\] = await Promise\.all/);
+  assert.match(enrichmentRoute, /page\.objects\.forEach\(\(object\) => keys\.add\(object\.key\)\)/);
+  assert.doesNotMatch(enrichmentRoute, /\.head\(/);
+  assert.match(dashboard, /const core = preserveDashboardEnrichment\(dashboardDataRef\.current, body as DashboardData\)/);
+  assert.match(dashboard, /setData\(core\);[\s\S]*window\.setTimeout\(\(\) => \{/);
+  assert.match(dashboard, /syncVersion === dashboardSyncVersionRef\.current/);
+  assert.match(dashboard, /enrichment\.syncId !== core\.syncId/);
+  assert.match(dashboard, /enrichmentControllerRef\.current\?\.abort\(\)/);
+  assert.match(dashboard, /applyDashboardEnrichment\(current, enrichment\)/);
+  assert.match(dashboard, /runWithConcurrency\(jobs, 2/);
+  assert.match(dashboard, /hasTeacherInstructions\(item\) && !item\.audioUrl/);
+  assert.match(dashboard, /if \(!body\.audioUrl/);
+  assert.match(dashboard, /item\.audioUrl \? <button className="assignment-audio-play"/);
+  assert.match(styles, /dashboard-announcements\.is-loading[\s\S]*--announcement-placeholder-height/);
 });
 
 test("Canvas token routes remain server-only", async () => {
@@ -59,16 +96,18 @@ test("announcement narration encrypts the xAI key and reuses R2 recordings", asy
 
 test("assignment narration is generated once and only then shows Play", async () => {
   const audioRoute = await readFile(new URL("app/api/assignments/audio/route.ts", root), "utf8");
-  const dashboardRoute = await readFile(new URL("app/api/dashboard/route.ts", root), "utf8");
+  const enrichmentRoute = await readFile(new URL("app/api/dashboard/enrichment/route.ts", root), "utf8");
   const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
   assert.match(audioRoute, /assignments\/v1\/\$\{courseId\}\/\$\{itemId\}\.mp3/);
   assert.match(audioRoute, /await bucket\.head\(key\)/);
   assert.match(audioRoute, /const speech = `\$\{title\}\. \$\{description\}`/);
   assert.match(audioRoute, /maleTeachers\.has\(name\).*"lux"/s);
   assert.match(audioRoute, /femaleTeachers\.has\(name\).*"luna"/s);
-  assert.match(dashboardRoute, /assignments\/v1/);
+  assert.match(enrichmentRoute, /assignments\/v1/);
   assert.match(dashboard, /item\.audioUrl \? <button className="assignment-audio-play"/);
   assert.match(dashboard, /\/api\/assignments\/audio/);
+  assert.match(dashboard, /hasTeacherInstructions\(item\) && !item\.audioUrl/);
+  assert.match(dashboard, /if \(!body\.audioUrl/);
   assert.match(dashboard, /function AssignmentAudioPlayer/);
 });
 
@@ -255,8 +294,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(dashboard, /Due tomorrow/);
   assert.match(dashboard, /Due this week/);
   assert.match(dashboard, /function hasTeacherInstructions\(item: ActionItem\)/);
-  assert.match(dashboard, /const readableDescription = item\.description\.trim\(\)/);
-  assert.match(dashboard, /plainCanvasText\(readableDescription\) !== plainCanvasText\(DEFAULT_ASSIGNMENT_INSTRUCTIONS\)/);
+  assert.match(dashboard, /item\.hasTeacherInstructions === true/);
   assert.match(dashboard, /assignment-details-play\.webp/);
   assert.match(styles, /\.assignment-instructions-play \{ width: 42px; height: 42px;/);
   assert.match(dashboard, /shortOrdinalDay\(tomorrow\)/);
@@ -297,6 +335,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
 test("assignments open a detailed accessible modal before leaving for Canvas", async () => {
   const dashboard = await readFile(new URL("app/dashboard/DashboardHome.tsx", root), "utf8");
   const dashboardRoute = await readFile(new URL("app/api/dashboard/route.ts", root), "utf8");
+  const enrichmentRoute = await readFile(new URL("app/api/dashboard/enrichment/route.ts", root), "utf8");
   const styles = await readFile(new URL("app/globals.css", root), "utf8");
 
   assert.match(dashboard, /role="dialog" aria-modal="true"/);
@@ -320,15 +359,15 @@ test("assignments open a detailed accessible modal before leaving for Canvas", a
   assert.match(dashboardRoute, /description: canvasHtmlToText/);
   assert.match(dashboardRoute, /item\.plannable\?\.message/);
   assert.match(dashboardRoute, /if \(itemType === "announcement"\) return null/);
-  assert.match(dashboardRoute, /async function enrichDueAssignmentInstructions\(items: ActionItem\[\], token: string\)/);
-  assert.match(dashboardRoute, /params\.append\("assignment_ids\[\]", String\(itemId\)\)/);
-  assert.doesNotMatch(dashboardRoute, /item\.kind !== "assignment"\s*\|\| item\.description\.trim\(\)/);
-  assert.match(dashboardRoute, /\/discussion_topics\/\$\{itemId\}/);
-  assert.match(dashboardRoute, /details\.set\(`discussion_topic:\$\{courseId\}:\$\{itemId\}`/);
-  assert.match(dashboardRoute, /descriptionHtml = assignment\.description\?\.trim\(\) \?\? ""/);
-  assert.match(dashboardRoute, /critical: criticalWithAudio/);
-  assert.match(dashboardRoute, /upcoming: upcomingWithAudio/);
-  assert.match(dashboardRoute, /descriptionHtml/);
+  assert.match(enrichmentRoute, /async function assignmentPatches\(selectors: ItemSelector\[\], token: string\)/);
+  assert.match(enrichmentRoute, /params\.append\("assignment_ids\[\]", String\(itemId\)\)/);
+  assert.match(enrichmentRoute, /\/discussion_topics\/\$\{selector\.itemId\}/);
+  assert.match(enrichmentRoute, /details\.set\(`discussion_topic:\$\{selector\.courseId\}:\$\{selector\.itemId\}`/);
+  assert.match(enrichmentRoute, /descriptionHtml = detail\.description\?\.trim\(\) \?\? ""/);
+  assert.match(enrichmentRoute, /hasTeacherInstructions: Boolean\(canvasHtmlToText\(descriptionHtml\)\)/);
+  assert.match(dashboardRoute, /critical,/);
+  assert.match(dashboardRoute, /upcoming,/);
+  assert.match(enrichmentRoute, /descriptionHtml/);
   assert.match(dashboardRoute, /submissionTypes:/);
   assert.match(styles, /\.assignment-modal-scroll \{[^}]*overflow-y: auto/);
   assert.match(styles, /\.assignment-modal-actions button \{ width: 100%/);
@@ -467,7 +506,7 @@ test("family chat is persistent, paginated, link-aware, and sender controlled", 
   assert.match(dashboard, /\[firstMessageId, latestMessageId, loading, messages\.length\]/);
   assert.match(dashboard, /\[activeView, adminLoading, chatLoading, postBoardLoading, postsByBoard\]/);
   assert.doesNotMatch(dashboard, /\[activeView, adminLoading, chatLoading, chatMessages/);
-  assert.match(dashboard, /\[activeView, dashboardPreferences\.showAnnouncements, dashboardPreferencesLoaded, hasDashboardData\]/);
+  assert.match(dashboard, /\[activeView, announcementsReady, dashboardPreferences\.showAnnouncements, dashboardPreferencesLoaded\]/);
   assert.match(dashboard, /aria-label="Close school app"/);
   assert.match(dashboard, /mobile-menu-logout-action/);
   assert.match(styles, /\.chat-message\.is-mine/);
