@@ -100,6 +100,7 @@ type CanvasCalendarEvent = {
 };
 
 type CanvasModule = {
+  name?: string;
   items?: Array<{
     title?: string;
     content_details?: { locked_for_user?: boolean };
@@ -405,25 +406,30 @@ function classScheduleFromModules(courses: CanvasCourse[], modulesByCourse: Map<
   const dayOrder = new Map(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day, index) => [day, index]));
   const meetings: Array<{ day: string; time: string; course: string; note: string; tentative: boolean }> = [];
   for (const course of courses) {
-    const items = (modulesByCourse.get(course.id) ?? []).flatMap((module) => module.items ?? []);
-    const scheduleItems = items.filter((item) => {
-      if (item.content_details?.locked_for_user) return false;
-      const title = item.title?.trim() ?? "";
-      return /(?:zoom|live)\s+class\s+link/i.test(title) && /(?:M\s*\/\s*W|T\s*\/\s*Th)/i.test(title);
+    const modules = modulesByCourse.get(course.id) ?? [];
+    const scheduleItems = modules.flatMap((module) => [
+      ...(module.name ? [{ title: module.name }] : []),
+      ...(module.items ?? []).filter((item) => !item.content_details?.locked_for_user),
+    ]).flatMap((item) => {
+      const title = item.title?.replace(/\s+/g, " ").trim() ?? "";
+      const match = title.match(/\b(M\s*\/\s*W|T\s*\/\s*Th)\b[^\d]*(\d{1,2}(?::\d{2})?\s*(?:[ap](?:\.?m\.?)?)?(?:\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:[ap](?:\.?m\.?)?)?)?)/i);
+      return match ? [{ title, daysText: match[1], timeText: match[2] }] : [];
     });
     const preferredSectionIndex = /world history/i.test(course.name) ? 1 : 0;
     const scheduleItem = scheduleItems[preferredSectionIndex] ?? scheduleItems[0];
-    const title = scheduleItem?.title?.trim();
-    if (!title) continue;
-    const match = title.match(/\((M\s*\/\s*W|T\s*\/\s*Th)\s+(.+?)\)\s*$/i);
-    if (!match) continue;
-    const days = /^M/i.test(match[1]) ? ["Monday", "Wednesday"] : ["Tuesday", "Thursday"];
-    const time = match[2]
+    if (!scheduleItem) continue;
+    const days = /^M/i.test(scheduleItem.daysText) ? ["Monday", "Wednesday"] : ["Tuesday", "Thursday"];
+    let time = scheduleItem.timeText
       .replace(/\s*-\s*/g, "–")
-      .replace(/\b([ap])\.?m\.?/gi, (_value, meridiem: string) => `${meridiem.toUpperCase()}M`)
+      .replace(/(\d)\s*([ap])(?:\.?m\.?)?/gi, (_value, digit: string, meridiem: string) => `${digit} ${meridiem.toUpperCase()}M`)
       .replace(/\s+/g, " ")
       .trim();
-    days.forEach((day) => meetings.push({ day, time, course: course.name, note: "Canvas Zoom class", tentative: false }));
+    if (!/[AP]M/i.test(time)) {
+      time = time.replace(/\b(\d{1,2})(?=\s*(?:–|$))/g, "$1:00");
+      time = `${time} PM`;
+    }
+    const hasEnd = time.includes("–");
+    days.forEach((day) => meetings.push({ day, time, course: course.name, note: "Canvas Zoom class", tentative: !hasEnd }));
   }
   return meetings.sort((left, right) => (dayOrder.get(left.day) ?? 7) - (dayOrder.get(right.day) ?? 7));
 }
