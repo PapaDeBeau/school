@@ -653,5 +653,6 @@ test("desktop preview defaults to the centered mobile presentation", async () =>
   assert.match(login, />Desktop<\/button>/);
   assert.match(login, /preview-\$\{desktopPreview\}/);
   assert.match(styles, /\.school-portal-shell\.preview-mobile\.dashboard-active > \.school-app \{ width: min\(520px, 100%\)/);
+  assert.match(styles, /preview-mobile\.dashboard-active > \.school-app::\-webkit-scrollbar \{ width: 0; height: 0; display: none; \}/);
   assert.match(styles, /@media \(max-width: 820px\)[\s\S]*?\.desktop-preview-switch \{ display: none; \}/);
 });

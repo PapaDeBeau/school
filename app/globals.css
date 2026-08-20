@@ -2376,7 +2376,8 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .preview-mobile-button { background: #e12032; }
 .preview-desktop-button { background: #0874ed; }
 .school-portal-shell.dashboard-active { padding-top: 66px; }
-.school-portal-shell.preview-mobile.dashboard-active > .school-app { width: min(520px, 100%); height: calc(100svh - 82px); margin: 0 auto; display: block; overflow-y: auto; border-radius: 22px; background: transparent; box-shadow: 0 20px 65px rgba(0,0,0,.38); }
+.school-portal-shell.preview-mobile.dashboard-active > .school-app { width: min(520px, 100%); height: calc(100svh - 82px); margin: 0 auto; display: block; overflow-y: auto; border-radius: 22px; background: transparent; box-shadow: 0 20px 65px rgba(0,0,0,.38); scrollbar-width: none; -ms-overflow-style: none; }
+.school-portal-shell.preview-mobile.dashboard-active > .school-app::-webkit-scrollbar { width: 0; height: 0; display: none; }
 .preview-mobile .school-app .school-sidebar { display: none; }
 .preview-mobile .school-app .school-workspace { position: relative; height: auto; padding: 0; overflow: visible; border: 0; border-radius: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
 .preview-mobile .school-app .workspace-header { display: none; }
