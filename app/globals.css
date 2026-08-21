@@ -2444,6 +2444,9 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .alert-rule-grid label { display: grid; gap: 5px; color: #52627c; font-size: 11px; font-weight: 900; text-transform: uppercase; }
 .alert-rule-grid input,.alert-rule-grid select,.alert-rule-grid textarea { width: 100%; min-height: 42px; padding: 8px 10px; border: 1px solid #ccd8e9; border-radius: 9px; color: #14213c; background: #fff; text-transform: none; }
 .alert-rule-grid textarea { min-height: 72px; resize: vertical; }
+.alert-record-sound { min-height: 40px; border: 1px solid #0874ed; border-radius: 9px; color: #fff; background: #0874ed; font-weight: 900; }
+.alert-record-sound:disabled { opacity: .5; }
+.alarm-audio-recorder { z-index: 210; }
 .alert-wide { grid-column: 1/-1; }
 .alert-test { margin-top: 12px; background: #d91d32; }
 .alerts-save { width: 100%; margin-top: 14px; min-height: 50px; font-size: 16px; }

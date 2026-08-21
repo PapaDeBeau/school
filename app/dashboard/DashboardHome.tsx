@@ -1471,6 +1471,15 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
+  const [recorderOpen, setRecorderOpen] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recordedSound, setRecordedSound] = useState<Blob | null>(null);
+  const [recordedSoundUrl, setRecordedSoundUrl] = useState<string | null>(null);
+  const [recordedDuration, setRecordedDuration] = useState(0);
+  const [recordingError, setRecordingError] = useState("");
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recordingStartedRef = useRef(0);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [pendingAssets, setPendingAssets] = useState<Record<string, { image?: File; sound?: File }>>({});
   const [capabilities, setCapabilities] = useState<{ native?: boolean; appVersion?: string; exact?: boolean; notifications?: boolean; overlay?: boolean } | null>(null);
   const bridge = typeof window === "undefined" ? undefined : (window as Window & { BeauSchoolApp?: SchoolAndroidBridge }).BeauSchoolApp;
@@ -1527,6 +1536,44 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
 
   function updateRule(id: string, patch: Partial<AlertRule>) {
     setRules((current) => current.map((rule) => rule.id === id ? { ...rule, ...patch } : rule));
+  }
+
+  async function startAlarmRecording() {
+    setRecordingError("");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const chunks: Blob[] = [];
+      const recorder = createCompatibleAudioRecorder(stream);
+      recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: recorder.mimeType || "audio/mp4" });
+        setRecordedSound(blob);
+        setRecordedSoundUrl((current) => { if (current) URL.revokeObjectURL(current); return URL.createObjectURL(blob); });
+        setRecordedDuration(Date.now() - recordingStartedRef.current);
+        stream.getTracks().forEach((track) => track.stop());
+      };
+      recorderRef.current = recorder;
+      recordingStartedRef.current = Date.now();
+      setRecordedDuration(0);
+      setRecording(true);
+      recorder.start();
+      recordingTimerRef.current = setInterval(() => setRecordedDuration(Date.now() - recordingStartedRef.current), 250);
+    } catch { setRecordingError("Microphone access is required to record an alarm sound."); }
+  }
+
+  function stopAlarmRecording() {
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    recordingTimerRef.current = null;
+    setRecording(false);
+    recorderRef.current?.stop();
+  }
+
+  function useAlarmRecording() {
+    if (!recordedSound || !editingRuleId) return;
+    const extension = recordedSound.type.includes("mp4") ? "m4a" : recordedSound.type.includes("ogg") ? "ogg" : "webm";
+    const file = new File([recordedSound], `alarm-recording.${extension}`, { type: recordedSound.type || "audio/mp4" });
+    setPendingAssets((current) => ({ ...current, [editingRuleId]: { ...current[editingRuleId], sound: file } }));
+    setRecorderOpen(false);
   }
 
   async function saveRules(nextRules = rules, confirmationRule?: AlertRule) {
@@ -1602,7 +1649,7 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
             <label>Days<select value={editingRule.weekdayMask} onChange={(event) => updateRule(editingRule.id, { weekdayMask: Number(event.target.value) })}><option value={127}>Every day</option><option value={62}>Weekdays</option><option value={65}>Weekends</option></select></label>
           </>}
           <label>Fallback sound<select value={editingRule.soundKey} onChange={(event) => updateRule(editingRule.id, { soundKey: event.target.value })}><option value="chime">School chime</option><option value="bell">School bell</option><option value="alert">School alert</option><option value="greatpower">With great power</option><option value="longbell">Long bell</option></select></label>
-          <label>Custom sound<input type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/aac" disabled={!bridge?.importAlertAsset} onChange={(event) => { const file = event.target.files?.[0]; if (file) setPendingAssets((current) => ({ ...current, [editingRule.id]: { ...current[editingRule.id], sound: file } })); }} /><small>{pendingAssets[editingRule.id]?.sound?.name ?? (bridge?.importAlertAsset ? "Optional · this device only" : "Open Android app to choose")}</small></label>
+          <label>Custom sound<input type="file" accept=".mp3,.m4a,.wav,.ogg,.aac,audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/ogg,audio/aac" disabled={!bridge?.importAlertAsset} onChange={(event) => { const file = event.target.files?.[0]; if (file) setPendingAssets((current) => ({ ...current, [editingRule.id]: { ...current[editingRule.id], sound: file } })); }} /><button className="alert-record-sound" type="button" disabled={!bridge?.importAlertAsset} onClick={() => { setRecordedSound(null); setRecordedSoundUrl(null); setRecordedDuration(0); setRecordingError(""); setRecorderOpen(true); }}>Record custom sound</button><small>{pendingAssets[editingRule.id]?.sound?.name ?? (bridge?.importAlertAsset ? "MP3, M4A, WAV, OGG or AAC · this device only" : "Open Android app to choose")}</small></label>
           <label>Fallback image<select value={editingRule.imageUrl ?? ""} onChange={(event) => updateRule(editingRule.id, { imageUrl: event.target.value || null })}>{alertImages.map((image) => <option value={image.url} key={image.url}>{image.label}</option>)}</select></label>
           <label>Custom image<input type="file" accept="image/jpeg,image/png,image/webp" disabled={!bridge?.importAlertAsset} onChange={(event) => { const file = event.target.files?.[0]; if (file) setPendingAssets((current) => ({ ...current, [editingRule.id]: { ...current[editingRule.id], image: file } })); }} /><small>{pendingAssets[editingRule.id]?.image?.name ?? (bridge?.importAlertAsset ? "Optional · this device only" : "Open Android app to choose")}</small></label>
           <label className="alert-wide">Title<input maxLength={80} value={editingRule.title} onChange={(event) => updateRule(editingRule.id, { title: event.target.value })} /></label>
@@ -1610,6 +1657,7 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
       </div>
       <div className="alert-editor-actions">{capabilities?.native ? <button className="alert-test" type="button" onClick={() => testRule(editingRule.id)}>Test now</button> : null}<button className="alert-delete" type="button" onClick={() => { const next = rules.filter((item) => item.id !== editingRule.id); setRules(next); void saveRules(next); }}>Delete</button><button className="alerts-save" type="button" onClick={() => void saveRules(rules, editingRule)} disabled={saving}>{saving ? "Saving…" : "Save alarm"}</button></div>
     </section></div> : null}
+    {recorderOpen ? <div className="chat-recorder-backdrop alarm-audio-recorder"><button className="modal-backdrop-dismiss" type="button" onClick={() => { if (recording) stopAlarmRecording(); setRecorderOpen(false); }} aria-label="Close alarm sound recorder" /><section className="chat-recorder" role="dialog" aria-modal="true" aria-labelledby="alarm-recorder-title"><button className="chat-recorder-close" type="button" onClick={() => { if (recording) stopAlarmRecording(); setRecorderOpen(false); }} aria-label="Close alarm sound recorder">×</button><span className={`chat-recorder-icon${recording ? " is-recording" : ""}`} aria-hidden="true">♪</span><h2 id="alarm-recorder-title">Custom alarm sound</h2><p>{recording ? "Recording…" : recordedSound ? "Listen before using it for this alarm." : "Tap record and make your own alarm sound."}</p><strong className="chat-recorder-time">{formatAudioTime(recordedDuration)}</strong>{recordedSoundUrl && !recording ? <audio src={recordedSoundUrl} controls /> : null}{recordingError ? <div className="chat-error" role="alert">{recordingError}</div> : null}<div className="chat-recorder-actions">{!recording && !recordedSound ? <button type="button" onClick={() => void startAlarmRecording()}>Record</button> : null}{recording ? <button className="is-stop" type="button" onClick={stopAlarmRecording}>Stop</button> : null}{recordedSound ? <button type="button" onClick={useAlarmRecording}>Use this sound</button> : null}</div></section></div> : null}
     {message ? <p className="alerts-message" role="status">{message}</p> : null}
   </section>;
 }

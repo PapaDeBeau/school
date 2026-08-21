@@ -662,6 +662,9 @@ test("alarms are profile-owned, native-synced, and exposed from the menu", async
   assert.match(dashboard, /className="alert-editor-backdrop"/);
   assert.match(dashboard, /className="alert-summary-card"/);
   assert.match(dashboard, /Custom sound/);
+  assert.match(dashboard, /Record custom sound/);
+  assert.match(dashboard, /alarm-recording\.\$\{extension\}/);
+  assert.match(dashboard, /\.m4a/);
   assert.match(dashboard, /Custom image/);
   assert.match(dashboard, /importAlertAsset/);
   assert.match(dashboard, /Test now/);
