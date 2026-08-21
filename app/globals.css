@@ -1955,7 +1955,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
     top: 0;
     min-height: 54px;
     display: grid;
-    grid-template-columns: 42px minmax(0, 1fr) 42px;
+    grid-template-columns: 42px auto minmax(0, 1fr) 42px;
     align-items: center;
     gap: 10px;
     margin: -12px -16px 0;
@@ -1979,6 +1979,14 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
     text-shadow: 0 2px 10px rgba(0, 0, 0, .72), 0 0 9px rgba(112, 192, 255, .35);
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .mobile-live-time {
+    color: #ff2947;
+    font-size: clamp(13px, 3.6vw, 17px);
+    font-weight: 950;
+    letter-spacing: .035em;
+    white-space: nowrap;
+    text-shadow: 0 0 5px #ff173b, 0 0 12px rgba(255, 23, 59, .95), 0 0 22px rgba(255, 23, 59, .72);
   }
   .mobile-dashboard-bar button {
     min-height: 38px;

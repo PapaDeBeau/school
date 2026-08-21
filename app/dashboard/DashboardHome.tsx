@@ -326,6 +326,12 @@ const timeFormat = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
 });
 
+const mobileClockFormat = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/Los_Angeles",
+  hour: "numeric",
+  minute: "2-digit",
+});
+
 const dayFormat = new Intl.DateTimeFormat("en-US", {
   timeZone: "America/Los_Angeles",
   weekday: "long",
@@ -338,13 +344,6 @@ const dayKeyFormat = new Intl.DateTimeFormat("en-CA", {
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
-});
-
-const mobileDateFormat = new Intl.DateTimeFormat("en-US", {
-  timeZone: "America/Los_Angeles",
-  weekday: "long",
-  month: "long",
-  day: "numeric",
 });
 
 const inboxDateFormat = new Intl.DateTimeFormat("en-US", {
@@ -365,11 +364,13 @@ function offsetDayKey(key: string, days: number) {
   return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
 }
 
-function ordinalDate(value: string) {
-  const date = new Date(value);
+function ordinalDate(value: string | Date) {
+  const date = typeof value === "string" ? new Date(value) : value;
   const day = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", day: "numeric" }).format(date));
   const suffix = day % 10 === 1 && day % 100 !== 11 ? "st" : day % 10 === 2 && day % 100 !== 12 ? "nd" : day % 10 === 3 && day % 100 !== 13 ? "rd" : "th";
-  return mobileDateFormat.format(date).replace(String(day), `${day}${suffix}`);
+  const weekday = new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", weekday: "long" }).format(date);
+  const month = new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", month: "short" }).format(date).toUpperCase();
+  return `${weekday}, ${month} ${day}${suffix}`;
 }
 
 function shortOrdinalDay(key: string) {
@@ -2508,6 +2509,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminError, setAdminError] = useState<string | null>(null);
   const [greetingIndex] = useState(() => Math.floor(Math.random() * familyGreetings.length));
+  const [headerClock, setHeaderClock] = useState(() => new Date());
   const [selectedAction, setSelectedAction] = useState<ActionItem | null>(null);
   const [assignmentPlayerItem, setAssignmentPlayerItem] = useState<ActionItem | null>(null);
   const [assignmentDetailLoading, setAssignmentDetailLoading] = useState(false);
@@ -2518,6 +2520,13 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     setAssignmentDetailError(null);
   }, []);
   const closeThread = useCallback(() => setSelectedThread(null), []);
+
+  useEffect(() => {
+    const updateClock = () => setHeaderClock(new Date());
+    updateClock();
+    const clockTimer = window.setInterval(updateClock, 1_000);
+    return () => window.clearInterval(clockTimer);
+  }, []);
   const closeComposer = useCallback(() => setComposerBoard(null), []);
 
   const openAssignment = useCallback(async (item: ActionItem) => {
@@ -3429,7 +3438,8 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={appPath("/menu-button.webp")} alt="" aria-hidden="true" />
           </button>
-          <strong className="mobile-chalk-date">{ordinalDate(data.generatedAt)}</strong>
+          <time className="mobile-live-time" dateTime={headerClock.toISOString()}>{mobileClockFormat.format(headerClock)}</time>
+          <strong className="mobile-chalk-date">{ordinalDate(headerClock)}</strong>
           <button className="mobile-close-button" type="button" onClick={closeApp} aria-label="Close school app">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={appPath("/logout-button.webp")} alt="" aria-hidden="true" />
