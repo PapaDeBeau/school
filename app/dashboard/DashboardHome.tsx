@@ -1446,10 +1446,11 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
 
   const syncNative = useCallback((nextRules: AlertRule[]) => {
     try {
-      bridge?.syncAlerts?.(ownerUsername, JSON.stringify(nextRules));
+      const result = bridge?.syncAlerts?.(ownerUsername, JSON.stringify(nextRules));
       const raw = bridge?.getAlertCapabilities?.();
       if (raw) setCapabilities(JSON.parse(raw));
-    } catch { setCapabilities(null); }
+      return result ? JSON.parse(result) as { ok?: boolean; error?: string } : null;
+    } catch { setCapabilities(null); return null; }
   }, [bridge, ownerUsername]);
 
   useEffect(() => {
@@ -1502,11 +1503,23 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Alarms could not be saved.");
-      setRules(body.rules ?? rules); syncNative(body.rules ?? rules);
+      setRules(body.rules ?? rules);
+      const nativeResult = syncNative(body.rules ?? rules);
+      if (nativeResult && nativeResult.ok === false) throw new Error(nativeResult.error || "Android could not schedule this alarm.");
       if (bridge?.requestNotificationAccess && capabilities?.notifications === false) bridge.requestNotificationAccess();
       setMessage(bridge?.syncAlerts ? "Saved to this profile and scheduled on this Android device." : "Saved to this profile. Open School in the Android app to schedule it on the device.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Alarms could not be saved."); }
     finally { setSaving(false); }
+  }
+
+  function testRule(ruleId: string) {
+    const nativeResult = syncNative(rules);
+    if (nativeResult && nativeResult.ok === false) {
+      setMessage(nativeResult.error || "Android could not prepare this alarm.");
+      return;
+    }
+    const shown = bridge?.testAlert?.(ownerUsername, ruleId) === true;
+    setMessage(shown ? "Test sent now. You should see the large alert and hear its selected sound." : "Save this alarm and finish all three Android permissions first.");
   }
 
   if (loading) return <section className="alerts-view"><p className="alerts-status">Loading alarms…</p></section>;
@@ -1527,7 +1540,7 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
           <label className="alert-wide">Title<input maxLength={80} value={rule.title} onChange={(event) => updateRule(rule.id, { title: event.target.value })} /></label>
           <label className="alert-wide">Message<textarea maxLength={300} value={rule.message} onChange={(event) => updateRule(rule.id, { message: event.target.value })} /></label>
         </div>
-        {capabilities?.native ? <button className="alert-test" type="button" onClick={() => bridge?.testAlert?.(ownerUsername, rule.id)}>Test this alarm</button> : null}
+        {capabilities?.native ? <button className="alert-test" type="button" onClick={() => testRule(rule.id)}>Test this alarm now</button> : null}
       </article>) : <div className="alerts-empty"><strong>No alarms yet</strong><p>Add one to create a daily or weekday reminder.</p></div>}
     </div>
     <button className="alerts-save" type="button" onClick={() => void saveRules()} disabled={saving}>{saving ? "Saving…" : "Save alarms"}</button>

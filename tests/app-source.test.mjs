@@ -641,6 +641,8 @@ test("alarms are profile-owned, native-synced, and exposed from the menu", async
   assert.match(dashboard, /requestNotificationAccess/);
   assert.match(dashboard, /Allow large pop-up alerts/);
   assert.match(dashboard, /requestLargeAlertAccess/);
+  assert.match(dashboard, /Test this alarm now/);
+  assert.match(dashboard, /Test sent now\. You should see the large alert/);
   assert.match(serviceWorker, /beau-school-images-v2/);
   assert.match(serviceWorker, /\/school\/menu-alarms\.webp/);
 });
