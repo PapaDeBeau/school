@@ -1498,6 +1498,11 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
   async function saveRules() {
     setSaving(true); setMessage("");
     try {
+      const tooSoon = rules.find((rule) => rule.enabled && rule.scheduleType === "once" && (!rule.oneTimeAt || rule.oneTimeAt < Date.now() + 120_000));
+      if (tooSoon) throw new Error("That one-time alarm has passed or is too close. Choose a time at least 2 minutes from now.");
+      if (capabilities?.native && (!capabilities.exact || !capabilities.notifications || !capabilities.overlay)) {
+        throw new Error("Finish all three Android alarm permissions above, then save again.");
+      }
       const response = await fetch(appPath("/api/alerts"), {
         method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rules }),
       });
@@ -1513,13 +1518,16 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
   }
 
   function testRule(ruleId: string) {
-    const nativeResult = syncNative(rules);
+    const previewRules = rules.map((rule) => rule.scheduleType === "once" && (!rule.oneTimeAt || rule.oneTimeAt <= Date.now())
+      ? { ...rule, oneTimeAt: Date.now() + 10 * 60_000 }
+      : rule);
+    const nativeResult = syncNative(previewRules);
     if (nativeResult && nativeResult.ok === false) {
       setMessage(nativeResult.error || "Android could not prepare this alarm.");
       return;
     }
     const shown = bridge?.testAlert?.(ownerUsername, ruleId) === true;
-    setMessage(shown ? "Test sent now. You should see the large alert and hear its selected sound." : "Save this alarm and finish all three Android permissions first.");
+    setMessage(shown ? "Test sent now. You should see the large alert and hear its selected sound." : "Android could not display the test. Confirm all three permissions above are enabled.");
   }
 
   if (loading) return <section className="alerts-view"><p className="alerts-status">Loading alarms…</p></section>;

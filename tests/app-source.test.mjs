@@ -643,6 +643,8 @@ test("alarms are profile-owned, native-synced, and exposed from the menu", async
   assert.match(dashboard, /requestLargeAlertAccess/);
   assert.match(dashboard, /Test this alarm now/);
   assert.match(dashboard, /Test sent now\. You should see the large alert/);
+  assert.match(dashboard, /Choose a time at least 2 minutes from now/);
+  assert.match(dashboard, /Finish all three Android alarm permissions above/);
   assert.match(serviceWorker, /beau-school-images-v2/);
   assert.match(serviceWorker, /\/school\/menu-alarms\.webp/);
 });
