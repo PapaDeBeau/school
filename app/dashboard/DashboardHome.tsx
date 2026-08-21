@@ -739,7 +739,7 @@ function FeatureBackBar({ onBack }: { onBack: () => void }) {
 }
 
 function createCompatibleAudioRecorder(stream: MediaStream) {
-  const preferredType = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"]
+  const preferredType = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"]
     .find((type) => MediaRecorder.isTypeSupported(type));
   return preferredType ? new MediaRecorder(stream, { mimeType: preferredType }) : new MediaRecorder(stream);
 }
@@ -1478,6 +1478,7 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
   const [recordedDuration, setRecordedDuration] = useState(0);
   const [recordingError, setRecordingError] = useState("");
   const recorderRef = useRef<MediaRecorder | null>(null);
+  const recordedAudioRef = useRef<HTMLAudioElement | null>(null);
   const recordingStartedRef = useRef(0);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [pendingAssets, setPendingAssets] = useState<Record<string, { image?: File; sound?: File }>>({});
@@ -1545,10 +1546,20 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
       const chunks: Blob[] = [];
       const recorder = createCompatibleAudioRecorder(stream);
       recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+      recorder.onerror = () => setRecordingError("Android could not finish that recording. Please try again.");
       recorder.onstop = () => {
         const blob = new Blob(chunks, { type: recorder.mimeType || "audio/mp4" });
+        if (blob.size < 256) {
+          setRecordedSound(null);
+          setRecordingError("No audio was captured. Please record again and speak near the phone.");
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
         setRecordedSound(blob);
-        setRecordedSoundUrl((current) => { if (current) URL.revokeObjectURL(current); return URL.createObjectURL(blob); });
+        setRecordedSoundUrl((current) => {
+          if (current) URL.revokeObjectURL(current);
+          return URL.createObjectURL(blob);
+        });
         setRecordedDuration(Date.now() - recordingStartedRef.current);
         stream.getTracks().forEach((track) => track.stop());
       };
@@ -1556,7 +1567,7 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
       recordingStartedRef.current = Date.now();
       setRecordedDuration(0);
       setRecording(true);
-      recorder.start();
+      recorder.start(250);
       recordingTimerRef.current = setInterval(() => setRecordedDuration(Date.now() - recordingStartedRef.current), 250);
     } catch { setRecordingError("Microphone access is required to record an alarm sound."); }
   }
@@ -1574,6 +1585,12 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
     const file = new File([recordedSound], `alarm-recording.${extension}`, { type: recordedSound.type || "audio/mp4" });
     setPendingAssets((current) => ({ ...current, [editingRuleId]: { ...current[editingRuleId], sound: file } }));
     setRecorderOpen(false);
+  }
+
+  async function playAlarmRecording() {
+    if (!recordedAudioRef.current) return;
+    recordedAudioRef.current.currentTime = 0;
+    await recordedAudioRef.current.play().catch(() => setRecordingError("The recording could not be played. Please record again."));
   }
 
   async function saveRules(nextRules = rules, confirmationRule?: AlertRule) {
@@ -1658,7 +1675,7 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
       {message ? <p className="alert-editor-message" role="status">{message}</p> : null}
       <div className="alert-editor-actions">{capabilities?.native ? <button className="alert-test" type="button" onClick={() => testRule(editingRule.id)}>Test now</button> : null}<button className="alert-delete" type="button" onClick={() => { const next = rules.filter((item) => item.id !== editingRule.id); setRules(next); void saveRules(next); }}>Delete</button><button className="alert-editor-close-bottom" type="button" onClick={() => setEditingRuleId(null)}>Close</button><button className="alerts-save" type="button" onClick={() => void saveRules(rules, editingRule)} disabled={saving}>{saving ? "Saving…" : "Save alarm"}</button></div>
     </section></div> : null}
-    {recorderOpen ? <div className="chat-recorder-backdrop alarm-audio-recorder"><button className="modal-backdrop-dismiss" type="button" onClick={() => { if (recording) stopAlarmRecording(); setRecorderOpen(false); }} aria-label="Close alarm sound recorder" /><section className="chat-recorder" role="dialog" aria-modal="true" aria-labelledby="alarm-recorder-title"><button className="chat-recorder-close" type="button" onClick={() => { if (recording) stopAlarmRecording(); setRecorderOpen(false); }} aria-label="Close alarm sound recorder">×</button><span className={`chat-recorder-icon${recording ? " is-recording" : ""}`} aria-hidden="true">♪</span><h2 id="alarm-recorder-title">Custom alarm sound</h2><p>{recording ? "Recording…" : recordedSound ? "Listen before using it for this alarm." : "Tap record and make your own alarm sound."}</p><strong className="chat-recorder-time">{formatAudioTime(recordedDuration)}</strong>{recordedSoundUrl && !recording ? <audio src={recordedSoundUrl} controls /> : null}{recordingError ? <div className="chat-error" role="alert">{recordingError}</div> : null}<div className="chat-recorder-actions">{!recording && !recordedSound ? <button type="button" onClick={() => void startAlarmRecording()}>Record</button> : null}{recording ? <button className="is-stop" type="button" onClick={stopAlarmRecording}>Stop</button> : null}{recordedSound ? <button type="button" onClick={useAlarmRecording}>Use this sound</button> : null}</div></section></div> : null}
+    {recorderOpen ? <div className="chat-recorder-backdrop alarm-audio-recorder"><button className="modal-backdrop-dismiss" type="button" onClick={() => { if (recording) stopAlarmRecording(); setRecorderOpen(false); }} aria-label="Close alarm sound recorder" /><section className="chat-recorder" role="dialog" aria-modal="true" aria-labelledby="alarm-recorder-title"><button className="chat-recorder-close" type="button" onClick={() => { if (recording) stopAlarmRecording(); setRecorderOpen(false); }} aria-label="Close alarm sound recorder">×</button><span className={`chat-recorder-icon${recording ? " is-recording" : ""}`} aria-hidden="true">♪</span><h2 id="alarm-recorder-title">Custom alarm sound</h2><p>{recording ? "Recording…" : recordedSound ? "Play it, then tap Use this sound to attach it to the alarm." : "Tap record and make your own alarm sound."}</p><strong className="chat-recorder-time">{formatAudioTime(recordedDuration)}</strong>{recordedSoundUrl && !recording ? <audio ref={recordedAudioRef} src={recordedSoundUrl} controls preload="auto" /> : null}{recordingError ? <div className="chat-error" role="alert">{recordingError}</div> : null}<div className="chat-recorder-actions">{!recording && !recordedSound ? <button type="button" onClick={() => void startAlarmRecording()}>Record</button> : null}{recording ? <button className="is-stop" type="button" onClick={stopAlarmRecording}>Stop</button> : null}{recordedSound ? <><button type="button" onClick={() => void playAlarmRecording()}>Play recording</button><button className="is-attach" type="button" onClick={useAlarmRecording}>Use this sound</button></> : null}</div></section></div> : null}
     {message ? <p className="alerts-message" role="status">{message}</p> : null}
   </section>;
 }
