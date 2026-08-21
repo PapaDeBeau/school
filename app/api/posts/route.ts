@@ -31,6 +31,11 @@ function readBoard(request: Request): Board | null {
   return board === "inspiration" || board === "resources" ? board : null;
 }
 
+function positiveId(value: unknown) {
+  const input = typeof value === "string" ? value : String(value ?? "");
+  return /^\d+$/.test(input) && Number(input) > 0 ? Number(input) : null;
+}
+
 function publicPost(record: PostRecord) {
   return {
     id: String(record.id),
@@ -121,5 +126,31 @@ export async function POST(request: Request) {
     return json({ post: publicPost(post) }, { status: 201 });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : "The post could not be saved." }, { status: 400 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  const auth = await authorize(request);
+  if (auth.response || !auth.user) return auth.response ?? familyUnauthorizedResponse();
+  const board = readBoard(request);
+  if (!board) return json({ error: "Choose the Inspiration or Resources board." }, { status: 400 });
+
+  try {
+    const payload = await request.json() as { id?: unknown };
+    const id = positiveId(payload.id);
+    if (!id) return json({ error: "That post is invalid." }, { status: 400 });
+    await ensureFamilyPostsSchema();
+    const existing = await getD1()
+      .prepare(`SELECT author_username FROM family_posts WHERE id = ? AND board = ?`)
+      .bind(id, board)
+      .first<{ author_username: string }>();
+    if (!existing) return json({ error: "That post no longer exists." }, { status: 404 });
+    if (existing.author_username !== auth.user.username) {
+      return json({ error: "Only the person who made this post can delete it." }, { status: 403 });
+    }
+    await getD1().prepare(`DELETE FROM family_posts WHERE id = ? AND board = ?`).bind(id, board).run();
+    return json({ deleted: String(id) });
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : "The post could not be deleted." }, { status: 400 });
   }
 }

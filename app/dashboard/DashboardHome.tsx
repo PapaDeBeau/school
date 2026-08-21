@@ -1047,13 +1047,17 @@ function youtubeEmbedUrl(value: string | null) {
   }
 }
 
-function PostBoardView({ board, posts, loading, error, onNewPost }: {
+function PostBoardView({ board, posts, viewerUsername, loading, error, onNewPost, onDelete }: {
   board: PostBoard;
   posts: FamilyPost[];
+  viewerUsername: string;
   loading: boolean;
   error: string | null;
   onNewPost: () => void;
+  onDelete: (post: FamilyPost) => Promise<void>;
 }) {
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const title = board === "inspiration" ? "Inspiration" : "Resources";
   const description = board === "inspiration" ? "Ideas, videos, and sparks worth remembering" : "Useful lessons, links, and learning tools";
   return (
@@ -1061,6 +1065,7 @@ function PostBoardView({ board, posts, loading, error, onNewPost }: {
       <div className="post-board-list" role="feed" aria-busy={loading}>
         {loading ? <div className="post-board-state" role="status"><i aria-hidden="true" /><p>Loading {title.toLocaleLowerCase("en-US")}…</p></div> : null}
         {error ? <div className="post-board-state is-error" role="alert"><strong>{title} could not be loaded.</strong><p>{error}</p></div> : null}
+        {deleteError ? <div className="post-board-state is-error" role="alert"><strong>The post could not be deleted.</strong><p>{deleteError}</p></div> : null}
         {!loading && !error && !posts.length ? <div className="post-board-state"><span aria-hidden="true">✦</span><strong>Start the {title} board.</strong><p>Add the first idea, video, or useful link.</p></div> : null}
         {posts.map((post) => {
           const embedUrl = youtubeEmbedUrl(post.url);
@@ -1075,6 +1080,20 @@ function PostBoardView({ board, posts, loading, error, onNewPost }: {
                   ) : post.author.name.slice(0, 1).toUpperCase()}
                 </span>
                 <div><p>{post.author.name}</p><time dateTime={post.createdAt}>{formatInboxDate(post.createdAt)}</time></div>
+                {post.author.username === viewerUsername ? <button
+                  className="family-post-delete"
+                  type="button"
+                  disabled={deletingId === post.id}
+                  onClick={() => {
+                    if (!window.confirm(`Delete “${post.title}”? This cannot be undone.`)) return;
+                    setDeletingId(post.id);
+                    setDeleteError(null);
+                    void onDelete(post).catch((caught) => {
+                      setDeleteError(caught instanceof Error ? caught.message : "The post could not be deleted.");
+                    }).finally(() => setDeletingId(null));
+                  }}
+                  aria-label={`Delete ${post.title}`}
+                >{deletingId === post.id ? "Deleting…" : "Delete"}</button> : null}
               </header>
               <h2>{post.title}</h2>
               {post.body ? <p className="family-post-body">{post.body}</p> : null}
@@ -2614,6 +2633,26 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     setComposerBoard(null);
   }, [onExit]);
 
+  const deletePost = useCallback(async (board: PostBoard, post: FamilyPost) => {
+    const response = await fetch(appPath(`/api/posts?board=${board}`), {
+      method: "DELETE",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: post.id }),
+    });
+    const body = await response.json();
+    if (response.status === 401) {
+      if (onExit) onExit();
+      else window.location.replace(appPath("/"));
+      throw new Error("Your family session has expired.");
+    }
+    if (!response.ok) throw new Error(body.error || "The post could not be deleted.");
+    setPostsByBoard((current) => ({
+      ...current,
+      [board]: current[board].filter((item) => item.id !== post.id),
+    }));
+  }, [onExit]);
+
   const loadChat = useCallback(async () => {
     setChatLoading(true);
     setChatError(null);
@@ -3542,9 +3581,11 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
             /> : activeView === "inspiration" || activeView === "resources" ? <PostBoardView
               board={activeView}
               posts={postsByBoard[activeView]}
+              viewerUsername={data.viewer.username}
               loading={postBoardLoading}
               error={postBoardError}
               onNewPost={() => setComposerBoard(activeView)}
+              onDelete={(post) => deletePost(activeView, post)}
             /> : null}
           </div>
         )}

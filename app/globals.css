@@ -768,6 +768,8 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .post-board-list { min-height: 0; display: grid; align-content: start; gap: 13px; overflow-y: auto; padding: 2px 4px 18px; overscroll-behavior: contain; scrollbar-color: #6aaeff rgba(0, 0, 0, .24); }
 .family-post { display: grid; gap: 13px; padding: clamp(16px, 2.5vw, 23px); border: 1px solid rgba(214, 232, 253, .38); border-radius: 17px; color: #fff; background: rgba(0, 9, 25, .86); box-shadow: 0 14px 38px rgba(0, 0, 0, .38), inset 0 1px 0 rgba(255, 255, 255, .08); }
 .family-post > header { display: flex; align-items: center; gap: 10px; }
+.family-post-delete { min-height: 32px; margin-left: auto; padding: 7px 11px; border: 1px solid rgba(255, 126, 145, .7); border-radius: 9px; color: #ffdce2; background: rgba(111, 15, 32, .68); font-size: 9px; font-weight: 900; cursor: pointer; }
+.family-post-delete:disabled { opacity: .6; cursor: wait; }
 .family-post-avatar { width: 44px; height: 44px; flex: 0 0 44px; display: grid; place-items: center; overflow: hidden; border: 2px solid #7cbcff; border-radius: 50%; color: #fff; background: #123f73; font-weight: 900; box-shadow: 0 0 16px rgba(53, 143, 240, .36); }
 .family-post-avatar img { width: 100%; height: 100%; display: block; object-fit: cover; }
 .family-post > header p { margin: 0; color: #a4d1ff; font-size: 10px; font-weight: 850; }
@@ -960,6 +962,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .admin-push-schedule { background: linear-gradient(135deg,#268cff,#164bb4); }
 @media (max-width: 560px) { .admin-push-grid { grid-template-columns: 1fr; gap: 0; } }
 .family-post a:focus-visible,
+.family-post-delete:focus-visible,
 .post-board-create-bar button:focus-visible,
 .post-composer-modal button:focus-visible,
 .chat-view button:focus-visible,
