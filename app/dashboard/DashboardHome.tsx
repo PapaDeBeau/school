@@ -1423,6 +1423,7 @@ type AlertRule = {
 type SchoolAndroidBridge = {
   close?: () => void;
   syncAlerts?: (ownerUsername: string, rulesJson: string) => string;
+  importAlertAsset?: (ownerUsername: string, ruleId: string, kind: "image" | "sound", mime: string, encoded: string) => string;
   getAlertCapabilities?: () => string;
   requestExactAlarmAccess?: () => void;
   openNotificationSettings?: () => void;
@@ -1430,6 +1431,15 @@ type SchoolAndroidBridge = {
   requestLargeAlertAccess?: () => void;
   testAlert?: (ownerUsername: string, ruleJson: string) => boolean;
 };
+
+function fileAsBase64(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
+    reader.onload = () => resolve(String(reader.result ?? "").split(",", 2)[1] ?? "");
+    reader.readAsDataURL(file);
+  });
+}
 
 const alertImages = [
   { label: "School", url: "https://beauvizenor.com/school/due-today-banner.webp" },
@@ -1446,11 +1456,22 @@ function localDateTimeValue(value: Date) {
   return `${year}-${month}-${day}T${hour}:${minute}`;
 }
 
+function alarmWhen(rule: AlertRule) {
+  if (rule.scheduleType === "once" && rule.oneTimeAt) {
+    return new Intl.DateTimeFormat(undefined, { weekday: "long", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(rule.oneTimeAt));
+  }
+  const dayLabel = rule.weekdayMask === 127 ? "Every day" : rule.weekdayMask === 62 ? "Weekdays" : rule.weekdayMask === 65 ? "Weekends" : "Selected days";
+  const time = new Date(2000, 0, 1, rule.hour, rule.minute);
+  return `${dayLabel} at ${new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(time)}`;
+}
+
 function AlertsView({ ownerUsername }: { ownerUsername: string }) {
   const [rules, setRules] = useState<AlertRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
+  const [pendingAssets, setPendingAssets] = useState<Record<string, { image?: File; sound?: File }>>({});
   const [capabilities, setCapabilities] = useState<{ native?: boolean; appVersion?: string; exact?: boolean; notifications?: boolean; overlay?: boolean } | null>(null);
   const bridge = typeof window === "undefined" ? undefined : (window as Window & { BeauSchoolApp?: SchoolAndroidBridge }).BeauSchoolApp;
 
@@ -1494,35 +1515,56 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
   function addRule() {
     const now = new Date();
     const oneTime = new Date(now.getTime() + 10 * 60_000);
+    const id = `alarm_${Date.now().toString(36)}`;
     setRules((current) => [...current, {
-      id: `alarm_${Date.now().toString(36)}`, enabled: true, scheduleType: "recurring", oneTimeAt: oneTime.getTime(), oneTimeLocal: localDateTimeValue(oneTime), weekdayMask: 127,
+      id, enabled: true, scheduleType: "recurring", oneTimeAt: oneTime.getTime(), oneTimeLocal: localDateTimeValue(oneTime), weekdayMask: 127,
       hour: now.getHours(), minute: 0, title: "School reminder", message: "Time to check School.",
       soundKey: "chime", imageUrl: alertImages[0].url,
     }]);
+    setEditingRuleId(id);
+    setMessage("");
   }
 
   function updateRule(id: string, patch: Partial<AlertRule>) {
     setRules((current) => current.map((rule) => rule.id === id ? { ...rule, ...patch } : rule));
   }
 
-  async function saveRules() {
+  async function saveRules(nextRules = rules, confirmationRule?: AlertRule) {
     setSaving(true); setMessage("");
     try {
-      const tooSoon = rules.find((rule) => rule.enabled && rule.scheduleType === "once" && (!rule.oneTimeAt || rule.oneTimeAt < Date.now() + 120_000));
+      const tooSoon = nextRules.find((rule) => rule.enabled && rule.scheduleType === "once" && (!rule.oneTimeAt || rule.oneTimeAt < Date.now() + 120_000));
       if (tooSoon) throw new Error("That one-time alarm has passed or is too close. Choose a time at least 2 minutes from now.");
       if (capabilities?.native && (!capabilities.exact || !capabilities.notifications || !capabilities.overlay)) {
         throw new Error("Finish all three Android alarm permissions above, then save again.");
       }
       const response = await fetch(appPath("/api/alerts"), {
-        method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rules }),
+        method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rules: nextRules }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Alarms could not be saved.");
-      setRules(body.rules ?? rules);
-      const nativeResult = syncNative(body.rules ?? rules);
+      setRules(body.rules ?? nextRules);
+      if (Object.keys(pendingAssets).length) {
+        if (!bridge?.importAlertAsset) throw new Error("Custom files can only be saved inside the School Android app.");
+        for (const rule of body.rules ?? nextRules) {
+          const assets = pendingAssets[rule.id];
+          for (const kind of ["image", "sound"] as const) {
+            const file = assets?.[kind];
+            if (!file) continue;
+            const encoded = await fileAsBase64(file);
+            const raw = bridge.importAlertAsset(ownerUsername, rule.id, kind, file.type, encoded);
+            const imported = raw ? JSON.parse(raw) as { ok?: boolean; error?: string } : null;
+            if (!imported?.ok) throw new Error(imported?.error || `Android could not save ${file.name}.`);
+          }
+        }
+      }
+      const nativeResult = syncNative(body.rules ?? nextRules);
+      if (bridge?.syncAlerts && !nativeResult) throw new Error("Android did not accept this alarm. Close and reopen the School app, then try again.");
       if (nativeResult && nativeResult.ok === false) throw new Error(nativeResult.error || "Android could not schedule this alarm.");
       if (bridge?.requestNotificationAccess && capabilities?.notifications === false) bridge.requestNotificationAccess();
-      setMessage(bridge?.syncAlerts ? "Saved to this profile and scheduled on this Android device." : "Saved to this profile. Open School in the Android app to schedule it on the device.");
+      setPendingAssets({});
+      setEditingRuleId(null);
+      const when = confirmationRule ? alarmWhen(confirmationRule) : "your selected time";
+      setMessage(nativeResult?.ok ? `Alarm set for ${when}.` : `Alarm saved for ${when}. Open School in the Android app to schedule it on this device.`);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Alarms could not be saved."); }
     finally { setSaving(false); }
   }
@@ -1539,27 +1581,35 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
   }
 
   if (loading) return <section className="alerts-view"><p className="alerts-status">Loading alarms…</p></section>;
+  const editingRule = rules.find((rule) => rule.id === editingRuleId) ?? null;
   return <section className="alerts-view" aria-label="Custom alarms">
     <header className="alerts-header"><div><p>THIS PROFILE ONLY</p><h1>Alarms</h1><span>Set one-time or recurring reminders for {ownerUsername}.</span></div><button type="button" onClick={addRule}>+ Add alarm</button></header>
-    {capabilities?.native ? <div className="alerts-device-status"><strong>Android connected{capabilities.appVersion ? ` · App ${capabilities.appVersion}` : ""}</strong><span>{capabilities.exact && capabilities.notifications && capabilities.overlay ? "All alarm permissions enabled" : "Finish alarm setup below"}</span>{!capabilities.notifications ? <button type="button" onClick={() => bridge?.requestNotificationAccess?.()}>Allow notifications</button> : null}{!capabilities.exact ? <button type="button" onClick={() => { setMessage("Opening Android Alarms & reminders settings…"); bridge?.requestExactAlarmAccess?.(); }}>Allow exact alarms</button> : null}{!capabilities.overlay ? <button className="large-alert-permission" type="button" onClick={() => bridge?.requestLargeAlertAccess?.()}>Allow large pop-up alerts</button> : <strong className="large-alert-enabled">Large pop-up alerts enabled</strong>}</div> : null}
+    {capabilities?.native && (!capabilities.exact || !capabilities.notifications || !capabilities.overlay) ? <div className="alerts-device-status"><strong>Finish alarm permissions</strong>{!capabilities.notifications ? <button type="button" onClick={() => bridge?.requestNotificationAccess?.()}>Allow notifications</button> : null}{!capabilities.exact ? <button type="button" onClick={() => { setMessage("Opening Android Alarms & reminders settings…"); bridge?.requestExactAlarmAccess?.(); }}>Allow exact alarms</button> : null}{!capabilities.overlay ? <button className="large-alert-permission" type="button" onClick={() => bridge?.requestLargeAlertAccess?.()}>Allow large pop-up alerts</button> : null}</div> : null}
     <div className="alerts-list">
-      {rules.length ? rules.map((rule) => <article className="alert-rule-card" key={rule.id}>
-        <div className="alert-rule-top"><label className="alert-enabled"><input type="checkbox" checked={rule.enabled} onChange={(event) => updateRule(rule.id, { enabled: event.target.checked })} /><span>{rule.enabled ? "On" : "Off"}</span></label><button className="alert-delete" type="button" onClick={() => setRules((current) => current.filter((item) => item.id !== rule.id))}>Remove</button></div>
-        <div className="alert-rule-grid">
-          <label>Schedule<select value={rule.scheduleType} onChange={(event) => updateRule(rule.id, { scheduleType: event.target.value as "recurring" | "once" })}><option value="recurring">Recurring</option><option value="once">One time</option></select></label>
-          {rule.scheduleType === "once" ? <label>Date & time<input type="datetime-local" value={rule.oneTimeLocal ?? ""} onChange={(event) => updateRule(rule.id, { oneTimeLocal: event.target.value || null, oneTimeAt: event.target.value ? new Date(event.target.value).getTime() : null })} /></label> : <>
-            <label>Time<input type="time" value={`${String(rule.hour).padStart(2, "0")}:${String(rule.minute).padStart(2, "0")}`} onChange={(event) => { const [hour, minute] = event.target.value.split(":").map(Number); updateRule(rule.id, { hour, minute }); }} /></label>
-            <label>Days<select value={rule.weekdayMask} onChange={(event) => updateRule(rule.id, { weekdayMask: Number(event.target.value) })}><option value={127}>Every day</option><option value={62}>Weekdays</option><option value={65}>Weekends</option></select></label>
-          </>}
-          <label>Sound<select value={rule.soundKey} onChange={(event) => updateRule(rule.id, { soundKey: event.target.value })}><option value="chime">School chime</option><option value="bell">School bell</option><option value="alert">School alert</option><option value="greatpower">With great power</option><option value="longbell">Long bell</option></select></label>
-          <label>Image<select value={rule.imageUrl ?? ""} onChange={(event) => updateRule(rule.id, { imageUrl: event.target.value || null })}>{alertImages.map((image) => <option value={image.url} key={image.url}>{image.label}</option>)}</select></label>
-          <label className="alert-wide">Title<input maxLength={80} value={rule.title} onChange={(event) => updateRule(rule.id, { title: event.target.value })} /></label>
-          <label className="alert-wide">Message<textarea maxLength={300} value={rule.message} onChange={(event) => updateRule(rule.id, { message: event.target.value })} /></label>
-        </div>
-        {capabilities?.native ? <button className="alert-test" type="button" onClick={() => testRule(rule.id)}>Test this alarm now</button> : null}
-      </article>) : <div className="alerts-empty"><strong>No alarms yet</strong><p>Add one to create a daily or weekday reminder.</p></div>}
+      {rules.length ? rules.map((rule) => <button className="alert-summary-card" type="button" key={rule.id} onClick={() => { setEditingRuleId(rule.id); setMessage(""); }}>
+        <span className={rule.enabled ? "alert-summary-dot is-on" : "alert-summary-dot"} />
+        <span><strong>{rule.title}</strong><small>{alarmWhen(rule)}</small></span>
+        <b>{rule.enabled ? "ON" : "OFF"}</b><i>›</i>
+      </button>) : <div className="alerts-empty"><strong>No alarms yet</strong><p>Add one to create a one-time or recurring reminder.</p></div>}
     </div>
-    <button className="alerts-save" type="button" onClick={() => void saveRules()} disabled={saving}>{saving ? "Saving…" : "Save alarms"}</button>
+    {editingRule ? <div className="alert-editor-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setEditingRuleId(null); }}><section className="alert-editor-modal" role="dialog" aria-modal="true" aria-label="Edit alarm">
+      <header><div><p>{editingRule.id.startsWith("alarm_") ? "ALARM SETTINGS" : "EDIT ALARM"}</p><h2>{editingRule.title || "Alarm"}</h2></div><button type="button" aria-label="Close alarm editor" onClick={() => setEditingRuleId(null)}>×</button></header>
+      <div className="alert-rule-top"><label className="alert-enabled"><input type="checkbox" checked={editingRule.enabled} onChange={(event) => updateRule(editingRule.id, { enabled: event.target.checked })} /><span>{editingRule.enabled ? "Alarm on" : "Alarm off"}</span></label></div>
+      <div className="alert-rule-grid">
+          <label>Schedule<select value={editingRule.scheduleType} onChange={(event) => updateRule(editingRule.id, { scheduleType: event.target.value as "recurring" | "once" })}><option value="recurring">Recurring</option><option value="once">One time</option></select></label>
+          {editingRule.scheduleType === "once" ? <label>Date & time<input type="datetime-local" value={editingRule.oneTimeLocal ?? ""} onChange={(event) => updateRule(editingRule.id, { oneTimeLocal: event.target.value || null, oneTimeAt: event.target.value ? new Date(event.target.value).getTime() : null })} /></label> : <>
+            <label>Time<input type="time" value={`${String(editingRule.hour).padStart(2, "0")}:${String(editingRule.minute).padStart(2, "0")}`} onChange={(event) => { const [hour, minute] = event.target.value.split(":").map(Number); updateRule(editingRule.id, { hour, minute }); }} /></label>
+            <label>Days<select value={editingRule.weekdayMask} onChange={(event) => updateRule(editingRule.id, { weekdayMask: Number(event.target.value) })}><option value={127}>Every day</option><option value={62}>Weekdays</option><option value={65}>Weekends</option></select></label>
+          </>}
+          <label>Fallback sound<select value={editingRule.soundKey} onChange={(event) => updateRule(editingRule.id, { soundKey: event.target.value })}><option value="chime">School chime</option><option value="bell">School bell</option><option value="alert">School alert</option><option value="greatpower">With great power</option><option value="longbell">Long bell</option></select></label>
+          <label>Custom sound<input type="file" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/aac" disabled={!bridge?.importAlertAsset} onChange={(event) => { const file = event.target.files?.[0]; if (file) setPendingAssets((current) => ({ ...current, [editingRule.id]: { ...current[editingRule.id], sound: file } })); }} /><small>{pendingAssets[editingRule.id]?.sound?.name ?? (bridge?.importAlertAsset ? "Optional · this device only" : "Open Android app to choose")}</small></label>
+          <label>Fallback image<select value={editingRule.imageUrl ?? ""} onChange={(event) => updateRule(editingRule.id, { imageUrl: event.target.value || null })}>{alertImages.map((image) => <option value={image.url} key={image.url}>{image.label}</option>)}</select></label>
+          <label>Custom image<input type="file" accept="image/jpeg,image/png,image/webp" disabled={!bridge?.importAlertAsset} onChange={(event) => { const file = event.target.files?.[0]; if (file) setPendingAssets((current) => ({ ...current, [editingRule.id]: { ...current[editingRule.id], image: file } })); }} /><small>{pendingAssets[editingRule.id]?.image?.name ?? (bridge?.importAlertAsset ? "Optional · this device only" : "Open Android app to choose")}</small></label>
+          <label className="alert-wide">Title<input maxLength={80} value={editingRule.title} onChange={(event) => updateRule(editingRule.id, { title: event.target.value })} /></label>
+          <label className="alert-wide">Message<textarea maxLength={300} value={editingRule.message} onChange={(event) => updateRule(editingRule.id, { message: event.target.value })} /></label>
+      </div>
+      <div className="alert-editor-actions">{capabilities?.native ? <button className="alert-test" type="button" onClick={() => testRule(editingRule.id)}>Test now</button> : null}<button className="alert-delete" type="button" onClick={() => { const next = rules.filter((item) => item.id !== editingRule.id); setRules(next); void saveRules(next); }}>Delete</button><button className="alerts-save" type="button" onClick={() => void saveRules(rules, editingRule)} disabled={saving}>{saving ? "Saving…" : "Save alarm"}</button></div>
+    </section></div> : null}
     {message ? <p className="alerts-message" role="status">{message}</p> : null}
   </section>;
 }
