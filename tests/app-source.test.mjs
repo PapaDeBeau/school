@@ -654,6 +654,8 @@ test("alarms are profile-owned, native-synced, and exposed from the menu", async
   assert.match(route, /schedule_type <> 'once' OR one_time_at > \?/);
   assert.match(route, /\^\\d\{4\}-\\d\{2\}-\\d\{2\}T\\d\{2\}:\\d\{2\}\$/);
   assert.match(dashboard, /function localDateTimeValue\(value: Date\)/);
+  assert.match(dashboard, /Date\.now\(\) \+ 3 \* 60_000/);
+  assert.match(dashboard, /alert-editor-close-bottom/);
   assert.match(dashboard, /value=\{editingRule\.oneTimeLocal \?\? ""\}/);
   assert.match(dashboard, /<option value="once">One time<\/option>/);
   assert.match(dashboard, /requestNotificationAccess/);

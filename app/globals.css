@@ -2432,9 +2432,11 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .alert-editor-modal > header p { margin: 0 0 3px; color: #0874ed; font-size: 10px; font-weight: 900; letter-spacing: .13em; }
 .alert-editor-modal > header h2 { margin: 0; color: #14213c; font-size: 25px; }
 .alert-editor-modal > header button { width: 38px; height: 38px; border: 0; border-radius: 9px; color: #fff; background: #d91d32; font-size: 28px; line-height: 1; }
-.alert-editor-actions { display: grid; grid-template-columns: auto auto minmax(150px,1fr); gap: 9px; margin-top: 14px; }
+.alert-editor-actions { display: grid; grid-template-columns: auto auto auto minmax(150px,1fr); gap: 9px; margin-top: 14px; }
 .alert-editor-actions .alert-test,.alert-editor-actions .alerts-save { margin: 0; }
 .alert-editor-actions .alert-delete { min-height: 44px; padding: 8px 13px; border: 1px solid #d91d32; border-radius: 10px; background: #fff; }
+.alert-editor-close-bottom { min-height: 44px; padding: 8px 13px; border: 1px solid #0874ed; border-radius: 10px; color: #0874ed; background: #fff; font-weight: 900; }
+.alert-editor-message { margin: 12px 0 0; padding: 10px; border-radius: 9px; color: #fff; background: #102a50; text-align: center; }
 .alert-rule-card,.alerts-empty { padding: 16px; border: 1px solid rgba(169,210,255,.7); border-radius: 16px; background: rgba(255,255,255,.94); box-shadow: 0 14px 34px rgba(0,8,28,.2); }
 .alert-rule-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .alert-enabled { display: flex; align-items: center; gap: 8px; font-weight: 900; }
