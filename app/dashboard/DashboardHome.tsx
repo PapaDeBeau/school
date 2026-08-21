@@ -327,7 +327,6 @@ const timeFormat = new Intl.DateTimeFormat("en-US", {
 });
 
 const mobileClockFormat = new Intl.DateTimeFormat("en-US", {
-  timeZone: "America/Los_Angeles",
   hour: "numeric",
   minute: "2-digit",
 });
@@ -366,10 +365,10 @@ function offsetDayKey(key: string, days: number) {
 
 function ordinalDate(value: string | Date) {
   const date = typeof value === "string" ? new Date(value) : value;
-  const day = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", day: "numeric" }).format(date));
+  const day = Number(new Intl.DateTimeFormat("en-US", { day: "numeric" }).format(date));
   const suffix = day % 10 === 1 && day % 100 !== 11 ? "st" : day % 10 === 2 && day % 100 !== 12 ? "nd" : day % 10 === 3 && day % 100 !== 13 ? "rd" : "th";
-  const weekday = new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", weekday: "long" }).format(date);
-  const month = new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", month: "short" }).format(date).toUpperCase();
+  const weekday = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(date);
+  const month = new Intl.DateTimeFormat("en-US", { month: "short" }).format(date).toUpperCase();
   return `${weekday}, ${month} ${day}${suffix}`;
 }
 
