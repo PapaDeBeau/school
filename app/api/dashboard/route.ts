@@ -35,23 +35,28 @@ function normalizeNameForMatch(value: string) {
 
 function selectCourseTeacher(course: CanvasCourse): CourseTeacher | undefined {
   const teachers = (course.teachers ?? []).filter((teacher) => teacher.display_name?.trim());
-  if (teachers.length === 1) {
-    return {
-      name: teachers[0].display_name!.trim(),
-      avatarUrl: teachers[0].avatar_image_url?.trim() || null,
-    };
-  }
-
   const courseWords = new Set(normalizeNameForMatch(course.name).split(" ").filter(Boolean));
   const matches = teachers.filter((teacher) => {
     const nameWords = normalizeNameForMatch(teacher.display_name!).split(" ").filter(Boolean);
     const surname = nameWords.at(-1);
     return Boolean(surname && surname.length > 2 && courseWords.has(surname));
   });
-  if (matches.length !== 1) return undefined;
+  if (matches.length === 1) {
+    return {
+      name: matches[0].display_name!.trim(),
+      avatarUrl: matches[0].avatar_image_url?.trim() || null,
+    };
+  }
+
+  // Some Canvas schools put the actual instructor surname in the course title
+  // while the teachers include returns a coordinator or account-level teacher.
+  const titleInstructor = course.name.match(/\s[-–—]\s*([\p{L}][\p{L}'’.-]*(?:\s+[\p{L}][\p{L}'’.-]*){0,2})\s*$/u)?.[1]?.trim();
+  if (titleInstructor) return { name: titleInstructor, avatarUrl: null };
+
+  if (teachers.length !== 1) return undefined;
   return {
-    name: matches[0].display_name!.trim(),
-    avatarUrl: matches[0].avatar_image_url?.trim() || null,
+    name: teachers[0].display_name!.trim(),
+    avatarUrl: teachers[0].avatar_image_url?.trim() || null,
   };
 }
 
