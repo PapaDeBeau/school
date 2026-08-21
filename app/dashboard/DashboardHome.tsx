@@ -1451,7 +1451,7 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
-  const [capabilities, setCapabilities] = useState<{ native?: boolean; exact?: boolean; notifications?: boolean; overlay?: boolean } | null>(null);
+  const [capabilities, setCapabilities] = useState<{ native?: boolean; appVersion?: string; exact?: boolean; notifications?: boolean; overlay?: boolean } | null>(null);
   const bridge = typeof window === "undefined" ? undefined : (window as Window & { BeauSchoolApp?: SchoolAndroidBridge }).BeauSchoolApp;
 
   const syncNative = useCallback((nextRules: AlertRule[]) => {
@@ -1541,7 +1541,7 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
   if (loading) return <section className="alerts-view"><p className="alerts-status">Loading alarms…</p></section>;
   return <section className="alerts-view" aria-label="Custom alarms">
     <header className="alerts-header"><div><p>THIS PROFILE ONLY</p><h1>Alarms</h1><span>Set one-time or recurring reminders for {ownerUsername}.</span></div><button type="button" onClick={addRule}>+ Add alarm</button></header>
-    {capabilities?.native ? <div className="alerts-device-status"><strong>Android connected</strong><span>{capabilities.exact && capabilities.notifications && capabilities.overlay ? "All alarm permissions enabled" : "Finish alarm setup below"}</span>{!capabilities.notifications ? <button type="button" onClick={() => bridge?.requestNotificationAccess?.()}>Allow notifications</button> : null}{!capabilities.exact ? <button type="button" onClick={() => { setMessage("Opening Android Alarms & reminders settings…"); bridge?.requestExactAlarmAccess?.(); }}>Allow exact alarms</button> : null}{!capabilities.overlay ? <button className="large-alert-permission" type="button" onClick={() => bridge?.requestLargeAlertAccess?.()}>Allow large pop-up alerts</button> : <strong className="large-alert-enabled">Large pop-up alerts enabled</strong>}</div> : null}
+    {capabilities?.native ? <div className="alerts-device-status"><strong>Android connected{capabilities.appVersion ? ` · App ${capabilities.appVersion}` : ""}</strong><span>{capabilities.exact && capabilities.notifications && capabilities.overlay ? "All alarm permissions enabled" : "Finish alarm setup below"}</span>{!capabilities.notifications ? <button type="button" onClick={() => bridge?.requestNotificationAccess?.()}>Allow notifications</button> : null}{!capabilities.exact ? <button type="button" onClick={() => { setMessage("Opening Android Alarms & reminders settings…"); bridge?.requestExactAlarmAccess?.(); }}>Allow exact alarms</button> : null}{!capabilities.overlay ? <button className="large-alert-permission" type="button" onClick={() => bridge?.requestLargeAlertAccess?.()}>Allow large pop-up alerts</button> : <strong className="large-alert-enabled">Large pop-up alerts enabled</strong>}</div> : null}
     <div className="alerts-list">
       {rules.length ? rules.map((rule) => <article className="alert-rule-card" key={rule.id}>
         <div className="alert-rule-top"><label className="alert-enabled"><input type="checkbox" checked={rule.enabled} onChange={(event) => updateRule(rule.id, { enabled: event.target.checked })} /><span>{rule.enabled ? "On" : "Off"}</span></label><button className="alert-delete" type="button" onClick={() => setRules((current) => current.filter((item) => item.id !== rule.id))}>Remove</button></div>
