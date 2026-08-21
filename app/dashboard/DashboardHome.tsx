@@ -1428,7 +1428,7 @@ type SchoolAndroidBridge = {
   openNotificationSettings?: () => void;
   requestNotificationAccess?: () => void;
   requestLargeAlertAccess?: () => void;
-  testAlert?: (ownerUsername: string, ruleId: string) => boolean;
+  testAlert?: (ownerUsername: string, ruleJson: string) => boolean;
 };
 
 const alertImages = [
@@ -1528,15 +1528,13 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
   }
 
   function testRule(ruleId: string) {
-    const previewRules = rules.map((rule) => rule.scheduleType === "once" && (!rule.oneTimeAt || rule.oneTimeAt <= Date.now())
-      ? { ...rule, oneTimeAt: Date.now() + 10 * 60_000 }
-      : rule);
-    const nativeResult = syncNative(previewRules);
-    if (nativeResult && nativeResult.ok === false) {
-      setMessage(nativeResult.error || "Android could not prepare this alarm.");
-      return;
-    }
-    const shown = bridge?.testAlert?.(ownerUsername, ruleId) === true;
+    const sourceRule = rules.find((rule) => rule.id === ruleId);
+    if (!sourceRule) return;
+    const previewTime = new Date(Date.now() + 10 * 60_000);
+    const previewRule = sourceRule.scheduleType === "once" && (!sourceRule.oneTimeAt || sourceRule.oneTimeAt <= Date.now())
+      ? { ...sourceRule, oneTimeAt: previewTime.getTime(), oneTimeLocal: localDateTimeValue(previewTime) }
+      : sourceRule;
+    const shown = bridge?.testAlert?.(ownerUsername, JSON.stringify(previewRule)) === true;
     setMessage(shown ? "Test sent now. You should see the large alert and hear its selected sound." : "Android could not display the test. Confirm all three permissions above are enabled.");
   }
 
