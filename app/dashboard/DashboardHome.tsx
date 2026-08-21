@@ -110,6 +110,7 @@ type DashboardData = {
   student: string;
   courseCount: number;
   unreadCount: number;
+  submittedCount: number;
   announcements: ActionItem[];
   critical: ActionItem[];
   upcoming: ActionItem[];
@@ -3334,7 +3335,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
         <section className="summary-grid" aria-label="Dashboard summary">
           <article className={`summary-card critical-stat${data.critical.length ? "" : " is-zero"}`}><span aria-hidden="true">!</span><div><strong>{data.critical.length}</strong><small>Critical</small></div></article>
           <article className={`summary-card unread-stat${data.unreadCount ? "" : " is-zero"}`}><span aria-hidden="true">✉</span><div><strong>{data.unreadCount}</strong><small>Unread</small></div></article>
-          <article className="summary-card course-stat"><span aria-hidden="true">▤</span><div><strong>{data.courseCount}</strong><small>Courses</small></div></article>
+          <article className={`summary-card submitted-stat${data.submittedCount ? "" : " is-zero"}`}><span aria-hidden="true">✓</span><div><strong>{data.submittedCount}</strong><small>Submitted</small></div></article>
         </section>
 
         {error ? <p className="inline-error" role="alert">Latest sync failed: {error}</p> : null}

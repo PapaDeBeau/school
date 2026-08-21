@@ -24,6 +24,32 @@ type CanvasCourse = {
 
 type CourseTeacher = { name: string | null; avatarUrl: string | null };
 
+type CanvasSubmission = {
+  workflow_state?: string | null;
+  submitted_at?: string | null;
+  graded_at?: string | null;
+  excused?: boolean;
+  missing?: boolean;
+  late?: boolean;
+};
+
+type CanvasAssignment = {
+  id: number;
+  name?: string;
+  description?: string | null;
+  due_at?: string | null;
+  points_possible?: number | null;
+  html_url?: string;
+  unlock_at?: string | null;
+  lock_at?: string | null;
+  submission_types?: string[];
+  allowed_extensions?: string[];
+  grading_type?: string | null;
+  allowed_attempts?: number | null;
+  published?: boolean;
+  submission?: CanvasSubmission | null;
+};
+
 type PlannerItem = {
   course_id?: number;
   context_name?: string;
@@ -157,40 +183,28 @@ function canvasHtmlToText(value?: string | null) {
     .trim();
 }
 
-function canvasRichContent(item: PlannerItem) {
-  const candidates = [
-    item.plannable?.description,
-    item.plannable?.message,
-    item.plannable?.details,
-    item.plannable?.body,
-  ];
-  return candidates.find((value) => value?.trim())?.trim() ?? "";
+function submissionIsComplete(submission?: CanvasSubmission | null) {
+  if (!submission) return false;
+  const workflowState = submission.workflow_state?.trim().toLocaleLowerCase("en-US") ?? "";
+  return submission.excused === true
+    || Boolean(submission.submitted_at)
+    || Boolean(submission.graded_at)
+    || workflowState === "submitted"
+    || workflowState === "graded"
+    || workflowState === "pending_review";
 }
 
-function detailIdForPlannerItem(item: PlannerItem, source: string) {
-  const discussionTopicId = source.match(/\/courses\/\d+\/discussion_topics\/(\d+)/i)?.[1];
-  if (discussionTopicId) return Number(discussionTopicId);
-  const urlAssignmentId = source.match(/\/courses\/\d+\/assignments\/(\d+)/i)?.[1];
-  if (urlAssignmentId) return Number(urlAssignmentId);
-  if (item.plannable?.assignment_id) return item.plannable.assignment_id;
-  if (item.planner_override?.assignment_id) return item.planner_override.assignment_id;
-  const plannerId = Number(item.plannable_id ?? item.plannable?.id);
-  return Number.isSafeInteger(plannerId) && plannerId > 0 ? plannerId : null;
-}
+function normalizeCanvasAssignment(
+  assignment: CanvasAssignment,
+  course: CanvasCourse,
+  teacher?: CourseTeacher,
+): ActionItem | null {
+  const title = assignment.name?.trim();
+  if (!title || assignment.published === false || submissionIsComplete(assignment.submission)) return null;
 
-function normalizePlannerItem(item: PlannerItem, courseNames: Map<number, string>, courseTeachers: Map<number, CourseTeacher>): ActionItem | null {
-  const itemType = item.plannable_type?.toLocaleLowerCase("en-US") ?? "";
-  if (itemType === "announcement") return null;
-
-  const title = item.plannable?.title?.trim();
-  if (!title) return null;
-
-  const submission = item.submissions;
-  if (submission?.submitted || submission?.graded || submission?.excused) return null;
-
-  const dueAt = item.plannable?.due_at ?? item.plannable_date ?? null;
-  const unlockAt = item.plannable?.unlock_at ? new Date(item.plannable.unlock_at) : null;
-  const locked = unlockAt ? unlockAt.getTime() > Date.now() : false;
+  const unlockAt = assignment.unlock_at ? new Date(assignment.unlock_at) : null;
+  const locked = Boolean(unlockAt && Number.isFinite(unlockAt.getTime()) && unlockAt.getTime() > Date.now());
+  const submission = assignment.submission;
   const state = submission?.missing
     ? "missing"
     : locked
@@ -198,42 +212,48 @@ function normalizePlannerItem(item: PlannerItem, courseNames: Map<number, string
       : submission?.late
         ? "late"
         : "open";
-  const course =
-    (item.course_id ? courseNames.get(item.course_id) : undefined) ??
-    item.context_name ??
-    "Canvas";
-  const source = item.html_url ?? item.plannable?.html_url ?? CANVAS_BASE_URL;
-  const descriptionHtml = canvasRichContent(item);
-  const canvasItemId = detailIdForPlannerItem(item, source);
-  const canvasItemType = itemType || null;
-  const teacher = item.course_id ? courseTeachers.get(item.course_id) : undefined;
+  const descriptionHtml = assignment.description?.trim() ?? "";
+  const source = assignment.html_url ?? `${CANVAS_BASE_URL}/courses/${course.id}/assignments/${assignment.id}`;
 
   return {
-    id: `assignment-${item.course_id ?? "canvas"}-${item.plannable?.id ?? title}`,
+    id: `assignment-${course.id}-${assignment.id}`,
     kind: "assignment",
-    canvasCourseId: item.course_id ?? null,
-    canvasItemId,
-    canvasItemType,
+    canvasCourseId: course.id,
+    canvasItemId: assignment.id,
+    canvasItemType: "assignment",
     title,
-    course,
-    dueAt,
-    points: item.plannable?.points_possible ?? null,
+    course: course.name,
+    dueAt: assignment.due_at ?? null,
+    points: assignment.points_possible ?? null,
     state,
     detail: locked && unlockAt ? `Unlocks ${unlockAt.toISOString()}` : state,
     sourceUrl: source.startsWith("http") ? source : `${CANVAS_BASE_URL}${source}`,
     description: canvasHtmlToText(descriptionHtml),
     descriptionHtml,
-    availableFrom: item.plannable?.unlock_at ?? null,
-    availableUntil: item.plannable?.lock_at ?? null,
-    submissionTypes: item.plannable?.submission_types ?? [],
-    allowedExtensions: item.plannable?.allowed_extensions ?? [],
-    gradingType: item.plannable?.grading_type ?? null,
-    allowedAttempts: item.plannable?.allowed_attempts ?? null,
-    published: item.plannable?.published ?? null,
+    availableFrom: assignment.unlock_at ?? null,
+    availableUntil: assignment.lock_at ?? null,
+    submissionTypes: assignment.submission_types ?? [],
+    allowedExtensions: assignment.allowed_extensions ?? [],
+    gradingType: assignment.grading_type ?? null,
+    allowedAttempts: assignment.allowed_attempts ?? null,
+    published: assignment.published ?? null,
     authorName: teacher?.name ?? null,
     authorAvatarUrl: teacher?.avatarUrl ?? null,
     audioUrl: null,
   };
+}
+
+async function mapWithConcurrency<T, R>(values: T[], limit: number, task: (value: T) => Promise<R>) {
+  const results = new Array<R>(values.length);
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(Math.max(1, limit), values.length) }, async () => {
+    while (nextIndex < values.length) {
+      const index = nextIndex++;
+      results[index] = await task(values[index]);
+    }
+  });
+  await Promise.all(workers);
+  return results;
 }
 
 function isCanvas406(error: unknown) {
@@ -298,7 +318,6 @@ export async function GET(request: Request) {
       ),
     ]);
 
-    const courseNames = new Map(courses.map((course) => [course.id, course.name]));
     const courseTeachers = new Map(courses.map((course) => {
       const teacher = course.teachers?.[0];
       return [course.id, {
@@ -306,9 +325,24 @@ export async function GET(request: Request) {
         avatarUrl: teacher?.avatar_image_url?.trim() || null,
       }] as const;
     }));
-    const assignments = plannerItems
-      .map((item) => normalizePlannerItem(item, courseNames, courseTeachers))
-      .filter((item): item is ActionItem => Boolean(item));
+    const courseAssignmentEntries = await mapWithConcurrency(courses, 6, async (course) => {
+      const params = new URLSearchParams({ per_page: "100", order_by: "due_at" });
+      params.append("include[]", "submission");
+      const courseAssignments = await canvasGet<CanvasAssignment[]>(
+        `/api/v1/courses/${course.id}/assignments?${params.toString()}`,
+        token,
+      );
+      return [course, courseAssignments] as const;
+    });
+    const submittedCount = courseAssignmentEntries.reduce((count, [, courseAssignments]) => (
+      count + courseAssignments.filter((assignment) => assignment.published !== false && submissionIsComplete(assignment.submission)).length
+    ), 0);
+    const assignments = courseAssignmentEntries.flatMap(([course, courseAssignments]) => {
+      const teacher = courseTeachers.get(course.id);
+      return courseAssignments
+        .map((assignment) => normalizeCanvasAssignment(assignment, course, teacher))
+        .filter((item): item is ActionItem => Boolean(item));
+    });
     const messages: ActionItem[] = unreadConversations.map((conversation) => ({
       id: `message-${conversation.id}`,
       kind: "message",
@@ -361,6 +395,7 @@ export async function GET(request: Request) {
       student: connection.displayName,
       courseCount: courses.length,
       unreadCount: unreadConversations.length,
+      submittedCount,
       announcements: [],
       critical,
       upcoming,

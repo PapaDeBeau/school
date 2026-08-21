@@ -9,6 +9,8 @@ test("dashboard contains the priority due-date surfaces", async () => {
   const dashboardRoute = await readFile(new URL("app/api/dashboard/route.ts", root), "utf8");
   const enrichmentRoute = await readFile(new URL("app/api/dashboard/enrichment/route.ts", root), "utf8");
   assert.match(dashboard, /Critical information/);
+  assert.match(dashboard, /data\.submittedCount/);
+  assert.match(dashboard, /<small>Submitted<\/small>/);
   assert.match(dashboard, /Due tomorrow/);
   assert.match(dashboard, /This week/);
   assert.match(dashboard, /grades-banner\.webp/);
@@ -38,6 +40,13 @@ test("dashboard renders core data before quiet enrichment and ignores stale work
   const styles = await readFile(new URL("app/globals.css", root), "utf8");
 
   assert.match(dashboardRoute, /const \[courses, plannerItems, unreadConversations\] = await Promise\.all/);
+  assert.match(dashboardRoute, /\/api\/v1\/courses\/\$\{course\.id\}\/assignments\?/);
+  assert.match(dashboardRoute, /params\.append\("include\[\]", "submission"\)/);
+  assert.match(dashboardRoute, /function submissionIsComplete\(submission\?: CanvasSubmission \| null\)/);
+  assert.match(dashboardRoute, /workflowState === "pending_review"/);
+  assert.match(dashboardRoute, /id: `assignment-\$\{course\.id\}-\$\{assignment\.id\}`/);
+  assert.match(dashboardRoute, /submittedCount,/);
+  assert.doesNotMatch(dashboardRoute, /const assignments = plannerItems/);
   assert.match(dashboardRoute, /syncId: generatedAt/);
   assert.match(dashboardRoute, /enrichmentPending: true/);
   assert.doesNotMatch(dashboardRoute, /calendar_events|upcoming_events|\/modules\?|\/announcements\?|getChatAudioBucket/);
@@ -370,8 +379,8 @@ test("assignments open a detailed accessible modal before leaving for Canvas", a
   assert.match(assignmentDetails, /readFamilySession/);
   assert.match(dashboard, /event\.key === "Escape"/);
   assert.match(dashboardRoute, /description: canvasHtmlToText/);
-  assert.match(dashboardRoute, /item\.plannable\?\.message/);
-  assert.match(dashboardRoute, /if \(itemType === "announcement"\) return null/);
+  assert.match(dashboardRoute, /assignment\.description\?\.trim\(\) \?\? ""/);
+  assert.match(dashboardRoute, /assignment\.published === false \|\| submissionIsComplete\(assignment\.submission\)/);
   assert.match(enrichmentRoute, /async function assignmentPatches\(selectors: ItemSelector\[\], token: string\)/);
   assert.match(enrichmentRoute, /params\.append\("assignment_ids\[\]", String\(itemId\)\)/);
   assert.match(enrichmentRoute, /\/discussion_topics\/\$\{selector\.itemId\}/);
@@ -595,9 +604,9 @@ test("admin stores percentages and controls dashboard section visibility", async
   assert.match(dashboard, /course: displayCourse, artwork: artworkForCourse\(course\.name\), percentage: displayCourse\.score/);
   assert.match(dashboard, /gradeCards\.map\(\(\{ course, artwork: item, percentage \}\)[\s\S]*?openCourseGradebook\(course\)/);
   assert.doesNotMatch(dashboard, /percentage: course\.score \?\? manualGrade\?\.percentage/);
-  assert.match(dashboardRoute, /function detailIdForPlannerItem\(/);
-  assert.match(dashboardRoute, /discussion_topics/);
-  assert.match(dashboardRoute, /source\.match\(\/\\\/courses\\\/\\d\+\\\/assignments\\\/\(\\d\+\)\/i\)/);
+  assert.match(dashboardRoute, /canvasItemId: assignment\.id/);
+  assert.match(dashboardRoute, /canvasItemType: "assignment"/);
+  assert.match(dashboardRoute, /courses\/\$\{course\.id\}\/assignments\/\$\{assignment\.id\}/);
   assert.match(styles, /\.grade-tone-b \.grade-artwork-letter,[\s\S]*\.grade-tone-d \.grade-artwork-letter \{ left: 51%; \}/);
   assert.match(styles, /\.grade-artwork-value \{[^}]*visibility: hidden; opacity: 0;/);
   assert.doesNotMatch(dashboard, /autoAlpha: 0\.18/);

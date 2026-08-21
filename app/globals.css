@@ -425,6 +425,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .critical-stat > span { color: #f34b6a; background: #fff0f3; }
 .unread-stat > span { color: #8551df; background: #f4efff; }
 .course-stat > span { color: #27ad71; background: #edf9f4; }
+.submitted-stat > span { color: #27ad71; background: #edf9f4; }
 
 .critical-strip {
   display: grid;
