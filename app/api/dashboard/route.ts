@@ -24,6 +24,37 @@ type CanvasCourse = {
 
 type CourseTeacher = { name: string | null; avatarUrl: string | null };
 
+function normalizeNameForMatch(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("en-US")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function selectCourseTeacher(course: CanvasCourse): CourseTeacher | undefined {
+  const teachers = (course.teachers ?? []).filter((teacher) => teacher.display_name?.trim());
+  if (teachers.length === 1) {
+    return {
+      name: teachers[0].display_name!.trim(),
+      avatarUrl: teachers[0].avatar_image_url?.trim() || null,
+    };
+  }
+
+  const courseWords = new Set(normalizeNameForMatch(course.name).split(" ").filter(Boolean));
+  const matches = teachers.filter((teacher) => {
+    const nameWords = normalizeNameForMatch(teacher.display_name!).split(" ").filter(Boolean);
+    const surname = nameWords.at(-1);
+    return Boolean(surname && surname.length > 2 && courseWords.has(surname));
+  });
+  if (matches.length !== 1) return undefined;
+  return {
+    name: matches[0].display_name!.trim(),
+    avatarUrl: matches[0].avatar_image_url?.trim() || null,
+  };
+}
+
 type CanvasSubmission = {
   workflow_state?: string | null;
   submitted_at?: string | null;
@@ -318,13 +349,9 @@ export async function GET(request: Request) {
       ),
     ]);
 
-    const courseTeachers = new Map(courses.map((course) => {
-      const teacher = course.teachers?.[0];
-      return [course.id, {
-        name: teacher?.display_name?.trim() || null,
-        avatarUrl: teacher?.avatar_image_url?.trim() || null,
-      }] as const;
-    }));
+    // Canvas assignments do not identify an author. Associate a course-level
+    // teacher only when the teacher is unambiguous; array order is not identity.
+    const courseTeachers = new Map(courses.map((course) => [course.id, selectCourseTeacher(course)] as const));
     const courseAssignmentEntries = await mapWithConcurrency(courses, 6, async (course) => {
       const params = new URLSearchParams({ per_page: "100", order_by: "due_at" });
       params.append("include[]", "submission");
