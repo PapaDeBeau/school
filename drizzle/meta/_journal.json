@@ -71,6 +71,13 @@
       "when": 1787268450901,
       "tag": "0009_youthful_whizzer",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1787290621549,
+      "tag": "0010_nasty_wonder_man",
+      "breakpoints": true
     }
   ]
 }

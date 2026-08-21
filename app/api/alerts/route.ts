@@ -15,7 +15,7 @@ function json(body: unknown, init?: ResponseInit) {
   return Response.json(body, { ...init, headers: { ...headers, ...init?.headers } });
 }
 
-type RuleInput = { id?: unknown; enabled?: unknown; scheduleType?: unknown; oneTimeAt?: unknown; weekdayMask?: unknown; hour?: unknown; minute?: unknown; title?: unknown; message?: unknown; soundKey?: unknown; imageUrl?: unknown };
+type RuleInput = { id?: unknown; enabled?: unknown; scheduleType?: unknown; oneTimeAt?: unknown; oneTimeLocal?: unknown; weekdayMask?: unknown; hour?: unknown; minute?: unknown; title?: unknown; message?: unknown; soundKey?: unknown; imageUrl?: unknown };
 
 function validRule(value: RuleInput) {
   const id = typeof value.id === "string" ? value.id.trim() : "";
@@ -25,19 +25,20 @@ function validRule(value: RuleInput) {
   const imageUrl = typeof value.imageUrl === "string" && value.imageUrl.trim() ? value.imageUrl.trim() : null;
   const scheduleType = value.scheduleType === "once" ? "once" : "recurring";
   const oneTimeAt = scheduleType === "once" && Number.isInteger(value.oneTimeAt) ? Number(value.oneTimeAt) : null;
+  const oneTimeLocal = scheduleType === "once" && typeof value.oneTimeLocal === "string" ? value.oneTimeLocal.trim() : null;
   if (!/^[A-Za-z0-9_-]{1,80}$/.test(id) || typeof value.enabled !== "boolean" ||
       !Number.isInteger(value.weekdayMask) || Number(value.weekdayMask) < 1 || Number(value.weekdayMask) > 127 ||
       !Number.isInteger(value.hour) || Number(value.hour) < 0 || Number(value.hour) > 23 ||
       !Number.isInteger(value.minute) || Number(value.minute) < 0 || Number(value.minute) > 59 ||
       !title || title.length > 80 || !message || message.length > 300 || !sounds.has(soundKey) ||
-      (scheduleType === "once" && (!oneTimeAt || oneTimeAt <= Date.now()))) return null;
+      (scheduleType === "once" && (!oneTimeAt || oneTimeAt <= Date.now() || !oneTimeLocal || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(oneTimeLocal)))) return null;
   if (imageUrl) {
     try {
       const parsed = new URL(imageUrl, "https://beauvizenor.com/school/");
       if (parsed.origin !== "https://beauvizenor.com" || !parsed.pathname.startsWith("/school/")) return null;
     } catch { return null; }
   }
-  return { id, enabled: value.enabled, scheduleType, oneTimeAt, weekdayMask: Number(value.weekdayMask), hour: Number(value.hour), minute: Number(value.minute), title, message, soundKey, imageUrl };
+  return { id, enabled: value.enabled, scheduleType, oneTimeAt, oneTimeLocal, weekdayMask: Number(value.weekdayMask), hour: Number(value.hour), minute: Number(value.minute), title, message, soundKey, imageUrl };
 }
 
 export async function GET(request: Request) {
@@ -45,11 +46,13 @@ export async function GET(request: Request) {
   if (auth.response || !auth.user) return auth.response;
   await ensureFamilyAlertSchema();
   const result = await getD1().prepare(`
-    SELECT id, enabled, schedule_type, one_time_at, weekday_mask, hour, minute, title, message, sound_key, image_url, updated_at
-    FROM family_alert_rules WHERE owner_username = ? ORDER BY hour, minute, updated_at
-  `).bind(auth.user.username).all();
+    SELECT id, enabled, schedule_type, one_time_at, one_time_local, weekday_mask, hour, minute, title, message, sound_key, image_url, updated_at
+    FROM family_alert_rules
+    WHERE owner_username = ? AND (schedule_type <> 'once' OR one_time_at > ?)
+    ORDER BY hour, minute, updated_at
+  `).bind(auth.user.username, Date.now()).all();
   return json({ ownerUsername: auth.user.username, rules: (result.results ?? []).map((row: Record<string, unknown>) => ({
-    id: row.id, enabled: Boolean(row.enabled), scheduleType: row.schedule_type, oneTimeAt: row.one_time_at, weekdayMask: row.weekday_mask, hour: row.hour, minute: row.minute,
+    id: row.id, enabled: Boolean(row.enabled), scheduleType: row.schedule_type, oneTimeAt: row.one_time_at, oneTimeLocal: row.one_time_local, weekdayMask: row.weekday_mask, hour: row.hour, minute: row.minute,
     title: row.title, message: row.message, soundKey: row.sound_key, imageUrl: row.image_url, updatedAt: row.updated_at,
   })) });
 }
@@ -67,9 +70,9 @@ export async function PUT(request: Request) {
   const now = new Date().toISOString();
   const statements = [d1.prepare("DELETE FROM family_alert_rules WHERE owner_username = ?").bind(auth.user.username)];
   for (const rule of rules) if (rule) statements.push(d1.prepare(`
-    INSERT INTO family_alert_rules (id, owner_username, enabled, schedule_type, one_time_at, weekday_mask, hour, minute, title, message, sound_key, image_url, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).bind(rule.id, auth.user.username, rule.enabled ? 1 : 0, rule.scheduleType, rule.oneTimeAt, rule.weekdayMask, rule.hour, rule.minute, rule.title, rule.message, rule.soundKey, rule.imageUrl, now, now));
+    INSERT INTO family_alert_rules (id, owner_username, enabled, schedule_type, one_time_at, one_time_local, weekday_mask, hour, minute, title, message, sound_key, image_url, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(rule.id, auth.user.username, rule.enabled ? 1 : 0, rule.scheduleType, rule.oneTimeAt, rule.oneTimeLocal, rule.weekdayMask, rule.hour, rule.minute, rule.title, rule.message, rule.soundKey, rule.imageUrl, now, now));
   await d1.batch(statements);
   return json({ ok: true, ownerUsername: auth.user.username, rules });
 }

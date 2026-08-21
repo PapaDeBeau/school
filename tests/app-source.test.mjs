@@ -632,6 +632,7 @@ test("alarms are profile-owned, native-synced, and exposed from the menu", async
   const db = await readFile(new URL("db/index.ts", root), "utf8");
   const migration = await readFile(new URL("drizzle/0008_stormy_toxin.sql", root), "utf8");
   const oneTimeMigration = await readFile(new URL("drizzle/0009_youthful_whizzer.sql", root), "utf8");
+  const wallClockMigration = await readFile(new URL("drizzle/0010_nasty_wonder_man.sql", root), "utf8");
   const asset = await stat(new URL("public/menu-alarms.webp", root));
   const serviceWorker = await readFile(new URL("public/image-cache-sw.js", root), "utf8");
   assert.ok(asset.size < 70_000, `menu-alarms.webp should stay tiny; got ${asset.size} bytes`);
@@ -646,6 +647,14 @@ test("alarms are profile-owned, native-synced, and exposed from the menu", async
   assert.match(migration, /CREATE TABLE `family_alert_rules`/);
   assert.match(oneTimeMigration, /ADD `schedule_type` text DEFAULT 'recurring' NOT NULL/);
   assert.match(oneTimeMigration, /ADD `one_time_at` integer/);
+  assert.match(wallClockMigration, /ADD `one_time_local` text/);
+  assert.match(schema, /oneTimeLocal: text\("one_time_local"\)/);
+  assert.match(db, /ADD COLUMN one_time_local TEXT/);
+  assert.match(route, /one_time_local/);
+  assert.match(route, /schedule_type <> 'once' OR one_time_at > \?/);
+  assert.match(route, /\^\\d\{4\}-\\d\{2\}-\\d\{2\}T\\d\{2\}:\\d\{2\}\$/);
+  assert.match(dashboard, /function localDateTimeValue\(value: Date\)/);
+  assert.match(dashboard, /value=\{rule\.oneTimeLocal \?\? ""\}/);
   assert.match(dashboard, /<option value="once">One time<\/option>/);
   assert.match(dashboard, /requestNotificationAccess/);
   assert.match(dashboard, /Allow large pop-up alerts/);

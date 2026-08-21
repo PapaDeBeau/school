@@ -1416,7 +1416,7 @@ function ChatView({ messages, viewer, loading, olderLoading, hasMore, error, onL
 }
 
 type AlertRule = {
-  id: string; enabled: boolean; scheduleType: "recurring" | "once"; oneTimeAt: number | null; weekdayMask: number; hour: number; minute: number;
+  id: string; enabled: boolean; scheduleType: "recurring" | "once"; oneTimeAt: number | null; oneTimeLocal: string | null; weekdayMask: number; hour: number; minute: number;
   title: string; message: string; soundKey: string; imageUrl: string | null;
 };
 
@@ -1436,6 +1436,15 @@ const alertImages = [
   { label: "Tomorrow", url: "https://beauvizenor.com/school/due-tomorrow-banner.webp" },
   { label: "This week", url: "https://beauvizenor.com/school/this-week-banner.webp" },
 ];
+
+function localDateTimeValue(value: Date) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  const hour = String(value.getHours()).padStart(2, "0");
+  const minute = String(value.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hour}:${minute}`;
+}
 
 function AlertsView({ ownerUsername }: { ownerUsername: string }) {
   const [rules, setRules] = useState<AlertRule[]>([]);
@@ -1486,7 +1495,7 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
     const now = new Date();
     const oneTime = new Date(now.getTime() + 10 * 60_000);
     setRules((current) => [...current, {
-      id: `alarm_${Date.now().toString(36)}`, enabled: true, scheduleType: "recurring", oneTimeAt: oneTime.getTime(), weekdayMask: 127,
+      id: `alarm_${Date.now().toString(36)}`, enabled: true, scheduleType: "recurring", oneTimeAt: oneTime.getTime(), oneTimeLocal: localDateTimeValue(oneTime), weekdayMask: 127,
       hour: now.getHours(), minute: 0, title: "School reminder", message: "Time to check School.",
       soundKey: "chime", imageUrl: alertImages[0].url,
     }]);
@@ -1540,7 +1549,7 @@ function AlertsView({ ownerUsername }: { ownerUsername: string }) {
         <div className="alert-rule-top"><label className="alert-enabled"><input type="checkbox" checked={rule.enabled} onChange={(event) => updateRule(rule.id, { enabled: event.target.checked })} /><span>{rule.enabled ? "On" : "Off"}</span></label><button className="alert-delete" type="button" onClick={() => setRules((current) => current.filter((item) => item.id !== rule.id))}>Remove</button></div>
         <div className="alert-rule-grid">
           <label>Schedule<select value={rule.scheduleType} onChange={(event) => updateRule(rule.id, { scheduleType: event.target.value as "recurring" | "once" })}><option value="recurring">Recurring</option><option value="once">One time</option></select></label>
-          {rule.scheduleType === "once" ? <label>Date & time<input type="datetime-local" value={rule.oneTimeAt ? new Date(rule.oneTimeAt - new Date(rule.oneTimeAt).getTimezoneOffset() * 60_000).toISOString().slice(0,16) : ""} onChange={(event) => updateRule(rule.id, { oneTimeAt: event.target.value ? new Date(event.target.value).getTime() : null })} /></label> : <>
+          {rule.scheduleType === "once" ? <label>Date & time<input type="datetime-local" value={rule.oneTimeLocal ?? ""} onChange={(event) => updateRule(rule.id, { oneTimeLocal: event.target.value || null, oneTimeAt: event.target.value ? new Date(event.target.value).getTime() : null })} /></label> : <>
             <label>Time<input type="time" value={`${String(rule.hour).padStart(2, "0")}:${String(rule.minute).padStart(2, "0")}`} onChange={(event) => { const [hour, minute] = event.target.value.split(":").map(Number); updateRule(rule.id, { hour, minute }); }} /></label>
             <label>Days<select value={rule.weekdayMask} onChange={(event) => updateRule(rule.id, { weekdayMask: Number(event.target.value) })}><option value={127}>Every day</option><option value={62}>Weekdays</option><option value={65}>Weekends</option></select></label>
           </>}

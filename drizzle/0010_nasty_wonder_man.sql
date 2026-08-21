@@ -1,0 +1,1 @@
+ALTER TABLE `family_alert_rules` ADD `one_time_local` text;
