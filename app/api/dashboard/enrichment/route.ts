@@ -3,7 +3,6 @@ import { ensureCanvasConnectionSchema, getChatAudioBucket, getDb } from "../../.
 import { canvasConnections } from "../../../../db/schema";
 import { CANVAS_BASE_URL, canvasGet, canvasGetAll } from "../../../../lib/canvas-client";
 import { loadCanvasModules, type CanvasModule } from "../../../../lib/canvas-modules";
-import { loadCanvasScheduleSources } from "../../../../lib/canvas-schedule-sources";
 import { decryptCanvasToken } from "../../../../lib/canvas-vault";
 import { familyUnauthorizedResponse, readFamilySession } from "../../../../lib/family-auth";
 import { isAuthorizedAppRequest, unauthorizedAppResponse } from "../../../../lib/request-auth";
@@ -395,10 +394,6 @@ export async function POST(request: Request) {
       };
     });
     const modulesByCourse = new Map(moduleEntries);
-    await mapWithConcurrency(courses, 3, async (course) => {
-      const sources = await loadCanvasScheduleSources(course.id, modulesByCourse.get(course.id) ?? [], <T,>(path: string) => canvasGet<T>(path, token));
-      console.info("class-schedule-source", JSON.stringify({ courseId: course.id, sources: sources.map((source) => ({ title: source.title, text: Array.from(canvasHtmlToText(source.html).replace(/\s+/g, " ").matchAll(/.{0,100}(?:monday|tuesday|wednesday|thursday|\b[MT]\s*\/|\d{1,2}:\d{2}|\d\s*[ap]m).{0,180}/gi), (match) => match[0].replace(/https?:\/\/\S+/g, "[link]")).slice(0, 16).join(" | ") })), items: (modulesByCourse.get(course.id) ?? []).flatMap((module) => (module.items ?? []).slice(0, 8).map((item) => ({title: item.title, type: item.type, page: item.page_url}))).slice(0, 15) }));
-    });
     const moduleSchedule = classScheduleFromModules(courses, modulesByCourse);
     const moduleScheduledCourses = new Set(moduleSchedule.map((meeting) => meeting.course));
     const calendarSchedule = classSchedule([

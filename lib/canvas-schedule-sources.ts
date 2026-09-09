@@ -8,7 +8,7 @@ export async function loadCanvasScheduleSources(courseId: number, modules: Canva
   const pages = new Map<string, string>();
   for (const module of modules) {
     for (const item of module.items ?? []) {
-      if (item.type === "Page" && item.page_url && !item.content_details?.locked_for_user && /zoom|live class|schedule|syllabus|course information|welcome/i.test(item.title ?? "")) {
+      if (item.type === "Page" && item.page_url && !item.content_details?.locked_for_user && /zoom|live class|schedule|syllabus|information.*class|course information|welcome/i.test(item.title ?? "")) {
         pages.set(item.page_url, item.title ?? "Course page");
       }
     }
