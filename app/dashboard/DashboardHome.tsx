@@ -274,7 +274,11 @@ function applyDashboardEnrichment(current: DashboardData, enrichment: DashboardE
     announcements,
     critical: current.critical.map(patchItem),
     upcoming: current.upcoming.map(patchItem),
-    week: enrichment.week.length ? enrichment.week : current.week,
+    week: [...enrichment.week, ...current.week.filter((meeting) => {
+      const course = current.courses.find((item) => item.name === meeting.course);
+      return course && enrichment.scheduleUnavailableCourseIds?.includes(course.id)
+        && !enrichment.week.some((fresh) => fresh.course === meeting.course);
+    })],
     announcementPlaceholderCount: Math.max(current.announcementPlaceholderCount, announcements.length),
   };
 }

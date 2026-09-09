@@ -3,7 +3,7 @@ import { ensureCanvasConnectionSchema, getChatAudioBucket, getDb } from "../../.
 import { canvasConnections } from "../../../../db/schema";
 import { CANVAS_BASE_URL, canvasGet, canvasGetAll } from "../../../../lib/canvas-client";
 import { loadCanvasModules, type CanvasModule } from "../../../../lib/canvas-modules";
-import { loadCanvasScheduleSources } from "../../../../lib/canvas-schedule-sources";
+import { loadEnrolledCanvasSections } from "../../../../lib/canvas-sections";
 import { decryptCanvasToken } from "../../../../lib/canvas-vault";
 import { familyUnauthorizedResponse, readFamilySession } from "../../../../lib/family-auth";
 import { isAuthorizedAppRequest, unauthorizedAppResponse } from "../../../../lib/request-auth";
@@ -215,8 +215,8 @@ function classScheduleFromModules(courses: CourseInput[], modulesByCourse: Map<n
       const match = title.match(/\b(M\s*\/\s*W|T\s*\/\s*Th)\b[^\d]*(\d{1,2}(?::\d{2})?\s*(?:[ap](?:\.?m\.?)?)?(?:\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:[ap](?:\.?m\.?)?)?)?)/i);
       return match ? [{ title, daysText: match[1], timeText: match[2] }] : [];
     });
-    const preferredSectionIndex = /world history/i.test(course.name) ? 1 : 0;
-    const scheduleItem = scheduleItems[preferredSectionIndex] ?? scheduleItems[0];
+    const uniqueSchedules = [...new Map(scheduleItems.map((item) => [`${item.daysText.toLowerCase().replace(/\s/g, "")}|${item.timeText.toLowerCase().replace(/\s/g, "")}`, item])).values()];
+    const scheduleItem = uniqueSchedules.length === 1 ? uniqueSchedules[0] : null;
     if (!scheduleItem) continue;
     const days = /^M/i.test(scheduleItem.daysText) ? ["Monday", "Wednesday"] : ["Tuesday", "Thursday"];
     let time = scheduleItem.timeText
@@ -224,10 +224,7 @@ function classScheduleFromModules(courses: CourseInput[], modulesByCourse: Map<n
       .replace(/(\d)\s*([ap])(?:\.?m\.?)?/gi, (_value, digit: string, meridiem: string) => `${digit} ${meridiem.toUpperCase()}M`)
       .replace(/\s+/g, " ")
       .trim();
-    if (!/[AP]M/i.test(time)) {
-      time = time.replace(/\b(\d{1,2})(?=\s*(?:–|$))/g, "$1:00");
-      time = `${time} PM`;
-    }
+    if (!/[AP]M/i.test(time)) continue;
     const hasEnd = time.includes("–");
     days.forEach((day) => meetings.push({ day, time, course: course.name, note: "Canvas Zoom class", tentative: !hasEnd }));
   }
@@ -396,14 +393,13 @@ export async function POST(request: Request) {
     });
     const modulesByCourse = new Map(moduleEntries);
     const sectionMeetings = await mapWithConcurrency(courses, 3, async (course) => {
-      const sources = await loadCanvasScheduleSources(course.id, modulesByCourse.get(course.id) ?? [], <T,>(path: string) => canvasGet<T>(path, token));
-      const sections = sources.filter((source) => source.kind === "section").map((source) => canvasHtmlToText(source.html));
-      console.info("class-enrolled-section", JSON.stringify({ courseId: course.id, sections }));
+      const result = await loadEnrolledCanvasSections(course.id, <T,>(path: string) => canvasGetAll<T>(path, token), <T,>(path: string) => canvasGet<T>(path, token));
+      if (!result.complete) scheduleUnavailableCourseIds.add(course.id);
+      const sections = result.sections.map((section) => section.name);
       return classScheduleFromModules([{ ...course, name: course.name, originalName: null, courseCode: null }], new Map([[course.id, [{ id: 0, items: sections.map((title) => ({ title })) }]]])).map((meeting) => ({ ...meeting, note: "Canvas enrolled section" }));
     });
-    const moduleSchedule = classScheduleFromModules(courses, modulesByCourse);
     const sectionScheduledCourses = new Set(sectionMeetings.flat().map((meeting) => meeting.course));
-    moduleSchedule.splice(0, moduleSchedule.length, ...sectionMeetings.flat(), ...moduleSchedule.filter((meeting) => !sectionScheduledCourses.has(meeting.course)));
+    const moduleSchedule = [...sectionMeetings.flat(), ...classScheduleFromModules(courses, modulesByCourse).filter((meeting) => !sectionScheduledCourses.has(meeting.course))];
     const moduleScheduledCourses = new Set(moduleSchedule.map((meeting) => meeting.course));
     const calendarSchedule = classSchedule([
       ...calendarEvents,
@@ -420,7 +416,7 @@ export async function POST(request: Request) {
       announcements,
       itemPatches: patches,
       week: [...moduleSchedule, ...calendarSchedule],
-      scheduleUnavailableCourseIds: [...scheduleUnavailableCourseIds],
+      scheduleUnavailableCourseIds: [...scheduleUnavailableCourseIds].filter((id) => ![...moduleSchedule, ...calendarSchedule].some((meeting) => meeting.course === courseNames.get(id))),
     });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : "Dashboard details could not be refreshed." }, { status: 500 });
