@@ -365,6 +365,7 @@ export async function POST(request: Request) {
       mapWithConcurrency(courses, 3, async (course) => {
         try {
           const result = await loadCanvasModules(course.id, <T,>(path: string) => canvasGetAll<T>(path, token));
+          console.info("class-schedule-diagnostic", JSON.stringify({ courseId: course.id, complete: result.complete, modules: result.modules.map((module) => ({ id: module.id, count: module.items?.length ?? 0, scheduleTitles: (module.items ?? []).filter((item) => /zoom|class.*link|\b[MT]\s*\/|\b(?:am|pm)\b/i.test(item.title ?? "")).map((item) => ({ title: item.title?.replace(/https?:\/\/\S+/g, "[link]").slice(0, 200), locked: item.content_details?.locked_for_user })) })) }));
           if (!result.complete) scheduleUnavailableCourseIds.add(course.id);
           // A partial list could select the wrong class section by position.
           return [course.id, result.complete ? result.modules : []] as const;
