@@ -1,10 +1,16 @@
 import type { CanvasModule } from "./canvas-modules";
 
 type CanvasPage = { title?: string; body?: string | null; locked_for_user?: boolean };
-export type ScheduleSource = { title: string; html: string };
+export type ScheduleSource = { title: string; html: string; kind?: "section" | "page" };
 
 export async function loadCanvasScheduleSources(courseId: number, modules: CanvasModule[], get: <T>(path: string) => Promise<T>) {
   const sources: ScheduleSource[] = [];
+  const enrollments = await get<Array<{ course_section_id?: number; type?: string }>>(`/api/v1/courses/${courseId}/enrollments?user_id=self`).catch(() => []);
+  const sectionIds = [...new Set(enrollments.filter((item) => item.type === "StudentEnrollment").map((item) => item.course_section_id).filter((id): id is number => Number.isSafeInteger(id) && Number(id) > 0))];
+  for (const sectionId of sectionIds.slice(0, 4)) {
+    const section = await get<{ name?: string }>(`/api/v1/courses/${courseId}/sections/${sectionId}`).catch(() => null);
+    if (section?.name) sources.push({ title: "Enrolled section", html: section.name.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;"), kind: "section" });
+  }
   const pages = new Map<string, string>();
   for (const module of modules) {
     for (const item of module.items ?? []) {
