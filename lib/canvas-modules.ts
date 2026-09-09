@@ -1,4 +1,4 @@
-export type CanvasModuleItem = { title?: string; content_details?: { locked_for_user?: boolean } };
+export type CanvasModuleItem = { title?: string; type?: string; page_url?: string; content_details?: { locked_for_user?: boolean } };
 export type CanvasModule = {
   id: number;
   name?: string;
