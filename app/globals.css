@@ -748,6 +748,9 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .portal-feature-view > .classes-view-header,
 .portal-feature-view > .admin-view-header { display: none !important; }
 .classes-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+.classes-sync-status { margin: 0 0 16px; padding: 14px; border-radius: 11px; background: #edf4ff; color: #174f99; font-size: 1rem; }
+.classes-sync-status p { margin: 0 0 10px; }
+.classes-sync-status button { padding: 10px 14px; border: 0; border-radius: 8px; background: #1b62bd; color: white; font: inherit; cursor: pointer; }
 .portal-feature-view.classes-view { min-height: 0; padding: 0; border: 0; border-radius: 0; color: #10213b; background: none; box-shadow: none; }
 .class-box { min-width: 0; display: grid; align-content: start; padding: 20px; overflow: hidden; border: 1px solid rgba(190,220,250,.88); border-radius: 18px; background: rgba(255,255,255,.96); box-shadow: 0 18px 42px rgba(0,20,62,.22), inset 0 1px 0 #fff; }
 .class-box > p { margin: 0 0 4px; color: #3977db; font-size: 8px; font-weight: 900; letter-spacing: .17em; text-transform: uppercase; }

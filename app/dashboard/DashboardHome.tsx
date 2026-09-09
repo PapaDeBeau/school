@@ -102,6 +102,8 @@ type DashboardData = {
   generatedAt: string;
   syncId: string;
   enrichmentPending: boolean;
+  scheduleUnavailableCourseIds?: number[];
+  scheduleError?: string | null;
   announcementPlaceholderCount: number;
   viewer: {
     username: string;
@@ -124,6 +126,7 @@ type ActionItemPatch = Pick<ActionItem, "id"> & Partial<Pick<ActionItem,
 
 type DashboardEnrichment = {
   syncId: string;
+  scheduleUnavailableCourseIds?: number[];
   announcements: ActionItem[];
   itemPatches: ActionItemPatch[];
   week: WeekItem[];
@@ -242,6 +245,8 @@ function preserveDashboardEnrichment(current: DashboardData | null, core: Dashbo
     critical: core.critical.map(preserveItem),
     upcoming: core.upcoming.map(preserveItem),
     week: current.week,
+    scheduleUnavailableCourseIds: current.scheduleUnavailableCourseIds,
+    scheduleError: current.scheduleError,
     announcementPlaceholderCount: Math.max(core.announcementPlaceholderCount, current.announcements.length),
   };
 }
@@ -264,6 +269,8 @@ function applyDashboardEnrichment(current: DashboardData, enrichment: DashboardE
   return {
     ...current,
     enrichmentPending: false,
+    scheduleUnavailableCourseIds: enrichment.scheduleUnavailableCourseIds ?? [],
+    scheduleError: null,
     announcements,
     critical: current.critical.map(patchItem),
     upcoming: current.upcoming.map(patchItem),
@@ -939,7 +946,10 @@ function comparableCourseName(value: string) {
   return value.toLocaleLowerCase("en-US").replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-function ClassesView({ courses, week }: { courses: Course[]; week: WeekItem[] }) {
+function ClassesView({ courses, week, pending, unavailableCourseIds, error, onRetry }: {
+  courses: Course[]; week: WeekItem[]; pending: boolean; unavailableCourseIds: number[];
+  error: string | null; onRetry: () => void;
+}) {
   const combineMeetings = (meetings: WeekItem[]) => Array.from(meetings.reduce((groups, meeting) => {
     const key = `${meeting.time}|${meeting.note}|${meeting.tentative}`;
     const current = groups.get(key);
@@ -965,6 +975,7 @@ function ClassesView({ courses, week }: { courses: Course[]; week: WeekItem[] })
 
   return (
     <section className="portal-feature-view classes-view" aria-label={`Classes: ${classes.length} classes and course spaces`}>
+      {pending ? <p className="classes-sync-status" role="status">Checking class times in Canvas…</p> : error || unavailableCourseIds.length ? <div className="classes-sync-status" role="alert"><p>{error || "Some class times could not be refreshed. Previously loaded times may still be shown."}</p><button type="button" onClick={onRetry}>Retry class times</button></div> : null}
       <div className="classes-grid" role="list">
         {classes.map((course) => (
           <article className="class-box" role="listitem" key={course.key}>
@@ -972,7 +983,7 @@ function ClassesView({ courses, week }: { courses: Course[]; week: WeekItem[] })
             <div className="class-meetings">
               {course.meetings.length ? course.meetings.map((meeting) => (
                 <div key={`${meeting.day}-${meeting.time}`}><strong>{meeting.day}</strong><time>{meeting.time}</time><small>{meeting.note}</small></div>
-              )) : <div className="class-time-missing"><strong>Canvas course</strong><small>Meeting time is not listed.</small></div>}
+              )) : <div className="class-time-missing"><strong>Class time</strong><small>{pending ? "Checking Canvas…" : error || unavailableCourseIds.includes(Number(course.key)) ? "Class time could not be loaded." : "No class time found in Canvas."}</small></div>}
             </div>
             {course.sourceUrl ? <a href={course.sourceUrl} target="_blank" rel="noreferrer">Open Class in Canvas <span aria-hidden="true">→</span></a> : null}
           </article>
@@ -2890,7 +2901,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     const markFinished = () => {
       const current = dashboardDataRef.current;
       if (!current || current.syncId !== core.syncId || syncVersion !== dashboardSyncVersionRef.current) return;
-      const next = { ...current, enrichmentPending: false };
+      const next = { ...current, enrichmentPending: false, scheduleError: "Class times could not be refreshed. Please try again." };
       dashboardDataRef.current = next;
       setData(next);
     };
@@ -3567,7 +3578,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
               threadLoadingId={threadLoadingId}
               onRead={(conversation) => void openThread(conversation)}
               onSent={() => void loadInbox()}
-            /> : activeView === "classes" ? <ClassesView courses={data.courses} week={data.week} /> : activeView === "chat" ? <ChatView
+            /> : activeView === "classes" ? <ClassesView courses={data.courses} week={data.week} pending={loading || data.enrichmentPending} unavailableCourseIds={data.scheduleUnavailableCourseIds ?? []} error={data.scheduleError ?? null} onRetry={() => void sync()} /> : activeView === "chat" ? <ChatView
               messages={chatMessages}
               viewer={data.viewer}
               loading={chatLoading}

@@ -24,7 +24,7 @@ test("dashboard contains the priority due-date surfaces", async () => {
   assert.doesNotMatch(dashboardRoute, /\/api\/v1\/calendar_events\?|\/users\/self\/upcoming_events|\/modules\?include|\/announcements\?|getChatAudioBucket/);
   assert.match(enrichmentRoute, /\/api\/v1\/calendar_events\?/);
   assert.match(enrichmentRoute, /\/api\/v1\/users\/self\/upcoming_events/);
-  assert.match(enrichmentRoute, /\/api\/v1\/courses\/\$\{course\.id\}\/modules\?include\[\]=items/);
+  assert.match(enrichmentRoute, /loadCanvasModules\(course\.id/);
   assert.match(enrichmentRoute, /classScheduleFromModules/);
   assert.match(enrichmentRoute, /week: \[\.\.\.moduleSchedule, \.\.\.calendarSchedule\]/);
   assert.match(enrichmentRoute, /Promise\.all\(\[/);

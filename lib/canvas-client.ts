@@ -1,4 +1,5 @@
 import { getAppEnv } from "../db";
+import { collectCanvasPages } from "./canvas-pagination";
 
 export const CANVAS_BASE_URL = "https://sequoiagrove.instructure.com";
 const CANVAS_RELAY_BASE_URL = "https://beauvizenor.com/school-canvas-relay";
@@ -14,6 +15,16 @@ function canvasRequestDestination(path: string) {
 
 export async function canvasGet<T>(path: string, token: string): Promise<T> {
   return canvasRequest<T>(path, token, "GET");
+}
+
+export async function canvasGetAll<T>(path: string, token: string): Promise<T[]> {
+  return collectCanvasPages<T>(path, CANVAS_BASE_URL, async (pagePath) => {
+    let link: string | null = null;
+    const items = await canvasRequest<T[]>(pagePath, token, "GET", undefined, (response) => {
+      link = response.headers.get("link");
+    });
+    return { items, link };
+  });
 }
 
 export async function canvasPostForm<T>(path: string, token: string, form: URLSearchParams): Promise<T> {
@@ -48,7 +59,7 @@ export async function canvasUploadConversationFile(file: File, token: string): P
   return await uploaded.json() as CanvasUploadedFile;
 }
 
-async function canvasRequest<T>(path: string, token: string, method: "GET" | "POST", body?: string): Promise<T> {
+async function canvasRequest<T>(path: string, token: string, method: "GET" | "POST", body?: string, onResponse?: (response: Response) => void): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12_000);
   let response: Response;
@@ -99,6 +110,7 @@ async function canvasRequest<T>(path: string, token: string, method: "GET" | "PO
   }
 
   try {
+    onResponse?.(response);
     return JSON.parse(responseBody) as T;
   } catch {
     throw new Error("Canvas returned an unreadable response.");

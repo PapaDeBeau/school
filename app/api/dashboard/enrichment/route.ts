@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 import { ensureCanvasConnectionSchema, getChatAudioBucket, getDb } from "../../../../db";
 import { canvasConnections } from "../../../../db/schema";
-import { CANVAS_BASE_URL, canvasGet } from "../../../../lib/canvas-client";
+import { CANVAS_BASE_URL, canvasGet, canvasGetAll } from "../../../../lib/canvas-client";
+import { loadCanvasModules, type CanvasModule } from "../../../../lib/canvas-modules";
 import { decryptCanvasToken } from "../../../../lib/canvas-vault";
 import { familyUnauthorizedResponse, readFamilySession } from "../../../../lib/family-auth";
 import { isAuthorizedAppRequest, unauthorizedAppResponse } from "../../../../lib/request-auth";
@@ -40,11 +41,6 @@ type CanvasCalendarEvent = {
   all_day_date?: string | null;
   context_code?: string | null;
   type?: string;
-};
-
-type CanvasModule = {
-  name?: string;
-  items?: Array<{ title?: string; content_details?: { locked_for_user?: boolean } }>;
 };
 
 type CanvasAssignmentDetails = {
@@ -207,7 +203,7 @@ function classScheduleFromModules(courses: CourseInput[], modulesByCourse: Map<n
   for (const course of courses) {
     const modules = modulesByCourse.get(course.id) ?? [];
     const scheduleItems = [
-      ...(course.originalName ? [{ title: course.originalName }] : []),
+      { title: course.originalName || course.name },
       ...(course.courseCode ? [{ title: course.courseCode }] : []),
       ...modules.flatMap((module) => [
         ...(module.name ? [{ title: module.name }] : []),
@@ -349,6 +345,7 @@ export async function POST(request: Request) {
     if (!connection) return json({ error: "Canvas is not connected." }, { status: 409 });
     const token = await decryptCanvasToken(connection.encryptedToken, connection.tokenIv);
     const courseNames = new Map(courses.map((course) => [course.id, course.name]));
+    const scheduleUnavailableCourseIds = new Set<number>();
 
     const calendarParams = new URLSearchParams({ type: "event", start_date: dateOffset(-7), end_date: dateOffset(14), per_page: "100" });
     courses.forEach((course) => calendarParams.append("context_codes[]", `course_${course.id}`));
@@ -365,10 +362,17 @@ export async function POST(request: Request) {
       courses.length
         ? canvasGet<CanvasCalendarEvent[]>("/api/v1/users/self/upcoming_events?per_page=100", token).catch(() => [])
         : Promise.resolve([]),
-      mapWithConcurrency(courses, 3, async (course) => [
-        course.id,
-        await canvasGet<CanvasModule[]>(`/api/v1/courses/${course.id}/modules?include[]=items&include[]=content_details&per_page=100`, token).catch(() => []),
-      ] as const),
+      mapWithConcurrency(courses, 3, async (course) => {
+        try {
+          const result = await loadCanvasModules(course.id, <T,>(path: string) => canvasGetAll<T>(path, token));
+          if (!result.complete) scheduleUnavailableCourseIds.add(course.id);
+          // A partial list could select the wrong class section by position.
+          return [course.id, result.complete ? result.modules : []] as const;
+        } catch {
+          scheduleUnavailableCourseIds.add(course.id);
+          return [course.id, [] as CanvasModule[]] as const;
+        }
+      }),
       courses.length
         ? canvasGet<CanvasAnnouncement[]>(`/api/v1/announcements?${announcementParams.toString()}`, token).catch(() => [])
         : Promise.resolve([]),
@@ -407,6 +411,7 @@ export async function POST(request: Request) {
       announcements,
       itemPatches: patches,
       week: [...moduleSchedule, ...calendarSchedule],
+      scheduleUnavailableCourseIds: [...scheduleUnavailableCourseIds],
     });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : "Dashboard details could not be refreshed." }, { status: 500 });
