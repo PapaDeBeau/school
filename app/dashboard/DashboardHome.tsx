@@ -1730,6 +1730,64 @@ function letterGrade(percentage: number) {
   return "F";
 }
 
+function courseHasA(course: Course, gradeOverrides: GradeOverride[]) {
+  const manualGrade = gradeOverrides.find((entry) => entry.courseKey === String(course.id));
+  const score = manualGrade?.percentage ?? course.score;
+  if (score !== null && score !== undefined) return score >= 90;
+  return course.grade?.trim().toLocaleUpperCase("en-US").startsWith("A") ?? false;
+}
+
+function shouldPlayAllACelebration(data: DashboardData, gradeOverrides: GradeOverride[]) {
+  const incompleteAssignments = [...data.critical, ...data.upcoming].filter((item) => item.kind === "assignment");
+  return incompleteAssignments.length === 0
+    && data.courses.length > 0
+    && data.courses.every((course) => courseHasA(course, gradeOverrides));
+}
+
+function AllACelebrationOverlay({ active, src }: { active: boolean; src: string }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [visible, setVisible] = useState(false);
+  const startedRef = useRef(false);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !active || startedRef.current) return;
+
+    let cancelled = false;
+    const start = () => {
+      if (cancelled || startedRef.current) return;
+      startedRef.current = true;
+      video.currentTime = 0;
+      video.muted = false;
+      setVisible(true);
+      void video.play().catch(() => {
+        setVisible(false);
+      });
+    };
+
+    if (video.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) start();
+    else video.addEventListener("canplaythrough", start, { once: true });
+
+    return () => {
+      cancelled = true;
+      video.removeEventListener("canplaythrough", start);
+    };
+  }, [active]);
+
+  return (
+    <div className={`all-a-celebration${visible ? " is-visible" : ""}`} aria-hidden={!visible}>
+      <video
+        ref={videoRef}
+        className="all-a-celebration-video"
+        src={src}
+        playsInline
+        preload="auto"
+        onEnded={() => setVisible(false)}
+      />
+    </div>
+  );
+}
+
 async function normalizePushImage(file: File) {
   if (!file.type.startsWith("image/")) return file;
   const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
@@ -3441,9 +3499,11 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const tomorrowSummary = `${dueTomorrow.length} ${dueTomorrow.length === 1 ? "ITEM" : "ITEMS"} DUE ${shortOrdinalDay(tomorrow)}`;
   const weekSummary = `${dueThisWeek.length} ${dueThisWeek.length === 1 ? "ITEM" : "ITEMS"} DUE THIS WEEK`;
   const nextWeekSummary = `${dueNextWeek.length} ${dueNextWeek.length === 1 ? "ITEM" : "ITEMS"} DUE NEXT WEEK`;
+  const playAllACelebration = activeView === "dashboard" && shouldPlayAllACelebration(data, gradeOverrides);
 
   return (
     <main className={`school-app${immersive ? " immersive-dashboard" : ""}${focusMode ? " is-focus-mode" : ""}`} ref={appRef}>
+      <AllACelebrationOverlay active={playAllACelebration} src={appPath("/celebrations/all-a-clear.webm")} />
       <aside className="school-sidebar">
         <a className="sidebar-brand" href={appPath("/dashboard")} aria-label="Beau School dashboard">
           <span className="sidebar-logo">B</span><span><strong>Beau School</strong><small>Private family workspace</small></span>
