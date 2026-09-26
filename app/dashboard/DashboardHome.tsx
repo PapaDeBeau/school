@@ -1738,8 +1738,8 @@ function courseHasA(course: Course, gradeOverrides: GradeOverride[]) {
 }
 
 function shouldPlayAllACelebration(data: DashboardData, gradeOverrides: GradeOverride[]) {
-  const incompleteAssignments = [...data.critical, ...data.upcoming].filter((item) => item.kind === "assignment");
-  return incompleteAssignments.length === 0
+  const dueAssignments = data.critical.filter((item) => item.kind === "assignment");
+  return dueAssignments.length === 0
     && data.courses.length > 0
     && data.courses.every((course) => courseHasA(course, gradeOverrides));
 }
@@ -1754,15 +1754,38 @@ function AllACelebrationOverlay({ active, src }: { active: boolean; src: string 
     if (!video || !active || startedRef.current) return;
 
     let cancelled = false;
+    let retryOnPointer: (() => void) | null = null;
+    let retryOnKey: (() => void) | null = null;
+
+    const removeRetryListeners = () => {
+      if (retryOnPointer) window.removeEventListener("pointerdown", retryOnPointer, { capture: true });
+      if (retryOnKey) window.removeEventListener("keydown", retryOnKey, { capture: true });
+      retryOnPointer = null;
+      retryOnKey = null;
+    };
+
+    const tryPlay = () => {
+      if (cancelled || startedRef.current) return;
+      video.muted = false;
+      void video.play().then(() => {
+        if (cancelled) return;
+        removeRetryListeners();
+        startedRef.current = true;
+        setVisible(true);
+      }).catch(() => {
+        if (cancelled || startedRef.current || retryOnPointer || retryOnKey) return;
+        setVisible(false);
+        retryOnPointer = () => tryPlay();
+        retryOnKey = () => tryPlay();
+        window.addEventListener("pointerdown", retryOnPointer, { once: true, capture: true });
+        window.addEventListener("keydown", retryOnKey, { once: true, capture: true });
+      });
+    };
+
     const start = () => {
       if (cancelled || startedRef.current) return;
-      startedRef.current = true;
       video.currentTime = 0;
-      video.muted = false;
-      setVisible(true);
-      void video.play().catch(() => {
-        setVisible(false);
-      });
+      tryPlay();
     };
 
     if (video.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) start();
@@ -1770,6 +1793,7 @@ function AllACelebrationOverlay({ active, src }: { active: boolean; src: string 
 
     return () => {
       cancelled = true;
+      removeRetryListeners();
       video.removeEventListener("canplaythrough", start);
     };
   }, [active]);
