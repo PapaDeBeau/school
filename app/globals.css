@@ -1167,6 +1167,8 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .due-tone-tomorrow .mobile-due-summary { color: #a56d00; }
 .due-tone-week .spider-count-badge strong { color: #198cff; text-shadow: 0 2px 1px #fff, 0 0 11px rgba(25, 140, 255, .9), 0 5px 7px rgba(0, 0, 0, .82); }
 .due-tone-week .mobile-due-summary { color: #1d62c8; }
+.due-tone-next-week .spider-count-badge strong { color: #25d9ff; text-shadow: 0 2px 1px #fff, 0 0 11px rgba(37, 217, 255, .9), 0 5px 7px rgba(0, 0, 0, .82); }
+.due-tone-next-week .mobile-due-summary { color: #1680ca; }
 @keyframes due-today-circle-pulse {
   0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(255, 20, 54, .45)); }
   50% { transform: scale(1.1); filter: drop-shadow(0 0 10px rgba(255, 20, 54, .88)); }

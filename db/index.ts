@@ -142,6 +142,7 @@ export async function ensureFamilyAdminSchema() {
         show_due_today_when_empty INTEGER NOT NULL DEFAULT 1,
         show_due_tomorrow_when_empty INTEGER NOT NULL DEFAULT 1,
         show_due_week_when_empty INTEGER NOT NULL DEFAULT 1,
+        show_due_next_week_when_empty INTEGER NOT NULL DEFAULT 1,
         updated_by TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
@@ -164,6 +165,14 @@ export async function ensureFamilyAdminSchema() {
     } catch (error) {
       const refreshedColumns = await d1.prepare("PRAGMA table_info(family_dashboard_settings)").all<{ name: string }>();
       if (!(refreshedColumns.results ?? []).some((column) => column.name === "show_announcements")) throw error;
+    }
+  }
+  if (!settingsColumnNames.has("show_due_next_week_when_empty")) {
+    try {
+      await d1.prepare("ALTER TABLE family_dashboard_settings ADD COLUMN show_due_next_week_when_empty INTEGER NOT NULL DEFAULT 1").run();
+    } catch (error) {
+      const refreshedColumns = await d1.prepare("PRAGMA table_info(family_dashboard_settings)").all<{ name: string }>();
+      if (!(refreshedColumns.results ?? []).some((column) => column.name === "show_due_next_week_when_empty")) throw error;
     }
   }
   await d1.prepare("PRAGMA optimize").run();

@@ -252,6 +252,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   const dueTodayArtwork = await stat(new URL("public/due-today-banner.webp", root));
   const dueTomorrowArtwork = await stat(new URL("public/due-tomorrow-banner.webp", root));
   const thisWeekArtwork = await stat(new URL("public/this-week-banner.webp", root));
+  const nextWeekArtwork = await stat(new URL("public/next-week-banner.webp", root));
   const menuPopupArtwork = await stat(new URL("public/menu-popup-bg.webp", root));
   const seeInCanvasArtwork = await stat(new URL("public/see-in-canvas.webp", root));
   const assignmentDetailsPlayArtwork = await stat(new URL("public/assignment-details-play.webp", root));
@@ -286,6 +287,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(layout, /rel="preload" as="image" href="\/school\/menu-resources\.webp"/);
   assert.match(layout, /rel="preload" as="image" href="\/school\/menu-stats\.webp"/);
   assert.match(layout, /rel="preload" as="image" href="\/school\/menu-admin\.webp"/);
+  assert.match(layout, /rel="preload" as="image" href="\/school\/next-week-banner\.webp"/);
   assert.match(styles, /var\(--font-chalk\)/);
   assert.match(styles, /\.school-portal-shell\.dashboard-active \{ padding: 12px 16px; overflow: visible; \}/);
   assert.match(styles, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
@@ -312,9 +314,12 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(dashboard, /due-tomorrow-banner\.webp/);
   assert.match(dashboard, /week-featured-slot/);
   assert.match(dashboard, /this-week-banner\.webp/);
+  assert.match(dashboard, /next-week-featured-slot/);
+  assert.match(dashboard, /next-week-banner\.webp/);
   assert.match(dashboard, /spider-count-badge/);
   assert.match(dashboard, /Due tomorrow/);
   assert.match(dashboard, /Due this week/);
+  assert.match(dashboard, /Due next week/);
   assert.match(dashboard, /function hasTeacherInstructions\(item: ActionItem\)/);
   assert.match(dashboard, /item\.hasTeacherInstructions === true/);
   assert.match(dashboard, /assignment-details-play\.webp/);
@@ -322,6 +327,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(dashboard, /shortOrdinalDay\(tomorrow\)/);
   assert.match(dashboard, /tone="today"/);
   assert.match(dashboard, /tone="tomorrow"/);
+  assert.match(dashboard, /tone="next-week"/);
   assert.doesNotMatch(dashboard, /className="dashboard-footer"/);
   assert.doesNotMatch(dashboard, /upcoming-stat|upcoming-panel|Important upcoming/);
   assert.match(styles, /\.school-app \.school-sidebar \{ display: none; \}/);
@@ -351,6 +357,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.ok(dueTodayArtwork.size < 100_000);
   assert.ok(dueTomorrowArtwork.size < 100_000);
   assert.ok(thisWeekArtwork.size < 100_000);
+  assert.ok(nextWeekArtwork.size < 70_000);
   assert.ok(panelPatterns.every((pattern) => pattern.size < 15_000));
 });
 
@@ -568,6 +575,7 @@ test("admin stores percentages and controls dashboard section visibility", async
   const schema = await readFile(new URL("db/schema.ts", root), "utf8");
   const dbIndex = await readFile(new URL("db/index.ts", root), "utf8");
   const migration = await readFile(new URL("drizzle/0006_nice_the_hunter.sql", root), "utf8");
+  const nextWeekMigration = await readFile(new URL("drizzle/0011_next_week_dashboard.sql", root), "utf8");
 
   assert.match(dashboard, /action: "admin"/);
   assert.match(dashboard, /function AdminView/);
@@ -577,6 +585,8 @@ test("admin stores percentages and controls dashboard section visibility", async
   assert.match(dashboard, /showDueTodayWhenEmpty/);
   assert.match(dashboard, /showDueTomorrowWhenEmpty/);
   assert.match(dashboard, /showDueWeekWhenEmpty/);
+  assert.match(dashboard, /showDueNextWeekWhenEmpty/);
+  assert.match(dashboard, /nextMondayKey\(today\)/);
   assert.match(dashboard, /className="week-item-due"/);
   assert.match(dashboard, /thisWeekDueLabel\(item\.dueAt\)/);
   assert.match(dashboard, /function letterGrade/);
@@ -622,7 +632,9 @@ test("admin stores percentages and controls dashboard section visibility", async
   assert.match(schema, /family_course_grades/);
   assert.match(dbIndex, /PRAGMA table_info\(family_dashboard_settings\)/);
   assert.match(dbIndex, /ALTER TABLE family_dashboard_settings ADD COLUMN show_announcements INTEGER NOT NULL DEFAULT 1/);
+  assert.match(dbIndex, /ALTER TABLE family_dashboard_settings ADD COLUMN show_due_next_week_when_empty INTEGER NOT NULL DEFAULT 1/);
   assert.match(migration, /ALTER TABLE `family_dashboard_settings` ADD `show_announcements` integer DEFAULT true NOT NULL/);
+  assert.match(nextWeekMigration, /ALTER TABLE `family_dashboard_settings` ADD `show_due_next_week_when_empty` integer DEFAULT true NOT NULL/);
 });
 
 test("alarms are profile-owned, native-synced, and exposed from the menu", async () => {
@@ -689,6 +701,6 @@ test("desktop preview defaults to the centered mobile presentation", async () =>
   assert.match(login, />Desktop<\/button>/);
   assert.match(login, /preview-\$\{desktopPreview\}/);
   assert.match(styles, /\.school-portal-shell\.preview-mobile\.dashboard-active > \.school-app \{ width: min\(520px, 100%\)/);
-  assert.match(styles, /preview-mobile\.dashboard-active > \.school-app::\-webkit-scrollbar \{ width: 0; height: 0; display: none; \}/);
+  assert.match(styles, /preview-mobile\.dashboard-active > \.school-app::-webkit-scrollbar \{ width: 0; height: 0; display: none; \}/);
   assert.match(styles, /@media \(max-width: 820px\)[\s\S]*?\.desktop-preview-switch \{ display: none; \}/);
 });

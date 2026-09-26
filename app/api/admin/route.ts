@@ -7,6 +7,7 @@ type SettingsRecord = {
   show_due_today_when_empty: number;
   show_due_tomorrow_when_empty: number;
   show_due_week_when_empty: number;
+  show_due_next_week_when_empty: number;
 };
 
 type GradeRecord = { course_key: string; course_name: string; percentage: number };
@@ -31,7 +32,7 @@ async function readAdminData() {
   await ensureFamilyAdminSchema();
   const d1 = getD1();
   const settings = await d1.prepare(`
-    SELECT show_announcements, show_due_today_when_empty, show_due_tomorrow_when_empty, show_due_week_when_empty
+    SELECT show_announcements, show_due_today_when_empty, show_due_tomorrow_when_empty, show_due_week_when_empty, show_due_next_week_when_empty
     FROM family_dashboard_settings WHERE id = 1
   `).first<SettingsRecord>();
   const grades = await d1.prepare(`
@@ -43,6 +44,7 @@ async function readAdminData() {
       showDueTodayWhenEmpty: settings ? Boolean(settings.show_due_today_when_empty) : true,
       showDueTomorrowWhenEmpty: settings ? Boolean(settings.show_due_tomorrow_when_empty) : true,
       showDueWeekWhenEmpty: settings ? Boolean(settings.show_due_week_when_empty) : true,
+      showDueNextWeekWhenEmpty: settings ? Boolean(settings.show_due_next_week_when_empty) : true,
     },
     grades: (grades.results ?? []).map((grade) => ({ courseKey: grade.course_key, courseName: grade.course_name, percentage: grade.percentage })),
   };
@@ -59,11 +61,11 @@ export async function PUT(request: Request) {
   if (auth.response || !auth.user) return auth.response ?? familyUnauthorizedResponse();
   try {
     const payload = await request.json() as {
-      settings?: { showAnnouncements?: unknown; showDueTodayWhenEmpty?: unknown; showDueTomorrowWhenEmpty?: unknown; showDueWeekWhenEmpty?: unknown };
+      settings?: { showAnnouncements?: unknown; showDueTodayWhenEmpty?: unknown; showDueTomorrowWhenEmpty?: unknown; showDueWeekWhenEmpty?: unknown; showDueNextWeekWhenEmpty?: unknown };
       grades?: Array<{ courseKey?: unknown; courseName?: unknown; percentage?: unknown }>;
     };
     const settings = payload.settings;
-    if (!settings || typeof settings.showAnnouncements !== "boolean" || typeof settings.showDueTodayWhenEmpty !== "boolean" || typeof settings.showDueTomorrowWhenEmpty !== "boolean" || typeof settings.showDueWeekWhenEmpty !== "boolean") {
+    if (!settings || typeof settings.showAnnouncements !== "boolean" || typeof settings.showDueTodayWhenEmpty !== "boolean" || typeof settings.showDueTomorrowWhenEmpty !== "boolean" || typeof settings.showDueWeekWhenEmpty !== "boolean" || typeof settings.showDueNextWeekWhenEmpty !== "boolean") {
       return json({ error: "All dashboard display toggles are required." }, { status: 400 });
     }
     if (!Array.isArray(payload.grades) || payload.grades.length > 30) return json({ error: "The course grade list is invalid." }, { status: 400 });
@@ -83,16 +85,17 @@ export async function PUT(request: Request) {
     const statements = [
       d1.prepare(`
         INSERT INTO family_dashboard_settings
-          (id, show_announcements, show_due_today_when_empty, show_due_tomorrow_when_empty, show_due_week_when_empty, updated_by, updated_at)
-        VALUES (1, ?, ?, ?, ?, ?, ?)
+          (id, show_announcements, show_due_today_when_empty, show_due_tomorrow_when_empty, show_due_week_when_empty, show_due_next_week_when_empty, updated_by, updated_at)
+        VALUES (1, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           show_announcements = excluded.show_announcements,
           show_due_today_when_empty = excluded.show_due_today_when_empty,
           show_due_tomorrow_when_empty = excluded.show_due_tomorrow_when_empty,
           show_due_week_when_empty = excluded.show_due_week_when_empty,
+          show_due_next_week_when_empty = excluded.show_due_next_week_when_empty,
           updated_by = excluded.updated_by,
           updated_at = excluded.updated_at
-      `).bind(settings.showAnnouncements ? 1 : 0, settings.showDueTodayWhenEmpty ? 1 : 0, settings.showDueTomorrowWhenEmpty ? 1 : 0, settings.showDueWeekWhenEmpty ? 1 : 0, auth.user.username, now),
+      `).bind(settings.showAnnouncements ? 1 : 0, settings.showDueTodayWhenEmpty ? 1 : 0, settings.showDueTomorrowWhenEmpty ? 1 : 0, settings.showDueWeekWhenEmpty ? 1 : 0, settings.showDueNextWeekWhenEmpty ? 1 : 0, auth.user.username, now),
       ...grades.map((grade) => grade.percentage === null
         ? d1.prepare(`DELETE FROM family_course_grades WHERE course_key = ?`).bind(grade.courseKey)
         : d1.prepare(`

@@ -318,6 +318,7 @@ type DashboardPreferences = {
   showDueTodayWhenEmpty: boolean;
   showDueTomorrowWhenEmpty: boolean;
   showDueWeekWhenEmpty: boolean;
+  showDueNextWeekWhenEmpty: boolean;
 };
 
 type GradeOverride = { courseKey: string; courseName: string; percentage: number };
@@ -372,6 +373,13 @@ function dayKey(value: string | Date) {
 function offsetDayKey(key: string, days: number) {
   const [year, month, day] = key.split("-").map(Number);
   return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
+function nextMondayKey(key: string) {
+  const [year, month, day] = key.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  const daysUntilMonday = (8 - date.getUTCDay()) % 7 || 7;
+  return offsetDayKey(key, daysUntilMonday);
 }
 
 function ordinalDate(value: string | Date) {
@@ -1801,6 +1809,7 @@ function AdminView({ courses, settings, grades, loading, error, onSave }: {
     { key: "showDueTodayWhenEmpty", title: "Due Today", detail: "Show the Due Today card even when it has zero items.", ariaLabel: "Due Today: show when empty" },
     { key: "showDueTomorrowWhenEmpty", title: "Due Tomorrow", detail: "Show the Due Tomorrow card even when it has zero items.", ariaLabel: "Due Tomorrow: show when empty" },
     { key: "showDueWeekWhenEmpty", title: "This Week", detail: "Show the This Week card even when it has zero items.", ariaLabel: "This Week: show when empty" },
+    { key: "showDueNextWeekWhenEmpty", title: "Next Week", detail: "Show the Next Week card even when it has zero items.", ariaLabel: "Next Week: show when empty" },
   ];
 
   return (
@@ -2167,7 +2176,7 @@ function AnimatedDueBadge({ count, summary }: { count: number; summary: string }
   );
 }
 
-function MobileDueCard({ title, items, empty, onSelectAssignment, onPlayAssignment, featured = false, banner = "/due-today-banner.webp", tone = "week", summary = `${items.length} ${items.length === 1 ? "ITEM" : "ITEMS"} DUE` }: { title: string; items: ActionItem[]; empty: string; onSelectAssignment: (item: ActionItem) => void; onPlayAssignment: (item: ActionItem) => void; featured?: boolean; banner?: string; tone?: "today" | "tomorrow" | "week"; summary?: string }) {
+function MobileDueCard({ title, items, empty, onSelectAssignment, onPlayAssignment, featured = false, banner = "/due-today-banner.webp", tone = "week", summary = `${items.length} ${items.length === 1 ? "ITEM" : "ITEMS"} DUE` }: { title: string; items: ActionItem[]; empty: string; onSelectAssignment: (item: ActionItem) => void; onPlayAssignment: (item: ActionItem) => void; featured?: boolean; banner?: string; tone?: "today" | "tomorrow" | "week" | "next-week"; summary?: string }) {
   return (
     <section className={`mobile-due-card due-tone-${tone}${featured ? " is-featured" : ""}${items.length ? " has-items" : ""}`}>
       {featured ? (
@@ -2189,7 +2198,7 @@ function MobileDueCard({ title, items, empty, onSelectAssignment, onPlayAssignme
               <div className="mobile-due-row" key={item.id}>
                 <button className="mobile-due-details" type="button" onClick={() => onSelectAssignment(item)} aria-label={`View details for ${item.title}`}>
                   <AssignmentTeacher item={item} />
-                  <span>{tone === "week" ? <em className="week-item-due"><b>Due:</b> {thisWeekDueLabel(item.dueAt)}</em> : null}<strong>{item.title}</strong><small>{item.authorName || "Teacher"}</small></span>
+                  <span>{tone === "week" || tone === "next-week" ? <em className="week-item-due"><b>Due:</b> {thisWeekDueLabel(item.dueAt)}</em> : null}<strong>{item.title}</strong><small>{item.authorName || "Teacher"}</small></span>
                   {!item.audioUrl ? <i aria-hidden="true">›</i> : null}
                 </button>
                 {item.audioUrl ? <button className="assignment-audio-play" type="button" onClick={() => onPlayAssignment(item)} aria-label={`Play ${item.title}`}>
@@ -2517,7 +2526,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const [chatHasMore, setChatHasMore] = useState(false);
   const [chatNextBefore, setChatNextBefore] = useState<string | null>(null);
   const [chatError, setChatError] = useState<string | null>(null);
-  const [dashboardPreferences, setDashboardPreferences] = useState<DashboardPreferences>({ showAnnouncements: true, showDueTodayWhenEmpty: true, showDueTomorrowWhenEmpty: true, showDueWeekWhenEmpty: true });
+  const [dashboardPreferences, setDashboardPreferences] = useState<DashboardPreferences>({ showAnnouncements: true, showDueTodayWhenEmpty: true, showDueTomorrowWhenEmpty: true, showDueWeekWhenEmpty: true, showDueNextWeekWhenEmpty: true });
   const [dashboardPreferencesLoaded, setDashboardPreferencesLoaded] = useState(false);
   const [gradeOverrides, setGradeOverrides] = useState<GradeOverride[]>([]);
   const [adminLoading, setAdminLoading] = useState(false);
@@ -3410,17 +3419,24 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const today = dayKey(data.generatedAt);
   const tomorrow = offsetDayKey(today, 1);
   const weekStart = offsetDayKey(today, 2);
-  const weekEnd = offsetDayKey(today, 7);
+  const nextWeekStart = nextMondayKey(today);
+  const nextWeekEnd = offsetDayKey(nextWeekStart, 7);
   const dueToday = assignmentPool.filter((item) => item.dueAt && dayKey(item.dueAt) === today);
   const dueTomorrow = assignmentPool.filter((item) => item.dueAt && dayKey(item.dueAt) === tomorrow);
   const dueThisWeek = assignmentPool.filter((item) => {
     if (!item.dueAt) return false;
     const dueDay = dayKey(item.dueAt);
-    return dueDay >= weekStart && dueDay <= weekEnd;
+    return dueDay >= weekStart && dueDay < nextWeekStart;
+  });
+  const dueNextWeek = assignmentPool.filter((item) => {
+    if (!item.dueAt) return false;
+    const dueDay = dayKey(item.dueAt);
+    return dueDay >= nextWeekStart && dueDay < nextWeekEnd;
   });
   const todaySummary = `${dueToday.length} ${dueToday.length === 1 ? "ITEM" : "ITEMS"} DUE TODAY`;
   const tomorrowSummary = `${dueTomorrow.length} ${dueTomorrow.length === 1 ? "ITEM" : "ITEMS"} DUE ${shortOrdinalDay(tomorrow)}`;
   const weekSummary = `${dueThisWeek.length} ${dueThisWeek.length === 1 ? "ITEM" : "ITEMS"} DUE THIS WEEK`;
+  const nextWeekSummary = `${dueNextWeek.length} ${dueNextWeek.length === 1 ? "ITEM" : "ITEMS"} DUE NEXT WEEK`;
 
   return (
     <main className={`school-app${immersive ? " immersive-dashboard" : ""}${focusMode ? " is-focus-mode" : ""}`} ref={appRef}>
@@ -3507,6 +3523,9 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           </div> : null}
           {dueThisWeek.length || dashboardPreferences.showDueWeekWhenEmpty ? <div className="week-featured-slot due-featured-slot" aria-label="Assignments due this week">
             <MobileDueCard title="Due this week" items={dueThisWeek} empty="Nothing else is due this week." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured banner="/this-week-banner.webp" tone="week" summary={weekSummary} />
+          </div> : null}
+          {dueNextWeek.length || dashboardPreferences.showDueNextWeekWhenEmpty ? <div className="next-week-featured-slot due-featured-slot" aria-label="Assignments due next week">
+            <MobileDueCard title="Due next week" items={dueNextWeek} empty="Nothing is due next week." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured banner="/next-week-banner.webp" tone="next-week" summary={nextWeekSummary} />
           </div> : null}
         </div>
 
@@ -3595,7 +3614,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
               onDelete={deleteChatMessage}
               onSeen={markChatSeen}
             /> : activeView === "alerts" ? <AlertsView ownerUsername={data.viewer.username} /> : activeView === "admin" ? <AdminView
-              key={`admin-${adminLoading}-${dashboardPreferences.showAnnouncements}-${dashboardPreferences.showDueTodayWhenEmpty}-${dashboardPreferences.showDueTomorrowWhenEmpty}-${dashboardPreferences.showDueWeekWhenEmpty}-${gradeOverrides.map((grade) => `${grade.courseKey}:${grade.percentage}`).join("|")}`}
+              key={`admin-${adminLoading}-${dashboardPreferences.showAnnouncements}-${dashboardPreferences.showDueTodayWhenEmpty}-${dashboardPreferences.showDueTomorrowWhenEmpty}-${dashboardPreferences.showDueWeekWhenEmpty}-${dashboardPreferences.showDueNextWeekWhenEmpty}-${gradeOverrides.map((grade) => `${grade.courseKey}:${grade.percentage}`).join("|")}`}
               courses={data.courses}
               settings={dashboardPreferences}
               grades={gradeOverrides}

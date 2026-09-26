@@ -74,6 +74,7 @@ export const familyDashboardSettings = sqliteTable("family_dashboard_settings", 
   showDueTodayWhenEmpty: integer("show_due_today_when_empty", { mode: "boolean" }).notNull().default(true),
   showDueTomorrowWhenEmpty: integer("show_due_tomorrow_when_empty", { mode: "boolean" }).notNull().default(true),
   showDueWeekWhenEmpty: integer("show_due_week_when_empty", { mode: "boolean" }).notNull().default(true),
+  showDueNextWeekWhenEmpty: integer("show_due_next_week_when_empty", { mode: "boolean" }).notNull().default(true),
   updatedBy: text("updated_by").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
