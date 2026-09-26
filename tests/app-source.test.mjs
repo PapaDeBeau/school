@@ -342,6 +342,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(styles, /\.next-week-featured-slot \.mobile-due-visual \{ padding: 12px 12px 0; \}/);
   assert.match(styles, /\.due-tone-next-week \.spider-count-badge strong \{ color: #666;/);
   assert.match(styles, /\.next-week-featured-slot \.mobile-due-list button,[\s\S]*?\.next-week-featured-slot \.mobile-due-list i \{ color: #555; \}/);
+  assert.match(styles, /\.due-featured-slot\.next-week-featured-slot \.week-item-due,[\s\S]*?\.due-featured-slot\.next-week-featured-slot \.week-item-due b \{ color: #555; \}/);
   assert.match(styles, /\.next-week-featured-slot \.assignment-audio-play img \{ filter: grayscale\(1\) saturate\(0\) contrast\(\.95\); \}/);
   assert.match(styles, /\.next-week-featured-slot \.assignment-teacher > small \{ color: #606060 !important; \}/);
   assert.match(styles, /background-color: #fff;/);
