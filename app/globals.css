@@ -1946,6 +1946,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .mobile-school-menu,
 .mobile-due-stack { display: none; }
 
+.celebrate-replay-slot,
 .celebrate-replay-button { display: none; }
 
 .all-a-celebration {
@@ -2118,17 +2119,30 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
     letter-spacing: -.035em;
     text-shadow: 0 2px 12px rgba(0, 5, 22, .78);
   }
+  .celebrate-replay-slot {
+    min-height: 96px;
+    display: grid;
+    place-items: center;
+    margin: 0 auto 2px;
+  }
   .celebrate-replay-button {
-    width: min(58vw, 210px);
+    width: min(66vw, 236px);
     min-height: 0;
     display: block;
-    margin: 2px auto 8px;
+    margin: 0 auto;
     padding: 0;
     border: 0;
+    opacity: 0;
     background: transparent;
     cursor: pointer;
     filter: drop-shadow(0 7px 15px rgba(0, 0, 0, .34));
+    pointer-events: none;
     transform-origin: center;
+    transform: scale(.12);
+  }
+  .celebrate-replay-button.is-visible {
+    opacity: 1;
+    pointer-events: auto;
     animation: celebrate-button-arrive .68s cubic-bezier(.2, 1.35, .32, 1) both;
   }
   .celebrate-replay-button.is-leaving {
