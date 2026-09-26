@@ -1809,7 +1809,7 @@ function AdminView({ courses, settings, grades, loading, error, onSave }: {
     { key: "showDueTodayWhenEmpty", title: "Due Today", detail: "Show the Due Today card even when it has zero items.", ariaLabel: "Due Today: show when empty" },
     { key: "showDueTomorrowWhenEmpty", title: "Due Tomorrow", detail: "Show the Due Tomorrow card even when it has zero items.", ariaLabel: "Due Tomorrow: show when empty" },
     { key: "showDueWeekWhenEmpty", title: "This Week", detail: "Show the This Week card even when it has zero items.", ariaLabel: "This Week: show when empty" },
-    { key: "showDueNextWeekWhenEmpty", title: "Next Week", detail: "Show the Next Week card even when it has zero items.", ariaLabel: "Next Week: show when empty" },
+    { key: "showDueNextWeekWhenEmpty", title: "Next Week", detail: "Check it if you wish to display Next weeks activities.", ariaLabel: "Next Week: display activities" },
   ];
 
   return (
@@ -3524,7 +3524,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           {dueThisWeek.length || dashboardPreferences.showDueWeekWhenEmpty ? <div className="week-featured-slot due-featured-slot" aria-label="Assignments due this week">
             <MobileDueCard title="Due this week" items={dueThisWeek} empty="Nothing else is due this week." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured banner="/this-week-banner.webp" tone="week" summary={weekSummary} />
           </div> : null}
-          {dueNextWeek.length || dashboardPreferences.showDueNextWeekWhenEmpty ? <div className="next-week-featured-slot due-featured-slot" aria-label="Assignments due next week">
+          {dashboardPreferences.showDueNextWeekWhenEmpty ? <div className="next-week-featured-slot due-featured-slot" aria-label="Assignments due next week">
             <MobileDueCard title="Due next week" items={dueNextWeek} empty="Nothing is due next week." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured banner="/next-week-banner.webp" tone="next-week" summary={nextWeekSummary} />
           </div> : null}
         </div>

@@ -587,6 +587,9 @@ test("admin stores percentages and controls dashboard section visibility", async
   assert.match(dashboard, /showDueTomorrowWhenEmpty/);
   assert.match(dashboard, /showDueWeekWhenEmpty/);
   assert.match(dashboard, /showDueNextWeekWhenEmpty/);
+  assert.match(dashboard, /Check it if you wish to display Next weeks activities\./);
+  assert.match(dashboard, /dashboardPreferences\.showDueNextWeekWhenEmpty \? <div className="next-week-featured-slot/);
+  assert.doesNotMatch(dashboard, /dueNextWeek\.length \|\| dashboardPreferences\.showDueNextWeekWhenEmpty/);
   assert.match(dashboard, /nextMondayKey\(today\)/);
   assert.match(dashboard, /className="week-item-due"/);
   assert.match(dashboard, /thisWeekDueLabel\(item\.dueAt\)/);
