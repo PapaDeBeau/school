@@ -1741,6 +1741,15 @@ function courseHasA(course: Course, gradeOverrides: GradeOverride[]) {
   return course.grade?.trim().toLocaleUpperCase("en-US").startsWith("A") ?? false;
 }
 
+function isCelebrationGradeCourse(course: Course) {
+  const name = comparableCourseName(course.name);
+  return name.includes("algebra")
+    || name.includes("biology")
+    || name.includes("english")
+    || name.includes("history")
+    || name.includes("hsva");
+}
+
 function shouldPlayAllACelebration(data: DashboardData, gradeOverrides: GradeOverride[]) {
   const today = dayKey(data.generatedAt);
   const nextWeekStart = nextMondayKey(today);
@@ -1750,8 +1759,11 @@ function shouldPlayAllACelebration(data: DashboardData, gradeOverrides: GradeOve
     && dayKey(item.dueAt) < nextWeekStart
   ));
   const gradedCourses = data.courses.filter((course) => (
+    isCelebrationGradeCourse(course)
+    && (
     courseGradePercentage(course, gradeOverrides) !== null
     || course.grade?.trim()
+    )
   ));
   const shouldPlay = dueBeforeNextWeek.length === 0
     && gradedCourses.length > 0
