@@ -1759,6 +1759,7 @@ function AdminView({ courses, settings, grades, loading, error, onSave }: {
   const [pushSending, setPushSending] = useState(false);
   const [pushMessage, setPushMessage] = useState("");
   const [pushComposerOpen, setPushComposerOpen] = useState(false);
+  const [gradeTesterOpen, setGradeTesterOpen] = useState(false);
 
   async function sendPush(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1832,7 +1833,10 @@ function AdminView({ courses, settings, grades, loading, error, onSave }: {
           <header><p>OneSignal</p><h2>Push notifications</h2><small>Send a large alert to subscribed School phones.</small></header>
           <button className="admin-save admin-push-send" type="button" onClick={() => { setPushMessage(""); setPushComposerOpen(true); }}>Create a phone alert</button>
         </section>
-        <section className="admin-section">
+        <button className="admin-test-grades-toggle" type="button" onClick={() => setGradeTesterOpen((open) => !open)} aria-expanded={gradeTesterOpen}>
+          {gradeTesterOpen ? "Close Test Grades" : "Test Grade Animation"}
+        </button>
+        {gradeTesterOpen ? <section className="admin-section admin-grades-section">
           <header><p>Six course slots</p><h2>Course percentages</h2><small>Letter grades are calculated automatically.</small></header>
           <div className="admin-grade-list">
             {editableCourses.map((course, index) => {
@@ -1846,7 +1850,7 @@ function AdminView({ courses, settings, grades, loading, error, onSave }: {
               );
             })}
           </div>
-        </section>
+        </section> : null}
         {error ? <p className="admin-message is-error" role="alert">{error}</p> : null}
         {saveMessage ? <p className={`admin-message${saveMessage.startsWith("Saved") ? " is-success" : " is-error"}`} role="status">{saveMessage}</p> : null}
         <button className="admin-save" type="submit" disabled={saving || loading}>{saving ? "Saving…" : "Save dashboard settings"}</button>

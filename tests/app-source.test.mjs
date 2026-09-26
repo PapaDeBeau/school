@@ -597,6 +597,10 @@ test("admin stores percentages and controls dashboard section visibility", async
   assert.doesNotMatch(dashboard, /dueNextWeek\.length \|\| dashboardPreferences\.showDueNextWeekWhenEmpty/);
   assert.match(dashboard, /className="admin-toggle-list"[\s\S]*?className="admin-section admin-push-launcher"[\s\S]*?Six course slots[\s\S]*?<button className="admin-save" type="submit"/);
   assert.match(styles, /\.admin-push-launcher \{ margin-top: 0; \}/);
+  assert.match(dashboard, /const \[gradeTesterOpen, setGradeTesterOpen\] = useState\(false\)/);
+  assert.match(dashboard, /className="admin-test-grades-toggle"[\s\S]*?\{gradeTesterOpen \? "Close Test Grades" : "Test Grade Animation"\}/);
+  assert.match(dashboard, /\{gradeTesterOpen \? <section className="admin-section admin-grades-section">/);
+  assert.match(styles, /\.admin-test-grades-toggle \{[^}]*background: linear-gradient\(135deg, #5f6670, #2d3238\)/);
   assert.match(dashboard, /nextMondayKey\(today\)/);
   assert.match(dashboard, /className="week-item-due"/);
   assert.match(dashboard, /thisWeekDueLabel\(item\.dueAt\)/);
