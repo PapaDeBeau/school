@@ -3578,7 +3578,11 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const tomorrowSummary = `${dueTomorrow.length} ${dueTomorrow.length === 1 ? "ITEM" : "ITEMS"} DUE ${shortOrdinalDay(tomorrow)}`;
   const weekSummary = `${dueThisWeek.length} ${dueThisWeek.length === 1 ? "ITEM" : "ITEMS"} DUE THIS WEEK`;
   const nextWeekSummary = `${dueNextWeek.length} ${dueNextWeek.length === 1 ? "ITEM" : "ITEMS"} DUE NEXT WEEK`;
-  const playAllACelebration = activeView === "dashboard" && shouldPlayAllACelebration(data, gradeOverrides);
+  const celebrationGradeCards = gradeCards.filter(({ course }) => isCelebrationGradeCourse(course));
+  const noVisibleWorkDueThisWeek = dueToday.length === 0 && dueTomorrow.length === 0 && dueThisWeek.length === 0;
+  const allVisibleGradesAreA = celebrationGradeCards.length > 0
+    && celebrationGradeCards.every(({ percentage }) => percentage !== null && percentage >= 90);
+  const playAllACelebration = activeView === "dashboard" && noVisibleWorkDueThisWeek && allVisibleGradesAreA;
 
   return (
     <main className={`school-app${immersive ? " immersive-dashboard" : ""}${focusMode ? " is-focus-mode" : ""}`} ref={appRef}>
