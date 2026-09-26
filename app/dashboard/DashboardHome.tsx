@@ -1781,12 +1781,14 @@ function shouldPlayAllACelebration(data: DashboardData, gradeOverrides: GradeOve
   return shouldPlay;
 }
 
-function AllACelebrationOverlay({ active, src }: { active: boolean; src: string }) {
+function AllACelebrationOverlay({ active, replayKey, src, onEnded }: { active: boolean; replayKey: number; src: string; onEnded: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [visible, setVisible] = useState(false);
   const startedRef = useRef(false);
 
   useEffect(() => {
+    startedRef.current = false;
+    setVisible(false);
     const video = videoRef.current;
     if (!video || !active || startedRef.current) return;
 
@@ -1851,7 +1853,7 @@ function AllACelebrationOverlay({ active, src }: { active: boolean; src: string 
       if (readinessTimer !== null) window.clearTimeout(readinessTimer);
       removeRetryListeners();
     };
-  }, [active]);
+  }, [active, replayKey]);
 
   return (
     <div className={`all-a-celebration${visible ? " is-visible" : ""}`} aria-hidden={!visible}>
@@ -1861,7 +1863,10 @@ function AllACelebrationOverlay({ active, src }: { active: boolean; src: string 
         src={src}
         playsInline
         preload="auto"
-        onEnded={() => setVisible(false)}
+        onEnded={() => {
+          setVisible(false);
+          onEnded();
+        }}
       />
     </div>
   );
@@ -2678,12 +2683,24 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const [assignmentPlayerItem, setAssignmentPlayerItem] = useState<ActionItem | null>(null);
   const [assignmentDetailLoading, setAssignmentDetailLoading] = useState(false);
   const [assignmentDetailError, setAssignmentDetailError] = useState<string | null>(null);
+  const [celebrationReplayKey, setCelebrationReplayKey] = useState(0);
+  const [celebrateButtonVisible, setCelebrateButtonVisible] = useState(false);
+  const [celebrateButtonLeaving, setCelebrateButtonLeaving] = useState(false);
   const closeAssignment = useCallback(() => {
     setSelectedAction(null);
     setAssignmentDetailLoading(false);
     setAssignmentDetailError(null);
   }, []);
   const closeThread = useCallback(() => setSelectedThread(null), []);
+
+  const replayCelebration = useCallback(() => {
+    setCelebrateButtonLeaving(true);
+    window.setTimeout(() => {
+      setCelebrateButtonVisible(false);
+      setCelebrateButtonLeaving(false);
+      setCelebrationReplayKey((key) => key + 1);
+    }, 260);
+  }, []);
 
   useEffect(() => {
     const updateClock = () => setHeaderClock(new Date());
@@ -3586,7 +3603,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
   return (
     <main className={`school-app${immersive ? " immersive-dashboard" : ""}${focusMode ? " is-focus-mode" : ""}`} ref={appRef}>
-      <AllACelebrationOverlay active={playAllACelebration} src={appPath("/celebrations/all-a-clear.webm")} />
+      <AllACelebrationOverlay active={playAllACelebration} replayKey={celebrationReplayKey} src={appPath("/celebrations/all-a-clear.webm")} onEnded={() => setCelebrateButtonVisible(true)} />
       <aside className="school-sidebar">
         <a className="sidebar-brand" href={appPath("/dashboard")} aria-label="Beau School dashboard">
           <span className="sidebar-logo">B</span><span><strong>Beau School</strong><small>Private family workspace</small></span>
@@ -3651,6 +3668,12 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           </span>
           <p>{familyGreeting}</p>
         </div>
+        {playAllACelebration && celebrateButtonVisible ? (
+          <button className={`celebrate-replay-button${celebrateButtonLeaving ? " is-leaving" : ""}`} type="button" onClick={replayCelebration} aria-label="Celebrate again">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={appPath("/celebrations/celebrate-button.webp")} alt="Celebrate" />
+          </button>
+        ) : null}
 
         <header className="workspace-header">
           <div><h1>Dashboard</h1><p>{dayFormat.format(new Date(data.generatedAt))}</p></div>

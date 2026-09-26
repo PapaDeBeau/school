@@ -1946,6 +1946,8 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .mobile-school-menu,
 .mobile-due-stack { display: none; }
 
+.celebrate-replay-button { display: none; }
+
 .all-a-celebration {
   position: fixed;
   z-index: 1000;
@@ -1971,6 +1973,19 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 @keyframes portal-loader-arrive {
   from { opacity: 0; transform: translateY(18px) scale(.97); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes celebrate-button-arrive {
+  0% { opacity: 0; transform: scale(.12); }
+  58% { opacity: 1; transform: scale(1.16); }
+  76% { transform: scale(.92); }
+  90% { transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes celebrate-button-leave {
+  0% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(.08); }
 }
 
 @media (max-width: 820px) {
@@ -2102,6 +2117,28 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
     font-weight: 850;
     letter-spacing: -.035em;
     text-shadow: 0 2px 12px rgba(0, 5, 22, .78);
+  }
+  .celebrate-replay-button {
+    width: min(58vw, 210px);
+    min-height: 0;
+    display: block;
+    margin: 2px auto 8px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    filter: drop-shadow(0 7px 15px rgba(0, 0, 0, .34));
+    transform-origin: center;
+    animation: celebrate-button-arrive .68s cubic-bezier(.2, 1.35, .32, 1) both;
+  }
+  .celebrate-replay-button.is-leaving {
+    pointer-events: none;
+    animation: celebrate-button-leave .26s cubic-bezier(.56, 0, 1, .45) both;
+  }
+  .celebrate-replay-button img {
+    width: 100%;
+    height: auto;
+    display: block;
   }
   .mobile-menu-layer {
     position: fixed;
