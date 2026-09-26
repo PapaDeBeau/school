@@ -3677,7 +3677,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
             tabIndex={playAllACelebration && celebrateButtonVisible ? 0 : -1}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={appPath("/celebrations/celebrate-button.webp")} alt="Celebrate" />
+            <img src={appPath("/celebrations/celebrate-button-v2.webp")} alt="Celebrate" />
           </button>
         </div>
 
