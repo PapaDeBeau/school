@@ -339,6 +339,7 @@ test("mobile dashboard uses the compact action bar and due-date sections", async
   assert.match(styles, /\.school-app \.quick-panel \{ display: none; \}/);
   assert.match(styles, /\.featured-due-stack \{ width: 100%/);
   assert.match(styles, /\.due-featured-slot \{ width: 100%/);
+  assert.match(styles, /\.next-week-featured-slot \.mobile-due-visual \{ padding: 12px 12px 0; \}/);
   assert.match(styles, /background-color: #fff;/);
   assert.match(styles, /panel-pattern-5\.webp/);
   assert.match(styles, /\.school-app \.overview-hero \{ display: none; \}/);

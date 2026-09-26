@@ -1153,6 +1153,8 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .due-featured-slot .mobile-due-card.is-featured { padding: 0 0 14px; }
 .due-featured-slot .mobile-due-visual { position: relative; overflow: visible; }
 .due-featured-slot .mobile-due-banner { width: 100%; height: auto; display: block; border-radius: 14px 14px 0 0; border-bottom: 1px solid rgba(107, 171, 255, .42); object-fit: contain; }
+.next-week-featured-slot .mobile-due-visual { padding: 12px 12px 0; }
+.next-week-featured-slot .mobile-due-banner { border-radius: 10px; }
 .due-featured-slot .spider-count-badge { position: absolute; z-index: 4; top: -22px; left: -20px; width: clamp(78px, 12vw, 110px); height: clamp(76px, 11.6vw, 106px); display: grid; place-items: center; overflow: visible; border: 0; border-radius: 0; color: #fff; background: transparent; box-shadow: none; transform: none; transform-origin: center; pointer-events: none; }
 .due-featured-slot .spider-count-badge::before,
 .due-featured-slot .spider-count-badge::after { display: none; }
