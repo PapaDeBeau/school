@@ -1730,18 +1730,43 @@ function letterGrade(percentage: number) {
   return "F";
 }
 
-function courseHasA(course: Course, gradeOverrides: GradeOverride[]) {
+function courseGradePercentage(course: Course, gradeOverrides: GradeOverride[]) {
   const manualGrade = gradeOverrides.find((entry) => entry.courseKey === String(course.id));
-  const score = manualGrade?.percentage ?? course.score;
+  return manualGrade?.percentage ?? course.score;
+}
+
+function courseHasA(course: Course, gradeOverrides: GradeOverride[]) {
+  const score = courseGradePercentage(course, gradeOverrides);
   if (score !== null && score !== undefined) return score >= 90;
   return course.grade?.trim().toLocaleUpperCase("en-US").startsWith("A") ?? false;
 }
 
 function shouldPlayAllACelebration(data: DashboardData, gradeOverrides: GradeOverride[]) {
-  const dueAssignments = data.critical.filter((item) => item.kind === "assignment");
-  return dueAssignments.length === 0
-    && data.courses.length > 0
-    && data.courses.every((course) => courseHasA(course, gradeOverrides));
+  const today = dayKey(data.generatedAt);
+  const nextWeekStart = nextMondayKey(today);
+  const dueBeforeNextWeek = [...data.critical, ...data.upcoming].filter((item) => (
+    item.kind === "assignment"
+    && item.dueAt
+    && dayKey(item.dueAt) < nextWeekStart
+  ));
+  const gradedCourses = data.courses.filter((course) => (
+    courseGradePercentage(course, gradeOverrides) !== null
+    || course.grade?.trim()
+  ));
+  const shouldPlay = dueBeforeNextWeek.length === 0
+    && gradedCourses.length > 0
+    && gradedCourses.every((course) => courseHasA(course, gradeOverrides));
+
+  if (typeof window !== "undefined") {
+    window.sessionStorage.setItem("all-a-celebration-debug", JSON.stringify({
+      shouldPlay,
+      dueBeforeNextWeek: dueBeforeNextWeek.map((item) => ({ title: item.title, course: item.course, dueAt: item.dueAt, state: item.state })),
+      grades: gradedCourses.map((course) => ({ name: course.name, grade: course.grade, score: courseGradePercentage(course, gradeOverrides) })),
+      nextWeekStart,
+    }));
+  }
+
+  return shouldPlay;
 }
 
 function AllACelebrationOverlay({ active, src }: { active: boolean; src: string }) {
@@ -1754,6 +1779,7 @@ function AllACelebrationOverlay({ active, src }: { active: boolean; src: string 
     if (!video || !active || startedRef.current) return;
 
     let cancelled = false;
+    let readinessTimer: number | null = null;
     let retryOnPointer: (() => void) | null = null;
     let retryOnKey: (() => void) | null = null;
 
@@ -1762,6 +1788,15 @@ function AllACelebrationOverlay({ active, src }: { active: boolean; src: string 
       if (retryOnKey) window.removeEventListener("keydown", retryOnKey, { capture: true });
       retryOnPointer = null;
       retryOnKey = null;
+    };
+
+    const videoIsReady = () => {
+      if (video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) return false;
+      if (!Number.isFinite(video.duration) || video.duration <= 0) return false;
+      for (let index = 0; index < video.buffered.length; index += 1) {
+        if (video.buffered.start(index) <= 0.25 && video.buffered.end(index) >= video.duration - 0.25) return true;
+      }
+      return video.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA;
     };
 
     const tryPlay = () => {
@@ -1788,13 +1823,21 @@ function AllACelebrationOverlay({ active, src }: { active: boolean; src: string 
       tryPlay();
     };
 
-    if (video.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) start();
-    else video.addEventListener("canplaythrough", start, { once: true });
+    const startWhenReady = () => {
+      if (cancelled || startedRef.current) return;
+      if (videoIsReady()) {
+        start();
+        return;
+      }
+      readinessTimer = window.setTimeout(startWhenReady, 250);
+    };
+
+    startWhenReady();
 
     return () => {
       cancelled = true;
+      if (readinessTimer !== null) window.clearTimeout(readinessTimer);
       removeRetryListeners();
-      video.removeEventListener("canplaythrough", start);
     };
   }, [active]);
 
