@@ -1828,6 +1828,10 @@ function AdminView({ courses, settings, grades, loading, error, onSave }: {
             ))}
           </div>
         </section>
+        <section className="admin-section admin-push-launcher">
+          <header><p>OneSignal</p><h2>Push notifications</h2><small>Send a large alert to subscribed School phones.</small></header>
+          <button className="admin-save admin-push-send" type="button" onClick={() => { setPushMessage(""); setPushComposerOpen(true); }}>Create a phone alert</button>
+        </section>
         <section className="admin-section">
           <header><p>Six course slots</p><h2>Course percentages</h2><small>Letter grades are calculated automatically.</small></header>
           <div className="admin-grade-list">
@@ -1847,10 +1851,6 @@ function AdminView({ courses, settings, grades, loading, error, onSave }: {
         {saveMessage ? <p className={`admin-message${saveMessage.startsWith("Saved") ? " is-success" : " is-error"}`} role="status">{saveMessage}</p> : null}
         <button className="admin-save" type="submit" disabled={saving || loading}>{saving ? "Saving…" : "Save dashboard settings"}</button>
       </form>
-      <section className="admin-section admin-push-launcher">
-        <header><p>OneSignal</p><h2>Push notifications</h2><small>Send a large alert to subscribed School phones.</small></header>
-        <button className="admin-save admin-push-send" type="button" onClick={() => { setPushMessage(""); setPushComposerOpen(true); }}>Create a phone alert</button>
-      </section>
       {pushComposerOpen ? <div className="admin-push-backdrop" role="presentation">
         <button className="modal-backdrop-dismiss" type="button" onClick={() => setPushComposerOpen(false)} aria-label="Close push notification composer" />
         <form className="admin-form admin-push-form admin-push-modal" role="dialog" aria-modal="true" aria-labelledby="admin-push-title" onSubmit={(event) => void sendPush(event)}>
