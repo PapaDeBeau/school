@@ -30,6 +30,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.production.example
 .dev.vars
 .dev.vars.*
 !.dev.vars.example
@@ -42,3 +43,6 @@ yarn-error.log*
 /outputs/
 /work/
 /.deploy/
+
+# generated deployment archives
+/site-build*.tar.gz

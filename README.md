@@ -32,6 +32,15 @@ The local setup script creates an ignored `.dev.vars` encryption key. Open `http
 
 The managed Sites project ID is stored in `.openai/hosting.json`. Future versions are pushed and deployed through the Sites hosting workflow; WHM is needed only for DNS or the one-time `/school` redirect.
 
+### VPS cutover configuration
+
+`.env.production.example` is the server configuration template. Copy it to
+`.env.production` only in the protected deployment directory and fill it with
+the *existing* production secrets during a cutover. Do not rotate
+`CANVAS_TOKEN_WRAP_KEY`: it encrypts the stored Canvas token. The current app
+uses Cloudflare D1, so a MySQL account alone will not replace D1 until the data
+layer is migrated.
+
 Target entry points:
 
 - canonical app: `https://beauvizenor.com/school`
