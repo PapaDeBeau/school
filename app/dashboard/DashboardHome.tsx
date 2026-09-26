@@ -3668,18 +3668,17 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           </span>
           <p>{familyGreeting}</p>
         </div>
-        <div className="celebrate-replay-slot">
+        {playAllACelebration && celebrateButtonVisible ? (
           <button
-            className={`celebrate-replay-button${playAllACelebration && celebrateButtonVisible ? " is-visible" : ""}${celebrateButtonLeaving ? " is-leaving" : ""}`}
+            className={`celebrate-replay-button is-visible${celebrateButtonLeaving ? " is-leaving" : ""}`}
             type="button"
             onClick={replayCelebration}
             aria-label="Celebrate again"
-            tabIndex={playAllACelebration && celebrateButtonVisible ? 0 : -1}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={appPath("/celebrations/celebrate-button-v2.webp")} alt="Celebrate" />
           </button>
-        </div>
+        ) : null}
 
         <header className="workspace-header">
           <div><h1>Dashboard</h1><p>{dayFormat.format(new Date(data.generatedAt))}</p></div>

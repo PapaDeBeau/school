@@ -1946,7 +1946,6 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .mobile-school-menu,
 .mobile-due-stack { display: none; }
 
-.celebrate-replay-slot,
 .celebrate-replay-button { display: none; }
 
 .all-a-celebration {
@@ -2119,17 +2118,11 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
     letter-spacing: -.035em;
     text-shadow: 0 2px 12px rgba(0, 5, 22, .78);
   }
-  .celebrate-replay-slot {
-    min-height: 96px;
-    display: grid;
-    place-items: center;
-    margin: 0 auto 2px;
-  }
   .celebrate-replay-button {
     width: min(66vw, 236px);
     min-height: 0;
     display: block;
-    margin: 0 auto;
+    margin: 0 auto 8px;
     padding: 0;
     border: 0;
     opacity: 0;
