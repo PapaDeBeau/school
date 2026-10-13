@@ -1169,7 +1169,10 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .due-tone-today.has-items .mobile-due-summary { animation: due-today-text-pulse 3.2s ease-in-out infinite; }
 .due-tone-missing-late .spider-count-badge strong { color: #ff173c; text-shadow: 0 2px 1px #fff, 0 0 14px rgba(255, 23, 60, .96), 0 6px 9px rgba(0, 0, 0, .9); }
 .due-tone-missing-late .mobile-due-summary { color: #d5092d; text-shadow: 0 0 12px rgba(255, 30, 62, .34); }
-.due-tone-missing-late.has-items .spider-count-web.is-animated { animation: due-today-circle-pulse 2.65s ease-in-out infinite; }
+.due-tone-missing-late .spider-count-badge::before { position: absolute; z-index: 0; inset: 11%; display: block; border-radius: 50%; background: #fff; box-shadow: 0 4px 12px rgba(64, 0, 10, .22); content: ""; }
+.due-tone-missing-late .spider-count-badge img { z-index: 1; }
+.due-tone-missing-late .spider-count-badge strong { z-index: 2; }
+.due-tone-missing-late.has-items .spider-count-web.is-animated { animation: missing-late-webby-pulse 4s ease-in-out infinite; }
 .due-tone-missing-late.has-items .mobile-due-summary { animation: due-today-text-pulse 2.65s ease-in-out infinite; }
 .due-tone-tomorrow .spider-count-badge strong { color: #ffd313; text-shadow: 0 2px 1px #fff, 0 0 11px rgba(255, 211, 19, .88), 0 5px 7px rgba(0, 0, 0, .82); }
 .due-tone-tomorrow .mobile-due-summary { color: #a56d00; }
@@ -1198,6 +1201,11 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 @keyframes due-today-text-pulse {
   0%, 100% { color: #c90829; transform: scale(1); }
   50% { color: #ff123a; transform: scale(1.035); }
+}
+@keyframes missing-late-webby-pulse {
+  0% { opacity: .1; filter: drop-shadow(0 0 2px rgba(255, 20, 54, .35)); transform: scale(1); }
+  75% { opacity: 1; filter: drop-shadow(0 0 13px rgba(255, 20, 54, .9)); transform: scale(1.08); }
+  100% { opacity: .1; filter: drop-shadow(0 0 2px rgba(255, 20, 54, .35)); transform: scale(1); }
 }
 .due-featured-slot .mobile-due-list { display: grid; margin: 8px 14px 0; }
 .due-featured-slot .mobile-due-list button { width: 100%; min-height: 62px; display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 6px 4px 6px 7px; border: 0; border-top: 1px solid rgba(210, 223, 240, .76); color: var(--dash-ink); background: transparent; font: inherit; text-align: left; cursor: pointer; }
@@ -2465,7 +2473,9 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   .assignment-modal-backdrop.is-closing,
   .assignment-modal-backdrop.is-closing .assignment-modal { animation-duration: .01ms; }
   .due-tone-today.has-items .spider-count-web,
-  .due-tone-today.has-items .mobile-due-summary { animation: none; }
+  .due-tone-today.has-items .mobile-due-summary,
+  .due-tone-missing-late.has-items .spider-count-web,
+  .due-tone-missing-late.has-items .mobile-due-summary { animation: none; }
 }
 
 /* Desktop preview controls: the site opens in the centered phone presentation by default. */
