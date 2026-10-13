@@ -2360,7 +2360,7 @@ function MobileDueCard({ title, items, empty, onSelectAssignment, onPlayAssignme
               <div className="mobile-due-row" key={item.id}>
                 <button className="mobile-due-details" type="button" onClick={() => onSelectAssignment(item)} aria-label={`View details for ${item.title}`}>
                   <AssignmentTeacher item={item} />
-                  <span>{tone === "missing-late" ? <em className="week-item-due is-alert-date"><b>{alertAssignmentStatus(item.state)}:</b> {thisWeekDueLabel(item.dueAt)}</em> : tone === "week" || tone === "next-week" ? <em className="week-item-due"><b>Due:</b> {thisWeekDueLabel(item.dueAt)}</em> : null}<strong>{item.title}</strong><small>{item.authorName || "Teacher"}</small></span>
+                  <span>{tone === "missing-late" ? <em className={`week-item-due is-alert-date is-${alertAssignmentStatus(item.state).toLocaleLowerCase("en-US")}`}><b>{alertAssignmentStatus(item.state)}:</b> {thisWeekDueLabel(item.dueAt)}</em> : tone === "week" || tone === "next-week" ? <em className="week-item-due"><b>Due:</b> {thisWeekDueLabel(item.dueAt)}</em> : null}<strong>{item.title}</strong><small>{item.authorName || "Teacher"}</small></span>
                   {!item.audioUrl ? <i aria-hidden="true">›</i> : null}
                 </button>
                 {item.audioUrl ? <button className="assignment-audio-play" type="button" onClick={() => onPlayAssignment(item)} aria-label={`Play ${item.title}`}>
