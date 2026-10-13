@@ -3764,7 +3764,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
         <div className="featured-due-stack">
           <div className="missing-late-featured-slot due-featured-slot" aria-label="Missing and late assignments">
-            <MobileDueCard title="Missing and late" items={missingLateItems} empty="No missing or late assignments." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured banner="/missing-late-banner.webp" tone="missing-late" summary={missingLateSummary} />
+            <MobileDueCard title="Missing and late" items={missingLateItems} empty="No missing or late assignments." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured banner="/missing-late-banner-v2.webp" tone="missing-late" summary={missingLateSummary} />
           </div>
           {dueToday.length || dashboardPreferences.showDueTodayWhenEmpty ? <div className="today-featured-slot due-featured-slot" aria-label="Assignments due today">
             <MobileDueCard title="Due today" items={dueToday} empty="Nothing is due today." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured tone="today" summary={todaySummary} />

@@ -62,7 +62,7 @@ test("dashboard renders core data before quiet enrichment and ignores stale work
   assert.doesNotMatch(enrichmentRoute, /\.head\(/);
   assert.match(dashboard, /const core = preserveDashboardEnrichment\(dashboardDataRef\.current, dashboardBody\)/);
   assert.match(dashboard, /missing-late-featured-slot/);
-  assert.match(dashboard, /missing-late-banner\.webp/);
+  assert.match(dashboard, /missing-late-banner-v2\.webp/);
   assert.match(dashboard, /tone="missing-late"/);
   assert.match(dashboard, /setData\(core\);[\s\S]*window\.setTimeout\(\(\) => \{/);
   assert.match(dashboard, /syncVersion === dashboardSyncVersionRef\.current/);
