@@ -115,6 +115,7 @@ type DashboardData = {
   submittedCount: number;
   announcements: ActionItem[];
   critical: ActionItem[];
+  missingLate: ActionItem[];
   upcoming: ActionItem[];
   week: WeekItem[];
   courses: Course[];
@@ -227,7 +228,7 @@ function hasTeacherInstructions(item: ActionItem) {
 
 function preserveDashboardEnrichment(current: DashboardData | null, core: DashboardData) {
   if (!current) return core;
-  const previousItems = new Map([...current.critical, ...current.upcoming].map((item) => [item.id, item] as const));
+  const previousItems = new Map([...current.critical, ...(current.missingLate ?? []), ...current.upcoming].map((item) => [item.id, item] as const));
   const preserveItem = (item: ActionItem) => {
     const previous = previousItems.get(item.id);
     if (!previous) return item;
@@ -243,6 +244,7 @@ function preserveDashboardEnrichment(current: DashboardData | null, core: Dashbo
     ...core,
     announcements: current.announcements,
     critical: core.critical.map(preserveItem),
+    missingLate: (core.missingLate ?? []).map(preserveItem),
     upcoming: core.upcoming.map(preserveItem),
     week: current.week,
     scheduleUnavailableCourseIds: current.scheduleUnavailableCourseIds,
@@ -273,6 +275,7 @@ function applyDashboardEnrichment(current: DashboardData, enrichment: DashboardE
     scheduleError: null,
     announcements,
     critical: current.critical.map(patchItem),
+    missingLate: (current.missingLate ?? []).map(patchItem),
     upcoming: current.upcoming.map(patchItem),
     week: [...enrichment.week, ...current.week.filter((meeting) => {
       const course = current.courses.find((item) => item.name === meeting.course);
@@ -2322,7 +2325,7 @@ function AnimatedDueBadge({ count, summary }: { count: number; summary: string }
   );
 }
 
-function MobileDueCard({ title, items, empty, onSelectAssignment, onPlayAssignment, featured = false, banner = "/due-today-banner.webp", tone = "week", summary = `${items.length} ${items.length === 1 ? "ITEM" : "ITEMS"} DUE` }: { title: string; items: ActionItem[]; empty: string; onSelectAssignment: (item: ActionItem) => void; onPlayAssignment: (item: ActionItem) => void; featured?: boolean; banner?: string; tone?: "today" | "tomorrow" | "week" | "next-week"; summary?: string }) {
+function MobileDueCard({ title, items, empty, onSelectAssignment, onPlayAssignment, featured = false, banner = "/due-today-banner.webp", tone = "week", summary = `${items.length} ${items.length === 1 ? "ITEM" : "ITEMS"} DUE` }: { title: string; items: ActionItem[]; empty: string; onSelectAssignment: (item: ActionItem) => void; onPlayAssignment: (item: ActionItem) => void; featured?: boolean; banner?: string; tone?: "today" | "tomorrow" | "week" | "next-week" | "missing-late"; summary?: string }) {
   return (
     <section className={`mobile-due-card due-tone-${tone}${featured ? " is-featured" : ""}${items.length ? " has-items" : ""}`}>
       {featured ? (
@@ -2344,7 +2347,7 @@ function MobileDueCard({ title, items, empty, onSelectAssignment, onPlayAssignme
               <div className="mobile-due-row" key={item.id}>
                 <button className="mobile-due-details" type="button" onClick={() => onSelectAssignment(item)} aria-label={`View details for ${item.title}`}>
                   <AssignmentTeacher item={item} />
-                  <span>{tone === "week" || tone === "next-week" ? <em className="week-item-due"><b>Due:</b> {thisWeekDueLabel(item.dueAt)}</em> : null}<strong>{item.title}</strong><small>{item.authorName || "Teacher"}</small></span>
+                  <span>{tone === "missing-late" ? <em className="week-item-due"><b>{assignmentStatus(item.state)}:</b> {thisWeekDueLabel(item.dueAt)}</em> : tone === "week" || tone === "next-week" ? <em className="week-item-due"><b>Due:</b> {thisWeekDueLabel(item.dueAt)}</em> : null}<strong>{item.title}</strong><small>{item.authorName || "Teacher"}</small></span>
                   {!item.audioUrl ? <i aria-hidden="true">›</i> : null}
                 </button>
                 {item.audioUrl ? <button className="assignment-audio-play" type="button" onClick={() => onPlayAssignment(item)} aria-label={`Play ${item.title}`}>
@@ -3021,7 +3024,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
   const generateReadyAudio = useCallback(async (hydrated: DashboardData, syncVersion: number) => {
     const assignmentCandidates = Array.from(new Map(
-      [...hydrated.critical, ...hydrated.upcoming].map((item) => [item.id, item] as const)
+      [...hydrated.critical, ...hydrated.missingLate, ...hydrated.upcoming].map((item) => [item.id, item] as const)
     ).values()).filter((item) => hasTeacherInstructions(item) && !item.audioUrl && item.canvasCourseId && item.canvasItemId);
     const announcementCandidates = hydrated.announcements.filter((item) => !item.audioUrl && item.canvasCourseId && item.canvasItemId && item.description.trim());
     const jobs = [
@@ -3054,7 +3057,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
         const addAudio = (candidate: ActionItem) => candidate.id === item.id ? { ...candidate, audioUrl: body.audioUrl! } : candidate;
         const next = kind === "announcement"
           ? { ...current, announcements: current.announcements.map(addAudio) }
-          : { ...current, critical: current.critical.map(addAudio), upcoming: current.upcoming.map(addAudio) };
+          : { ...current, critical: current.critical.map(addAudio), missingLate: current.missingLate.map(addAudio), upcoming: current.upcoming.map(addAudio) };
         dashboardDataRef.current = next;
         setData(next);
       } catch {
@@ -3078,7 +3081,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     };
     try {
       const assignmentItems = Array.from(new Map(
-        [...core.critical, ...core.upcoming]
+        [...core.critical, ...core.missingLate, ...core.upcoming]
           .filter((item) => item.kind === "assignment" && item.canvasCourseId && item.canvasItemId)
           .map((item) => [item.id, item] as const)
       ).values());
@@ -3132,7 +3135,9 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
         return;
       }
       if (!response.ok) throw new Error(body.error || "Canvas could not be synced.");
-      const core = preserveDashboardEnrichment(dashboardDataRef.current, body as DashboardData);
+      const dashboardBody = body as DashboardData;
+      dashboardBody.missingLate ??= dashboardBody.critical.filter((item) => item.kind === "assignment" && (item.state === "missing" || item.state === "late"));
+      const core = preserveDashboardEnrichment(dashboardDataRef.current, dashboardBody);
       dashboardDataRef.current = core;
       setData(core);
       window.setTimeout(() => {
@@ -3553,6 +3558,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   }
 
   const allClear = data.critical.length === 0;
+  const missingLateItems = data.missingLate ?? data.critical.filter((item) => item.kind === "assignment" && (item.state === "missing" || item.state === "late"));
   const firstName = data.student.split(" ")[0] || "Beau";
   const viewerInitials = data.viewer.displayName.slice(0, 2).toUpperCase();
   const viewerPhoto = familyProfilePhoto[data.viewer.username];
@@ -3570,7 +3576,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     return b.percentage - a.percentage || a.course.name.localeCompare(b.course.name);
   });
   const assignmentPool = Array.from(new Map(
-    [...data.critical, ...data.upcoming]
+    [...data.critical, ...missingLateItems, ...data.upcoming]
       .filter((item) => item.kind === "assignment" && item.dueAt)
       .map((item) => [item.id, item])
   ).values());
@@ -3595,6 +3601,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const tomorrowSummary = `${dueTomorrow.length} ${dueTomorrow.length === 1 ? "ITEM" : "ITEMS"} DUE ${shortOrdinalDay(tomorrow)}`;
   const weekSummary = `${dueThisWeek.length} ${dueThisWeek.length === 1 ? "ITEM" : "ITEMS"} DUE THIS WEEK`;
   const nextWeekSummary = `${dueNextWeek.length} ${dueNextWeek.length === 1 ? "ITEM" : "ITEMS"} DUE NEXT WEEK`;
+  const missingLateSummary = `${missingLateItems.length} ${missingLateItems.length === 1 ? "ITEM" : "ITEMS"} MISSING ~ LATE`;
   const celebrationGradeCards = gradeCards.filter(({ course }) => isCelebrationGradeCourse(course));
   const noVisibleWorkDueThisWeek = dueToday.length === 0 && dueTomorrow.length === 0 && dueThisWeek.length === 0;
   const allVisibleGradesAreA = celebrationGradeCards.length > 0
@@ -3689,6 +3696,9 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
         </header>
 
         <div className="featured-due-stack">
+          <div className="missing-late-featured-slot due-featured-slot" aria-label="Missing and late assignments">
+            <MobileDueCard title="Missing and late" items={missingLateItems} empty="No missing or late assignments." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured banner="/missing-late-banner.webp" tone="missing-late" summary={missingLateSummary} />
+          </div>
           {dueToday.length || dashboardPreferences.showDueTodayWhenEmpty ? <div className="today-featured-slot due-featured-slot" aria-label="Assignments due today">
             <MobileDueCard title="Due today" items={dueToday} empty="Nothing is due today." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured tone="today" summary={todaySummary} />
           </div> : null}

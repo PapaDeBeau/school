@@ -39,8 +39,12 @@ test("dashboard renders core data before quiet enrichment and ignores stale work
   const enrichmentRoute = await readFile(new URL("app/api/dashboard/enrichment/route.ts", root), "utf8");
   const styles = await readFile(new URL("app/globals.css", root), "utf8");
 
-  assert.match(dashboardRoute, /const \[courses, plannerItems, unreadConversations\] = await Promise\.all/);
+  assert.match(dashboardRoute, /const \[courses, plannerItems, unreadConversations, missingSubmissions\] = await Promise\.all/);
+  assert.match(dashboardRoute, /\/api\/v1\/users\/self\/missing_submissions\?include\[\]=course/);
+  assert.match(dashboardRoute, /const missingLate = trackedAssignments/);
+  assert.match(dashboardRoute, /missingLate,/);
   assert.match(dashboardRoute, /\/api\/v1\/courses\/\$\{course\.id\}\/assignments\?/);
+  assert.match(dashboardRoute, /canvasGetAll<CanvasAssignment>/);
   assert.match(dashboardRoute, /params\.append\("include\[\]", "submission"\)/);
   assert.match(dashboardRoute, /function submissionIsComplete\(submission\?: CanvasSubmission \| null\)/);
   assert.match(dashboardRoute, /workflowState === "pending_review"/);
@@ -56,7 +60,10 @@ test("dashboard renders core data before quiet enrichment and ignores stale work
   assert.match(enrichmentRoute, /const \[calendarEvents, upcomingEvents, moduleEntries, canvasAnnouncements, rawItemPatches, assignmentAudioKeys, announcementAudioKeys\] = await Promise\.all/);
   assert.match(enrichmentRoute, /page\.objects\.forEach\(\(object\) => keys\.add\(object\.key\)\)/);
   assert.doesNotMatch(enrichmentRoute, /\.head\(/);
-  assert.match(dashboard, /const core = preserveDashboardEnrichment\(dashboardDataRef\.current, body as DashboardData\)/);
+  assert.match(dashboard, /const core = preserveDashboardEnrichment\(dashboardDataRef\.current, dashboardBody\)/);
+  assert.match(dashboard, /missing-late-featured-slot/);
+  assert.match(dashboard, /missing-late-banner\.webp/);
+  assert.match(dashboard, /tone="missing-late"/);
   assert.match(dashboard, /setData\(core\);[\s\S]*window\.setTimeout\(\(\) => \{/);
   assert.match(dashboard, /syncVersion === dashboardSyncVersionRef\.current/);
   assert.match(dashboard, /enrichment\.syncId !== core\.syncId/);

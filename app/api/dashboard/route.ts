@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { ensureCanvasConnectionSchema, getDb } from "../../../db";
 import { canvasConnections } from "../../../db/schema";
-import { CANVAS_BASE_URL, canvasGet } from "../../../lib/canvas-client";
+import { CANVAS_BASE_URL, canvasGet, canvasGetAll } from "../../../lib/canvas-client";
 import { decryptCanvasToken } from "../../../lib/canvas-vault";
 import { familyUnauthorizedResponse, readFamilySession } from "../../../lib/family-auth";
 import { isAuthorizedAppRequest, unauthorizedAppResponse } from "../../../lib/request-auth";
@@ -84,6 +84,12 @@ type CanvasAssignment = {
   allowed_attempts?: number | null;
   published?: boolean;
   submission?: CanvasSubmission | null;
+  course?: {
+    id?: number;
+    name?: string;
+  };
+  context_id?: number;
+  context_name?: string;
 };
 
 type PlannerItem = {
@@ -279,6 +285,50 @@ function normalizeCanvasAssignment(
   };
 }
 
+function normalizeMissingAssignment(
+  assignment: CanvasAssignment,
+  courseById: Map<number, CanvasCourse>,
+  courseByName: Map<string, CanvasCourse>,
+  courseTeachers: Map<number, CourseTeacher | undefined>,
+): ActionItem | null {
+  const title = assignment.name?.trim();
+  if (!title || assignment.published === false) return null;
+
+  const courseId = assignment.course?.id ?? assignment.context_id ?? null;
+  const courseName = assignment.course?.name ?? assignment.context_name ?? "Canvas";
+  const course = courseId ? courseById.get(courseId) : courseByName.get(courseName);
+  const resolvedCourseId = course?.id ?? courseId;
+  const source = assignment.html_url
+    ?? (resolvedCourseId ? `${CANVAS_BASE_URL}/courses/${resolvedCourseId}/assignments/${assignment.id}` : CANVAS_BASE_URL);
+
+  return {
+    id: `missing-${resolvedCourseId ?? "unknown"}-${assignment.id}`,
+    kind: "assignment",
+    canvasCourseId: resolvedCourseId,
+    canvasItemId: assignment.id,
+    canvasItemType: "assignment",
+    title,
+    course: course?.name ?? courseName,
+    dueAt: assignment.due_at ?? null,
+    points: assignment.points_possible ?? null,
+    state: "missing",
+    detail: "missing",
+    sourceUrl: source.startsWith("http") ? source : `${CANVAS_BASE_URL}${source}`,
+    description: canvasHtmlToText(assignment.description),
+    descriptionHtml: assignment.description?.trim() ?? "",
+    availableFrom: assignment.unlock_at ?? null,
+    availableUntil: assignment.lock_at ?? null,
+    submissionTypes: assignment.submission_types ?? [],
+    allowedExtensions: assignment.allowed_extensions ?? [],
+    gradingType: assignment.grading_type ?? null,
+    allowedAttempts: assignment.allowed_attempts ?? null,
+    published: assignment.published ?? null,
+    authorName: resolvedCourseId ? (courseTeachers.get(resolvedCourseId)?.name ?? null) : null,
+    authorAvatarUrl: resolvedCourseId ? (courseTeachers.get(resolvedCourseId)?.avatarUrl ?? null) : null,
+    audioUrl: null,
+  };
+}
+
 async function mapWithConcurrency<T, R>(values: T[], limit: number, task: (value: T) => Promise<R>) {
   const results = new Array<R>(values.length);
   let nextIndex = 0;
@@ -334,7 +384,7 @@ export async function GET(request: Request) {
       `/api/v1/planner/items?start_date=${dateOffset(-14)}` +
       `&end_date=${dateOffset(14)}&filter=incomplete_items&per_page=100`;
 
-    const [courses, plannerItems, unreadConversations] = await Promise.all([
+    const [courses, plannerItems, unreadConversations, missingSubmissions] = await Promise.all([
       canvasGetWithFallback<CanvasCourse[]>(
         "/api/v1/courses?enrollment_state=active&include[]=total_scores&include[]=teachers&per_page=100",
         "/api/v1/courses?enrollment_state=active&per_page=100",
@@ -352,15 +402,23 @@ export async function GET(request: Request) {
         token,
         []
       ),
+      optionalCanvasGet<CanvasAssignment[]>(
+        "/api/v1/users/self/missing_submissions?include[]=course&filter[]=submittable&per_page=100",
+        "/api/v1/users/self/missing_submissions?include[]=course&per_page=100",
+        token,
+        []
+      ),
     ]);
 
     // Canvas assignments do not identify an author. Associate a course-level
     // teacher only when the teacher is unambiguous; array order is not identity.
     const courseTeachers = new Map(courses.map((course) => [course.id, selectCourseTeacher(course)] as const));
+    const courseById = new Map(courses.map((course) => [course.id, course] as const));
+    const courseByName = new Map(courses.map((course) => [course.name, course] as const));
     const courseAssignmentEntries = await mapWithConcurrency(courses, 6, async (course) => {
       const params = new URLSearchParams({ per_page: "100", order_by: "due_at" });
       params.append("include[]", "submission");
-      const courseAssignments = await canvasGet<CanvasAssignment[]>(
+      const courseAssignments = await canvasGetAll<CanvasAssignment>(
         `/api/v1/courses/${course.id}/assignments?${params.toString()}`,
         token,
       );
@@ -375,6 +433,22 @@ export async function GET(request: Request) {
         .map((assignment) => normalizeCanvasAssignment(assignment, course, teacher))
         .filter((item): item is ActionItem => Boolean(item));
     });
+    const assignmentsByCanvasKey = new Map(assignments.map((item) => [`${item.canvasCourseId}:${item.canvasItemId}`, item] as const));
+    const missingAssignments = missingSubmissions
+      .map((assignment) => normalizeMissingAssignment(assignment, courseById, courseByName, courseTeachers))
+      .filter((item): item is ActionItem => Boolean(item))
+      .filter((item) => {
+        const key = `${item.canvasCourseId}:${item.canvasItemId}`;
+        const existing = assignmentsByCanvasKey.get(key);
+        if (existing) {
+          existing.state = "missing";
+          existing.detail = "missing";
+          return false;
+        }
+        assignmentsByCanvasKey.set(key, item);
+        return true;
+      });
+    const trackedAssignments = [...assignments, ...missingAssignments];
     const messages: ActionItem[] = unreadConversations.map((conversation) => ({
       id: `message-${conversation.id}`,
       kind: "message",
@@ -405,12 +479,15 @@ export async function GET(request: Request) {
     const now = new Date();
     const todayKey = pacificDateKey(now);
     const inSevenDays = now.getTime() + 7 * 24 * 60 * 60 * 1000;
-    const critical = [...messages, ...assignments.filter((item) => {
+    const critical = [...messages, ...trackedAssignments.filter((item) => {
       if (!item.dueAt) return item.state === "missing";
       const due = new Date(item.dueAt);
-      return due.getTime() < now.getTime() || pacificDateKey(due) === todayKey;
+      return item.state === "missing" || item.state === "late" || due.getTime() < now.getTime() || pacificDateKey(due) === todayKey;
     })];
-    const upcoming = assignments
+    const missingLate = trackedAssignments
+      .filter((item) => item.state === "missing" || item.state === "late")
+      .sort((a, b) => new Date(a.dueAt ?? 0).getTime() - new Date(b.dueAt ?? 0).getTime());
+    const upcoming = trackedAssignments
       .filter((item) => {
         if (!item.dueAt || critical.some((criticalItem) => criticalItem.id === item.id)) return false;
         const due = new Date(item.dueAt).getTime();
@@ -430,6 +507,7 @@ export async function GET(request: Request) {
       submittedCount,
       announcements: [],
       critical,
+      missingLate,
       upcoming,
       week: [],
       courses: courses.map((course) => ({
