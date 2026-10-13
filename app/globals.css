@@ -1207,6 +1207,10 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   75% { opacity: 1; filter: drop-shadow(0 0 13px rgba(255, 20, 54, .9)); transform: scale(1.08); }
   100% { opacity: .1; filter: drop-shadow(0 0 2px rgba(255, 20, 54, .35)); transform: scale(1); }
 }
+@keyframes alert-date-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: .18; }
+}
 .due-featured-slot .mobile-due-list { display: grid; margin: 8px 14px 0; }
 .due-featured-slot .mobile-due-list button { width: 100%; min-height: 62px; display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 6px 4px 6px 7px; border: 0; border-top: 1px solid rgba(210, 223, 240, .76); color: var(--dash-ink); background: transparent; font: inherit; text-align: left; cursor: pointer; }
 .due-featured-slot .mobile-due-list button:focus-visible { outline: 3px solid rgba(36, 99, 235, .34); outline-offset: -2px; border-radius: 8px; }
@@ -1215,6 +1219,8 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .due-featured-slot .mobile-due-list small { color: #6b7690; font-size: 9px; }
 .due-featured-slot .week-item-due { margin-bottom: 1px; color: #216fd0; font-size: 9px; font-style: normal; font-weight: 850; letter-spacing: .025em; }
 .due-featured-slot .week-item-due b { color: #e56c13; font-weight: 950; text-transform: uppercase; }
+.due-featured-slot .week-item-due.is-alert-date { font-size: 13px; font-weight: 1000; letter-spacing: .055em; animation: alert-date-blink 1s steps(2, jump-none) infinite; }
+.due-featured-slot .week-item-due.is-alert-date b { font-size: 15px; font-weight: 1000; }
 .due-featured-slot.next-week-featured-slot .week-item-due,
 .due-featured-slot.next-week-featured-slot .week-item-due b { color: #555; }
 .due-featured-slot .mobile-due-list i { color: #65748f; font-size: 20px; font-style: normal; }
@@ -2475,7 +2481,8 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   .due-tone-today.has-items .spider-count-web,
   .due-tone-today.has-items .mobile-due-summary,
   .due-tone-missing-late.has-items .spider-count-web,
-  .due-tone-missing-late.has-items .mobile-due-summary { animation: none; }
+  .due-tone-missing-late.has-items .mobile-due-summary,
+  .due-featured-slot .week-item-due.is-alert-date { animation: none; }
 }
 
 /* Desktop preview controls: the site opens in the centered phone presentation by default. */

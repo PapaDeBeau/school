@@ -485,7 +485,12 @@ export async function GET(request: Request) {
       return item.state === "missing" || item.state === "late" || due.getTime() < now.getTime() || pacificDateKey(due) === todayKey;
     })];
     const missingLate = trackedAssignments
-      .filter((item) => item.state === "missing" || item.state === "late")
+      .filter((item) => {
+        if (item.state === "missing" || item.state === "late") return true;
+        if (!item.dueAt || item.state === "locked") return false;
+        const due = new Date(item.dueAt);
+        return Number.isFinite(due.getTime()) && due.getTime() < now.getTime();
+      })
       .sort((a, b) => new Date(a.dueAt ?? 0).getTime() - new Date(b.dueAt ?? 0).getTime());
     const upcoming = trackedAssignments
       .filter((item) => {

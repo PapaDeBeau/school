@@ -434,6 +434,10 @@ function assignmentStatus(value: string) {
   return labels[value] ?? readableLabel(value);
 }
 
+function alertAssignmentStatus(value: string) {
+  return value === "missing" ? "MISSING" : "OVERDUE";
+}
+
 function formatInboxDate(value: string | null) {
   if (!value) return "Date unavailable";
   const date = new Date(value);
@@ -2347,7 +2351,7 @@ function MobileDueCard({ title, items, empty, onSelectAssignment, onPlayAssignme
               <div className="mobile-due-row" key={item.id}>
                 <button className="mobile-due-details" type="button" onClick={() => onSelectAssignment(item)} aria-label={`View details for ${item.title}`}>
                   <AssignmentTeacher item={item} />
-                  <span>{tone === "missing-late" ? <em className="week-item-due"><b>{assignmentStatus(item.state)}:</b> {thisWeekDueLabel(item.dueAt)}</em> : tone === "week" || tone === "next-week" ? <em className="week-item-due"><b>Due:</b> {thisWeekDueLabel(item.dueAt)}</em> : null}<strong>{item.title}</strong><small>{item.authorName || "Teacher"}</small></span>
+                  <span>{tone === "missing-late" ? <em className="week-item-due is-alert-date"><b>{alertAssignmentStatus(item.state)}:</b> {thisWeekDueLabel(item.dueAt)}</em> : tone === "week" || tone === "next-week" ? <em className="week-item-due"><b>Due:</b> {thisWeekDueLabel(item.dueAt)}</em> : null}<strong>{item.title}</strong><small>{item.authorName || "Teacher"}</small></span>
                   {!item.audioUrl ? <i aria-hidden="true">›</i> : null}
                 </button>
                 {item.audioUrl ? <button className="assignment-audio-play" type="button" onClick={() => onPlayAssignment(item)} aria-label={`Play ${item.title}`}>
@@ -2647,6 +2651,8 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const enrichmentControllerRef = useRef<AbortController | null>(null);
   const dashboardSyncVersionRef = useRef(0);
   const audioRequestsRef = useRef(new Set<string>());
+  const missingLateAlertPlayedRef = useRef(false);
+  const missingLateAlertFallbackRef = useRef<(() => void) | null>(null);
   const announcementEntrancePlayedRef = useRef(false);
   const [data, setData] = useState<DashboardData | null>(null);
   const hasDashboardData = Boolean(data);
@@ -3163,6 +3169,39 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       enrichmentControllerRef.current = null;
     };
   }, [loadAdmin, sync]);
+
+  useEffect(() => {
+    if (activeView !== "dashboard" || !data?.missingLate.length || missingLateAlertPlayedRef.current) return;
+    const audio = new Audio(appPath("/missing-late-alert.mp3"));
+    audio.preload = "auto";
+
+    const clearFallback = () => {
+      if (!missingLateAlertFallbackRef.current) return;
+      window.removeEventListener("pointerdown", missingLateAlertFallbackRef.current, true);
+      missingLateAlertFallbackRef.current = null;
+    };
+    const playAlert = () => {
+      clearFallback();
+      missingLateAlertPlayedRef.current = true;
+      audio.currentTime = 0;
+      void audio.play().catch(() => {
+        missingLateAlertPlayedRef.current = false;
+      });
+    };
+
+    void audio.play().then(() => {
+      missingLateAlertPlayedRef.current = true;
+    }).catch(() => {
+      const fallback = () => playAlert();
+      missingLateAlertFallbackRef.current = fallback;
+      window.addEventListener("pointerdown", fallback, { once: true, capture: true });
+    });
+
+    return () => {
+      clearFallback();
+      audio.pause();
+    };
+  }, [activeView, data?.missingLate.length, data?.syncId]);
 
   useLayoutEffect(() => {
     const layer = mobileMenuLayerRef.current;
