@@ -438,6 +438,15 @@ function alertAssignmentStatus(value: string) {
   return value === "missing" ? "MISSING" : "OVERDUE";
 }
 
+function isActionableAlertItem(item: ActionItem, nowValue: string) {
+  if (item.kind !== "assignment") return false;
+  if (item.state === "missing" || item.state === "late") return true;
+  if (!item.dueAt || item.state === "locked") return false;
+  const due = new Date(item.dueAt);
+  const now = new Date(nowValue);
+  return Number.isFinite(due.getTime()) && Number.isFinite(now.getTime()) && due.getTime() < now.getTime();
+}
+
 function formatInboxDate(value: string | null) {
   if (!value) return "Date unavailable";
   const date = new Date(value);
@@ -2652,7 +2661,8 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const dashboardSyncVersionRef = useRef(0);
   const audioRequestsRef = useRef(new Set<string>());
   const missingLateAlertPlayedRef = useRef(false);
-  const missingLateAlertFallbackRef = useRef<(() => void) | null>(null);
+  const missingLateAlertPendingRef = useRef(false);
+  const audioGestureUnlockedRef = useRef(false);
   const announcementEntrancePlayedRef = useRef(false);
   const [data, setData] = useState<DashboardData | null>(null);
   const hasDashboardData = Boolean(data);
@@ -2716,6 +2726,27 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     updateClock();
     const clockTimer = window.setInterval(updateClock, 1_000);
     return () => window.clearInterval(clockTimer);
+  }, []);
+
+  useEffect(() => {
+    const markAudioUnlocked = () => {
+      audioGestureUnlockedRef.current = true;
+      if (!missingLateAlertPendingRef.current || missingLateAlertPlayedRef.current) return;
+      missingLateAlertPendingRef.current = false;
+      const audio = new Audio(appPath("/missing-late-alert.mp3"));
+      audio.preload = "auto";
+      audio.volume = 1;
+      missingLateAlertPlayedRef.current = true;
+      void audio.play().catch(() => {
+        missingLateAlertPlayedRef.current = false;
+      });
+    };
+    window.addEventListener("pointerdown", markAudioUnlocked, true);
+    window.addEventListener("keydown", markAudioUnlocked, true);
+    return () => {
+      window.removeEventListener("pointerdown", markAudioUnlocked, true);
+      window.removeEventListener("keydown", markAudioUnlocked, true);
+    };
   }, []);
   const closeComposer = useCallback(() => setComposerBoard(null), []);
 
@@ -3170,38 +3201,36 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     };
   }, [loadAdmin, sync]);
 
+  const missingLateItems = data ? Array.from(new Map(
+    [...(data.missingLate ?? []), ...data.critical.filter((item) => isActionableAlertItem(item, data.generatedAt))]
+      .map((item) => [item.id, item] as const)
+  ).values()).sort((a, b) => new Date(a.dueAt ?? 0).getTime() - new Date(b.dueAt ?? 0).getTime()) : [];
+
   useEffect(() => {
-    if (activeView !== "dashboard" || !data?.missingLate.length || missingLateAlertPlayedRef.current) return;
+    if (activeView !== "dashboard" || !missingLateItems.length || missingLateAlertPlayedRef.current) return;
     const audio = new Audio(appPath("/missing-late-alert.mp3"));
     audio.preload = "auto";
-
-    const clearFallback = () => {
-      if (!missingLateAlertFallbackRef.current) return;
-      window.removeEventListener("pointerdown", missingLateAlertFallbackRef.current, true);
-      missingLateAlertFallbackRef.current = null;
-    };
-    const playAlert = () => {
-      clearFallback();
-      missingLateAlertPlayedRef.current = true;
-      audio.currentTime = 0;
-      void audio.play().catch(() => {
-        missingLateAlertPlayedRef.current = false;
-      });
-    };
+    audio.volume = 1;
 
     void audio.play().then(() => {
       missingLateAlertPlayedRef.current = true;
     }).catch(() => {
-      const fallback = () => playAlert();
-      missingLateAlertFallbackRef.current = fallback;
-      window.addEventListener("pointerdown", fallback, { once: true, capture: true });
+      missingLateAlertPendingRef.current = true;
+      if (audioGestureUnlockedRef.current) {
+        missingLateAlertPendingRef.current = false;
+        missingLateAlertPlayedRef.current = true;
+        audio.currentTime = 0;
+        void audio.play().catch(() => {
+          missingLateAlertPlayedRef.current = false;
+          missingLateAlertPendingRef.current = true;
+        });
+      }
     });
 
     return () => {
-      clearFallback();
       audio.pause();
     };
-  }, [activeView, data?.missingLate.length, data?.syncId]);
+  }, [activeView, missingLateItems.length, data?.syncId]);
 
   useLayoutEffect(() => {
     const layer = mobileMenuLayerRef.current;
@@ -3597,7 +3626,6 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   }
 
   const allClear = data.critical.length === 0;
-  const missingLateItems = data.missingLate ?? data.critical.filter((item) => item.kind === "assignment" && (item.state === "missing" || item.state === "late"));
   const firstName = data.student.split(" ")[0] || "Beau";
   const viewerInitials = data.viewer.displayName.slice(0, 2).toUpperCase();
   const viewerPhoto = familyProfilePhoto[data.viewer.username];
