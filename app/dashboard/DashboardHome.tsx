@@ -436,7 +436,7 @@ function assignmentStatus(value: string) {
 }
 
 function alertAssignmentStatus(value: string) {
-  return value === "missing" ? "MISSING" : "OVERDUE";
+  return value === "missing" ? "MISSING" : value === "late" ? "LATE" : "OVERDUE";
 }
 
 function isActionableAlertItem(item: ActionItem, nowValue: string) {
@@ -3204,7 +3204,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   }, [loadAdmin, sync]);
 
   const missingLateItems = data ? Array.from(new Map(
-    [...(data.missingLate ?? []), ...(dashboardPreferences.includeOverdueAlerts ? data.critical.filter((item) => isActionableAlertItem(item, data.generatedAt)) : [])]
+    [...(data.missingLate ?? []).filter((item) => item.state === "missing" || item.state === "late"), ...(dashboardPreferences.includeOverdueAlerts ? data.critical.filter((item) => isActionableAlertItem(item, data.generatedAt)) : [])]
       .map((item) => [item.id, item] as const)
   ).values()).sort((a, b) => new Date(a.dueAt ?? 0).getTime() - new Date(b.dueAt ?? 0).getTime()) : [];
 
