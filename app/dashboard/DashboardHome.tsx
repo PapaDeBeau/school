@@ -322,6 +322,7 @@ type DashboardPreferences = {
   showDueTomorrowWhenEmpty: boolean;
   showDueWeekWhenEmpty: boolean;
   showDueNextWeekWhenEmpty: boolean;
+  includeOverdueAlerts: boolean;
 };
 
 type GradeOverride = { courseKey: string; courseName: string; percentage: number };
@@ -1969,6 +1970,7 @@ function AdminView({ courses, settings, grades, loading, error, onSave }: {
     { key: "showDueTomorrowWhenEmpty", title: "Due Tomorrow", detail: "Show the Due Tomorrow card even when it has zero items.", ariaLabel: "Due Tomorrow: show when empty" },
     { key: "showDueWeekWhenEmpty", title: "This Week", detail: "Show the This Week card even when it has zero items.", ariaLabel: "This Week: show when empty" },
     { key: "showDueNextWeekWhenEmpty", title: "Next Week", detail: "Check it if you wish to display Next weeks activities.", ariaLabel: "Next Week: display activities" },
+    { key: "includeOverdueAlerts", title: "OVERDUE", detail: "Show overdue assignments too and play the siren when this section appears.", ariaLabel: "OVERDUE: show overdue assignments and play siren" },
   ];
 
   return (
@@ -2691,7 +2693,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const [chatHasMore, setChatHasMore] = useState(false);
   const [chatNextBefore, setChatNextBefore] = useState<string | null>(null);
   const [chatError, setChatError] = useState<string | null>(null);
-  const [dashboardPreferences, setDashboardPreferences] = useState<DashboardPreferences>({ showAnnouncements: true, showDueTodayWhenEmpty: true, showDueTomorrowWhenEmpty: true, showDueWeekWhenEmpty: true, showDueNextWeekWhenEmpty: true });
+  const [dashboardPreferences, setDashboardPreferences] = useState<DashboardPreferences>({ showAnnouncements: true, showDueTodayWhenEmpty: true, showDueTomorrowWhenEmpty: true, showDueWeekWhenEmpty: true, showDueNextWeekWhenEmpty: true, includeOverdueAlerts: false });
   const [dashboardPreferencesLoaded, setDashboardPreferencesLoaded] = useState(false);
   const [gradeOverrides, setGradeOverrides] = useState<GradeOverride[]>([]);
   const [adminLoading, setAdminLoading] = useState(false);
@@ -3013,7 +3015,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
         return;
       }
       if (!response.ok) throw new Error(body.error || "Admin settings could not be loaded.");
-      setDashboardPreferences(body.settings);
+      setDashboardPreferences({ includeOverdueAlerts: false, ...body.settings });
       setGradeOverrides(body.grades ?? []);
     } catch (caught) {
       setAdminError(caught instanceof Error ? caught.message : "Admin settings could not be loaded.");
@@ -3039,7 +3041,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       setAdminError(messageText);
       throw new Error(messageText);
     }
-    setDashboardPreferences(body.settings);
+    setDashboardPreferences({ includeOverdueAlerts: false, ...body.settings });
     setGradeOverrides(body.grades ?? []);
   }, [onExit]);
 
@@ -3202,12 +3204,12 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   }, [loadAdmin, sync]);
 
   const missingLateItems = data ? Array.from(new Map(
-    [...(data.missingLate ?? []), ...data.critical.filter((item) => isActionableAlertItem(item, data.generatedAt))]
+    [...(data.missingLate ?? []), ...(dashboardPreferences.includeOverdueAlerts ? data.critical.filter((item) => isActionableAlertItem(item, data.generatedAt)) : [])]
       .map((item) => [item.id, item] as const)
   ).values()).sort((a, b) => new Date(a.dueAt ?? 0).getTime() - new Date(b.dueAt ?? 0).getTime()) : [];
 
   useEffect(() => {
-    if (activeView !== "dashboard" || !missingLateItems.length || missingLateAlertPlayedRef.current) return;
+    if (activeView !== "dashboard" || !dashboardPreferences.includeOverdueAlerts || !missingLateItems.length || missingLateAlertPlayedRef.current) return;
     const audio = new Audio(appPath("/missing-late-alert.mp3"));
     audio.preload = "auto";
     audio.volume = 1;
@@ -3230,7 +3232,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     return () => {
       audio.pause();
     };
-  }, [activeView, missingLateItems.length, data?.syncId]);
+  }, [activeView, dashboardPreferences.includeOverdueAlerts, missingLateItems.length, data?.syncId]);
 
   useLayoutEffect(() => {
     const layer = mobileMenuLayerRef.current;
@@ -3668,7 +3670,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const tomorrowSummary = `${dueTomorrow.length} ${dueTomorrow.length === 1 ? "ITEM" : "ITEMS"} DUE ${shortOrdinalDay(tomorrow)}`;
   const weekSummary = `${dueThisWeek.length} ${dueThisWeek.length === 1 ? "ITEM" : "ITEMS"} DUE THIS WEEK`;
   const nextWeekSummary = `${dueNextWeek.length} ${dueNextWeek.length === 1 ? "ITEM" : "ITEMS"} DUE NEXT WEEK`;
-  const missingLateSummary = `${missingLateItems.length} ${missingLateItems.length === 1 ? "ITEM" : "ITEMS"} MISSING ~ LATE`;
+  const missingLateSummary = `${missingLateItems.length} ${missingLateItems.length === 1 ? "ITEM" : "ITEMS"} ${dashboardPreferences.includeOverdueAlerts ? "MISSING ~ LATE ~ OVERDUE" : "MISSING ~ LATE"}`;
   const celebrationGradeCards = gradeCards.filter(({ course }) => isCelebrationGradeCourse(course));
   const noVisibleWorkDueThisWeek = dueToday.length === 0 && dueTomorrow.length === 0 && dueThisWeek.length === 0;
   const allVisibleGradesAreA = celebrationGradeCards.length > 0
@@ -3866,7 +3868,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
               onDelete={deleteChatMessage}
               onSeen={markChatSeen}
             /> : activeView === "alerts" ? <AlertsView ownerUsername={data.viewer.username} /> : activeView === "admin" ? <AdminView
-              key={`admin-${adminLoading}-${dashboardPreferences.showAnnouncements}-${dashboardPreferences.showDueTodayWhenEmpty}-${dashboardPreferences.showDueTomorrowWhenEmpty}-${dashboardPreferences.showDueWeekWhenEmpty}-${dashboardPreferences.showDueNextWeekWhenEmpty}-${gradeOverrides.map((grade) => `${grade.courseKey}:${grade.percentage}`).join("|")}`}
+              key={`admin-${adminLoading}-${dashboardPreferences.showAnnouncements}-${dashboardPreferences.showDueTodayWhenEmpty}-${dashboardPreferences.showDueTomorrowWhenEmpty}-${dashboardPreferences.showDueWeekWhenEmpty}-${dashboardPreferences.showDueNextWeekWhenEmpty}-${dashboardPreferences.includeOverdueAlerts}-${gradeOverrides.map((grade) => `${grade.courseKey}:${grade.percentage}`).join("|")}`}
               courses={data.courses}
               settings={dashboardPreferences}
               grades={gradeOverrides}

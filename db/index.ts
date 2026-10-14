@@ -143,6 +143,7 @@ export async function ensureFamilyAdminSchema() {
         show_due_tomorrow_when_empty INTEGER NOT NULL DEFAULT 1,
         show_due_week_when_empty INTEGER NOT NULL DEFAULT 1,
         show_due_next_week_when_empty INTEGER NOT NULL DEFAULT 1,
+        include_overdue_alerts INTEGER NOT NULL DEFAULT 0,
         updated_by TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
@@ -173,6 +174,14 @@ export async function ensureFamilyAdminSchema() {
     } catch (error) {
       const refreshedColumns = await d1.prepare("PRAGMA table_info(family_dashboard_settings)").all<{ name: string }>();
       if (!(refreshedColumns.results ?? []).some((column) => column.name === "show_due_next_week_when_empty")) throw error;
+    }
+  }
+  if (!settingsColumnNames.has("include_overdue_alerts")) {
+    try {
+      await d1.prepare("ALTER TABLE family_dashboard_settings ADD COLUMN include_overdue_alerts INTEGER NOT NULL DEFAULT 0").run();
+    } catch (error) {
+      const refreshedColumns = await d1.prepare("PRAGMA table_info(family_dashboard_settings)").all<{ name: string }>();
+      if (!(refreshedColumns.results ?? []).some((column) => column.name === "include_overdue_alerts")) throw error;
     }
   }
   await d1.prepare("PRAGMA optimize").run();
