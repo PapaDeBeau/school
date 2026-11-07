@@ -1169,7 +1169,7 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
 .due-tone-today.has-items .mobile-due-summary { animation: due-today-text-pulse 3.2s ease-in-out infinite; }
 .due-tone-missing-late .spider-count-badge strong { color: #ff173c; text-shadow: 0 2px 1px #fff, 0 0 14px rgba(255, 23, 60, .96), 0 6px 9px rgba(0, 0, 0, .9); }
 .due-tone-missing-late .mobile-due-summary { color: #d5092d; text-shadow: 0 0 12px rgba(255, 30, 62, .34); }
-.due-tone-missing-late .spider-count-badge::before { position: absolute; z-index: 0; inset: 11%; display: block; border-radius: 50%; background: #fff; box-shadow: 0 4px 12px rgba(64, 0, 10, .22); content: ""; }
+/* Keep the web artwork transparent, like the other due-date badges. */
 .due-tone-missing-late .spider-count-badge img { z-index: 1; }
 .due-tone-missing-late .spider-count-badge strong { z-index: 2; }
 .due-tone-missing-late.has-items .spider-count-web.is-animated { animation: missing-late-webby-pulse 4s ease-in-out infinite; }
