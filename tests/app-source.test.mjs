@@ -46,8 +46,8 @@ test("dashboard renders core data before quiet enrichment and ignores stale work
   assert.match(dashboardRoute, /\/api\/v1\/courses\/\$\{course\.id\}\/assignments\?/);
   assert.match(dashboardRoute, /canvasGetAll<CanvasAssignment>/);
   assert.match(dashboardRoute, /params\.append\("include\[\]", "submission"\)/);
-  assert.match(dashboardRoute, /function submissionIsComplete\(submission\?: CanvasSubmission \| null\)/);
-  assert.match(dashboardRoute, /workflowState === "pending_review"/);
+  assert.match(dashboardRoute, /assignmentIsComplete/);
+  
   assert.match(dashboardRoute, /id: `assignment-\$\{course\.id\}-\$\{assignment\.id\}`/);
   assert.match(dashboardRoute, /submittedCount,/);
   assert.doesNotMatch(dashboardRoute, /const assignments = plannerItems/);
@@ -400,7 +400,7 @@ test("assignments open a detailed accessible modal before leaving for Canvas", a
   assert.match(dashboard, /event\.key === "Escape"/);
   assert.match(dashboardRoute, /description: canvasHtmlToText/);
   assert.match(dashboardRoute, /assignment\.description\?\.trim\(\) \?\? ""/);
-  assert.match(dashboardRoute, /assignment\.published === false \|\| submissionIsComplete\(assignment\.submission\)/);
+  assert.match(dashboardRoute, /assignment\.published === false \|\| assignmentIsComplete\(assignment\)/);
   assert.match(enrichmentRoute, /async function assignmentPatches\(selectors: ItemSelector\[\], token: string\)/);
   assert.match(enrichmentRoute, /params\.append\("assignment_ids\[\]", String\(itemId\)\)/);
   assert.match(enrichmentRoute, /\/discussion_topics\/\$\{selector\.itemId\}/);

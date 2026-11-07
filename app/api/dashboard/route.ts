@@ -1,3 +1,4 @@
+import { assignmentIsComplete, externalZeroNeedsAttention, type CanvasSubmissionStatus } from "../../../lib/canvas-assignment-status";
 import { eq } from "drizzle-orm";
 import { ensureCanvasConnectionSchema, getDb } from "../../../db";
 import { canvasConnections } from "../../../db/schema";
@@ -60,14 +61,7 @@ function selectCourseTeacher(course: CanvasCourse): CourseTeacher | undefined {
   };
 }
 
-type CanvasSubmission = {
-  workflow_state?: string | null;
-  submitted_at?: string | null;
-  graded_at?: string | null;
-  excused?: boolean;
-  missing?: boolean;
-  late?: boolean;
-};
+type CanvasSubmission = CanvasSubmissionStatus;
 
 type CanvasAssignment = {
   id: number;
@@ -225,35 +219,27 @@ function canvasHtmlToText(value?: string | null) {
     .trim();
 }
 
-function submissionIsComplete(submission?: CanvasSubmission | null) {
-  if (!submission) return false;
-  const workflowState = submission.workflow_state?.trim().toLocaleLowerCase("en-US") ?? "";
-  return submission.excused === true
-    || Boolean(submission.submitted_at)
-    || Boolean(submission.graded_at)
-    || workflowState === "submitted"
-    || workflowState === "graded"
-    || workflowState === "pending_review";
-}
-
 function normalizeCanvasAssignment(
   assignment: CanvasAssignment,
   course: CanvasCourse,
   teacher?: CourseTeacher,
 ): ActionItem | null {
   const title = assignment.name?.trim();
-  if (!title || assignment.published === false || submissionIsComplete(assignment.submission)) return null;
+  if (!title || assignment.published === false || assignmentIsComplete(assignment)) return null;
 
   const unlockAt = assignment.unlock_at ? new Date(assignment.unlock_at) : null;
   const locked = Boolean(unlockAt && Number.isFinite(unlockAt.getTime()) && unlockAt.getTime() > Date.now());
   const submission = assignment.submission;
-  const state = submission?.missing
-    ? "missing"
-    : locked
-      ? "locked"
-      : submission?.late
-        ? "late"
-        : "open";
+  const needsAttention = externalZeroNeedsAttention(assignment);
+  const state = needsAttention
+    ? "needs_attention"
+    : submission?.missing
+      ? "missing"
+      : locked
+        ? "locked"
+        : submission?.late
+          ? "late"
+          : "open";
   const descriptionHtml = assignment.description?.trim() ?? "";
   const source = assignment.html_url ?? `${CANVAS_BASE_URL}/courses/${course.id}/assignments/${assignment.id}`;
 
@@ -268,7 +254,7 @@ function normalizeCanvasAssignment(
     dueAt: assignment.due_at ?? null,
     points: assignment.points_possible ?? null,
     state,
-    detail: locked && unlockAt ? `Unlocks ${unlockAt.toISOString()}` : state,
+    detail: needsAttention ? "Zero grade recorded; no submission recorded in Canvas" : locked && unlockAt ? `Unlocks ${unlockAt.toISOString()}` : state,
     sourceUrl: source.startsWith("http") ? source : `${CANVAS_BASE_URL}${source}`,
     description: canvasHtmlToText(descriptionHtml),
     descriptionHtml,
@@ -425,7 +411,7 @@ export async function GET(request: Request) {
       return [course, courseAssignments] as const;
     });
     const submittedCount = courseAssignmentEntries.reduce((count, [, courseAssignments]) => (
-      count + courseAssignments.filter((assignment) => assignment.published !== false && submissionIsComplete(assignment.submission)).length
+      count + courseAssignments.filter((assignment) => assignment.published !== false && assignmentIsComplete(assignment)).length
     ), 0);
     const assignments = courseAssignmentEntries.flatMap(([course, courseAssignments]) => {
       const teacher = courseTeachers.get(course.id);
@@ -482,10 +468,10 @@ export async function GET(request: Request) {
     const critical = [...messages, ...trackedAssignments.filter((item) => {
       if (!item.dueAt) return item.state === "missing";
       const due = new Date(item.dueAt);
-      return item.state === "missing" || item.state === "late" || due.getTime() < now.getTime() || pacificDateKey(due) === todayKey;
+      return item.state === "missing" || item.state === "late" || item.state === "needs_attention" || due.getTime() < now.getTime() || pacificDateKey(due) === todayKey;
     })];
     const missingLate = trackedAssignments
-      .filter((item) => item.state === "missing" || item.state === "late")
+      .filter((item) => item.state === "missing" || item.state === "late" || item.state === "needs_attention")
       .sort((a, b) => new Date(a.dueAt ?? 0).getTime() - new Date(b.dueAt ?? 0).getTime());
     const upcoming = trackedAssignments
       .filter((item) => {

@@ -426,6 +426,7 @@ function readableLabel(value: string) {
 }
 
 function assignmentStatus(value: string) {
+  if (value === "needs_attention") return "Needs attention - zero grade, no submission recorded";
   const labels: Record<string, string> = {
     late: "Late",
     locked: "Locked",
@@ -436,12 +437,13 @@ function assignmentStatus(value: string) {
 }
 
 function alertAssignmentStatus(value: string) {
+  if (value === "needs_attention") return "NEEDS ATTENTION";
   return value === "missing" ? "MISSING" : value === "late" ? "LATE" : "OVERDUE";
 }
 
 function isActionableAlertItem(item: ActionItem, nowValue: string) {
   if (item.kind !== "assignment") return false;
-  if (item.state === "missing" || item.state === "late") return true;
+  if (item.state === "missing" || item.state === "late" || item.state === "needs_attention") return true;
   if (!item.dueAt || item.state === "locked") return false;
   const due = new Date(item.dueAt);
   const now = new Date(nowValue);
@@ -3175,7 +3177,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
       }
       if (!response.ok) throw new Error(body.error || "Canvas could not be synced.");
       const dashboardBody = body as DashboardData;
-      dashboardBody.missingLate ??= dashboardBody.critical.filter((item) => item.kind === "assignment" && (item.state === "missing" || item.state === "late"));
+      dashboardBody.missingLate ??= dashboardBody.critical.filter((item) => item.kind === "assignment" && (item.state === "missing" || item.state === "late" || item.state === "needs_attention"));
       const core = preserveDashboardEnrichment(dashboardDataRef.current, dashboardBody);
       dashboardDataRef.current = core;
       setData(core);
@@ -3204,7 +3206,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   }, [loadAdmin, sync]);
 
   const missingLateItems = data ? Array.from(new Map(
-    [...(data.missingLate ?? []).filter((item) => item.state === "missing" || item.state === "late"), ...(dashboardPreferences.includeOverdueAlerts ? data.critical.filter((item) => isActionableAlertItem(item, data.generatedAt)) : [])]
+    [...(data.missingLate ?? []).filter((item) => item.state === "missing" || item.state === "late" || item.state === "needs_attention"), ...(dashboardPreferences.includeOverdueAlerts ? data.critical.filter((item) => isActionableAlertItem(item, data.generatedAt)) : [])]
       .map((item) => [item.id, item] as const)
   ).values()).sort((a, b) => new Date(a.dueAt ?? 0).getTime() - new Date(b.dueAt ?? 0).getTime()) : [];
 
@@ -3670,7 +3672,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const tomorrowSummary = `${dueTomorrow.length} ${dueTomorrow.length === 1 ? "ITEM" : "ITEMS"} DUE ${shortOrdinalDay(tomorrow)}`;
   const weekSummary = `${dueThisWeek.length} ${dueThisWeek.length === 1 ? "ITEM" : "ITEMS"} DUE THIS WEEK`;
   const nextWeekSummary = `${dueNextWeek.length} ${dueNextWeek.length === 1 ? "ITEM" : "ITEMS"} DUE NEXT WEEK`;
-  const missingLateSummary = `${missingLateItems.length} ${missingLateItems.length === 1 ? "ITEM" : "ITEMS"} ${dashboardPreferences.includeOverdueAlerts ? "MISSING ~ LATE ~ OVERDUE" : "MISSING ~ LATE"}`;
+  const missingLateSummary = missingLateItems.some((item) => item.state === "needs_attention") ? `${missingLateItems.length} ${missingLateItems.length === 1 ? "ITEM NEEDS" : "ITEMS NEED"} ATTENTION` : `${missingLateItems.length} ${missingLateItems.length === 1 ? "ITEM" : "ITEMS"} ${dashboardPreferences.includeOverdueAlerts ? "MISSING ~ LATE ~ OVERDUE" : "MISSING ~ LATE"}`;
   const celebrationGradeCards = gradeCards.filter(({ course }) => isCelebrationGradeCourse(course));
   const noVisibleWorkDueThisWeek = dueToday.length === 0 && dueTomorrow.length === 0 && dueThisWeek.length === 0;
   const allVisibleGradesAreA = celebrationGradeCards.length > 0
@@ -3766,7 +3768,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
         <div className="featured-due-stack">
           <div className="missing-late-featured-slot due-featured-slot" aria-label="Missing and late assignments">
-            <MobileDueCard title="Missing and late" items={missingLateItems} empty="No missing or late assignments." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured banner="/missing-late-banner-v2.webp" tone="missing-late" summary={missingLateSummary} />
+            <MobileDueCard title={missingLateItems.some((item) => item.state === "needs_attention") ? "Needs attention" : "Missing and late"} items={missingLateItems} empty="No missing or late assignments." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured banner="/missing-late-banner-v2.webp" tone="missing-late" summary={missingLateSummary} />
           </div>
           {dueToday.length || dashboardPreferences.showDueTodayWhenEmpty ? <div className="today-featured-slot due-featured-slot" aria-label="Assignments due today">
             <MobileDueCard title="Due today" items={dueToday} empty="Nothing is due today." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured tone="today" summary={todaySummary} />
