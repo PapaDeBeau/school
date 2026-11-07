@@ -1,4 +1,5 @@
 import { assignmentIsComplete, externalZeroNeedsAttention, type CanvasSubmissionStatus } from "../../../lib/canvas-assignment-status";
+import { isInDashboardDateWindow } from "../../../lib/dashboard-date-window";
 import { eq } from "drizzle-orm";
 import { ensureCanvasConnectionSchema, getDb } from "../../../db";
 import { canvasConnections } from "../../../db/schema";
@@ -434,7 +435,9 @@ export async function GET(request: Request) {
         assignmentsByCanvasKey.set(key, item);
         return true;
       });
-    const trackedAssignments = [...assignments, ...missingAssignments];
+    const now = new Date();
+    const trackedAssignments = [...assignments, ...missingAssignments]
+      .filter((item) => isInDashboardDateWindow(item.dueAt, now));
     const messages: ActionItem[] = unreadConversations.map((conversation) => ({
       id: `message-${conversation.id}`,
       kind: "message",
@@ -462,9 +465,7 @@ export async function GET(request: Request) {
       audioUrl: null,
     }));
 
-    const now = new Date();
     const todayKey = pacificDateKey(now);
-    const inSevenDays = now.getTime() + 7 * 24 * 60 * 60 * 1000;
     const critical = [...messages, ...trackedAssignments.filter((item) => {
       if (!item.dueAt) return item.state === "missing";
       const due = new Date(item.dueAt);
@@ -476,8 +477,7 @@ export async function GET(request: Request) {
     const upcoming = trackedAssignments
       .filter((item) => {
         if (!item.dueAt || critical.some((criticalItem) => criticalItem.id === item.id)) return false;
-        const due = new Date(item.dueAt).getTime();
-        return due <= inSevenDays;
+        return true;
       })
       .sort((a, b) => new Date(a.dueAt ?? 0).getTime() - new Date(b.dueAt ?? 0).getTime());
     const generatedAt = new Date().toISOString();
