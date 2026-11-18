@@ -1972,7 +1972,7 @@ function AdminView({ courses, settings, grades, loading, error, onSave }: {
     { key: "showDueTomorrowWhenEmpty", title: "Due Tomorrow", detail: "Show the Due Tomorrow card even when it has zero items.", ariaLabel: "Due Tomorrow: show when empty" },
     { key: "showDueWeekWhenEmpty", title: "This Week", detail: "Show the This Week card even when it has zero items.", ariaLabel: "This Week: show when empty" },
     { key: "showDueNextWeekWhenEmpty", title: "Next Week", detail: "Check it if you wish to display Next weeks activities.", ariaLabel: "Next Week: display activities" },
-    { key: "includeOverdueAlerts", title: "OVERDUE", detail: "Show overdue assignments too and play the siren when this section appears.", ariaLabel: "OVERDUE: show overdue assignments and play siren" },
+    { key: "includeOverdueAlerts", title: "OVERDUE", detail: "Show overdue assignments too.", ariaLabel: "OVERDUE: show overdue assignments" },
   ];
 
   return (
@@ -2664,9 +2664,6 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
   const enrichmentControllerRef = useRef<AbortController | null>(null);
   const dashboardSyncVersionRef = useRef(0);
   const audioRequestsRef = useRef(new Set<string>());
-  const missingLateAlertPlayedRef = useRef(false);
-  const missingLateAlertPendingRef = useRef(false);
-  const audioGestureUnlockedRef = useRef(false);
   const announcementEntrancePlayedRef = useRef(false);
   const [data, setData] = useState<DashboardData | null>(null);
   const hasDashboardData = Boolean(data);
@@ -2732,26 +2729,6 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     return () => window.clearInterval(clockTimer);
   }, []);
 
-  useEffect(() => {
-    const markAudioUnlocked = () => {
-      audioGestureUnlockedRef.current = true;
-      if (!missingLateAlertPendingRef.current || missingLateAlertPlayedRef.current) return;
-      missingLateAlertPendingRef.current = false;
-      const audio = new Audio(appPath("/missing-late-alert.mp3"));
-      audio.preload = "auto";
-      audio.volume = 1;
-      missingLateAlertPlayedRef.current = true;
-      void audio.play().catch(() => {
-        missingLateAlertPlayedRef.current = false;
-      });
-    };
-    window.addEventListener("pointerdown", markAudioUnlocked, true);
-    window.addEventListener("keydown", markAudioUnlocked, true);
-    return () => {
-      window.removeEventListener("pointerdown", markAudioUnlocked, true);
-      window.removeEventListener("keydown", markAudioUnlocked, true);
-    };
-  }, []);
   const closeComposer = useCallback(() => setComposerBoard(null), []);
 
   const openAssignment = useCallback(async (item: ActionItem) => {
@@ -3209,32 +3186,6 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     [...(data.missingLate ?? []).filter((item) => item.state === "missing" || item.state === "late" || item.state === "needs_attention"), ...(dashboardPreferences.includeOverdueAlerts ? data.critical.filter((item) => isActionableAlertItem(item, data.generatedAt)) : [])]
       .map((item) => [item.id, item] as const)
   ).values()).sort((a, b) => new Date(a.dueAt ?? 0).getTime() - new Date(b.dueAt ?? 0).getTime()) : [];
-
-  useEffect(() => {
-    if (activeView !== "dashboard" || !dashboardPreferences.includeOverdueAlerts || !missingLateItems.length || missingLateAlertPlayedRef.current) return;
-    const audio = new Audio(appPath("/missing-late-alert.mp3"));
-    audio.preload = "auto";
-    audio.volume = 1;
-
-    void audio.play().then(() => {
-      missingLateAlertPlayedRef.current = true;
-    }).catch(() => {
-      missingLateAlertPendingRef.current = true;
-      if (audioGestureUnlockedRef.current) {
-        missingLateAlertPendingRef.current = false;
-        missingLateAlertPlayedRef.current = true;
-        audio.currentTime = 0;
-        void audio.play().catch(() => {
-          missingLateAlertPlayedRef.current = false;
-          missingLateAlertPendingRef.current = true;
-        });
-      }
-    });
-
-    return () => {
-      audio.pause();
-    };
-  }, [activeView, dashboardPreferences.includeOverdueAlerts, missingLateItems.length, data?.syncId]);
 
   useLayoutEffect(() => {
     const layer = mobileMenuLayerRef.current;
@@ -3767,9 +3718,9 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
         </header>
 
         <div className="featured-due-stack">
-          <div className="missing-late-featured-slot due-featured-slot" aria-label="Missing and late assignments">
+          {missingLateItems.length > 0 ? <div className="missing-late-featured-slot due-featured-slot" aria-label="Missing and late assignments">
             <MobileDueCard title={missingLateItems.some((item) => item.state === "needs_attention") ? "Needs attention" : "Missing and late"} items={missingLateItems} empty="No missing or late assignments." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured banner="/missing-late-banner-v2.webp" tone="missing-late" summary={missingLateSummary} />
-          </div>
+          </div> : null}
           {dueToday.length || dashboardPreferences.showDueTodayWhenEmpty ? <div className="today-featured-slot due-featured-slot" aria-label="Assignments due today">
             <MobileDueCard title="Due today" items={dueToday} empty="Nothing is due today." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured tone="today" summary={todaySummary} />
           </div> : null}
