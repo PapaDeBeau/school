@@ -23,3 +23,8 @@ export function needsNoSubmission(item: AssignmentInstructions): boolean {
     || /\b(?:for (?:your )?(?:reading|review|reference|information) only|just (?:read|review)[^.!?]{0,80}nothing to (?:submit|turn in))\b/.test(text)
     || item.submissionTypes?.includes("none") === true;
 }
+
+export function isPastNoSubmission(item: AssignmentInstructions & { dueAt?: string | null }, now: string | Date): boolean {
+  if (!item.dueAt || !needsNoSubmission(item)) return false;
+  return Date.parse(item.dueAt) < new Date(now).getTime();
+}

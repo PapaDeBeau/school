@@ -3,7 +3,7 @@
 import { type CSSProperties, type FormEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import DOMPurify from "dompurify";
-import { needsNoSubmission } from "../../lib/assignment-submission-requirement";
+import { needsNoSubmission, isPastNoSubmission } from "../../lib/assignment-submission-requirement";
 import { appPath } from "../../lib/app-paths";
 
 type ActionItem = {
@@ -443,7 +443,7 @@ function alertAssignmentStatus(value: string) {
 }
 
 function isActionableAlertItem(item: ActionItem, nowValue: string) {
-  if (item.kind !== "assignment") return false;
+  if (item.kind !== "assignment" || needsNoSubmission(item)) return false;
   if (item.state === "missing" || item.state === "late" || item.state === "needs_attention") return true;
   if (!item.dueAt || item.state === "locked") return false;
   const due = new Date(item.dueAt);
@@ -1969,9 +1969,6 @@ function AdminView({ courses, settings, grades, loading, error, onSave }: {
 
   const toggleRows: Array<{ key: keyof DashboardPreferences; title: string; detail: string; ariaLabel: string }> = [
     { key: "showAnnouncements", title: "Announcements", detail: "Show the entire Announcements section on the Home page.", ariaLabel: "Announcements: show on Home page" },
-    { key: "showDueTodayWhenEmpty", title: "Due Today", detail: "Show the Due Today card even when it has zero items.", ariaLabel: "Due Today: show when empty" },
-    { key: "showDueTomorrowWhenEmpty", title: "Due Tomorrow", detail: "Show the Due Tomorrow card even when it has zero items.", ariaLabel: "Due Tomorrow: show when empty" },
-    { key: "showDueWeekWhenEmpty", title: "This Week", detail: "Show the This Week card even when it has zero items.", ariaLabel: "This Week: show when empty" },
     { key: "showDueNextWeekWhenEmpty", title: "Next Week", detail: "Check it if you wish to display Next weeks activities.", ariaLabel: "Next Week: display activities" },
     { key: "includeOverdueAlerts", title: "OVERDUE", detail: "Show overdue assignments too.", ariaLabel: "OVERDUE: show overdue assignments" },
   ];
@@ -3185,6 +3182,7 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
   const missingLateItems = data ? Array.from(new Map(
     [...(data.missingLate ?? []).filter((item) => item.state === "missing" || item.state === "late" || item.state === "needs_attention"), ...(dashboardPreferences.includeOverdueAlerts ? data.critical.filter((item) => isActionableAlertItem(item, data.generatedAt)) : [])]
+      .filter((item) => !needsNoSubmission(item))
       .map((item) => [item.id, item] as const)
   ).values()).sort((a, b) => new Date(a.dueAt ?? 0).getTime() - new Date(b.dueAt ?? 0).getTime()) : [];
 
@@ -3581,7 +3579,8 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     );
   }
 
-  const allClear = data.critical.length === 0;
+  const criticalItems = data.critical.filter((item) => !isPastNoSubmission(item, data.generatedAt));
+  const allClear = criticalItems.length === 0;
   const firstName = data.student.split(" ")[0] || "Beau";
   const viewerInitials = data.viewer.displayName.slice(0, 2).toUpperCase();
   const viewerPhoto = familyProfilePhoto[data.viewer.username];
@@ -3599,8 +3598,8 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
     return b.percentage - a.percentage || a.course.name.localeCompare(b.course.name);
   });
   const assignmentPool = Array.from(new Map(
-    [...data.critical, ...missingLateItems, ...data.upcoming]
-      .filter((item) => item.kind === "assignment" && item.dueAt)
+    [...criticalItems, ...missingLateItems, ...data.upcoming]
+      .filter((item) => item.kind === "assignment" && item.dueAt && !isPastNoSubmission(item, data.generatedAt))
       .map((item) => [item.id, item])
   ).values());
   const today = dayKey(data.generatedAt);
@@ -3722,17 +3721,17 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
           {missingLateItems.length > 0 ? <div className="missing-late-featured-slot due-featured-slot" aria-label="Missing and late assignments">
             <MobileDueCard title={missingLateItems.some((item) => item.state === "needs_attention") ? "Needs attention" : "Missing and late"} items={missingLateItems} empty="No missing or late assignments." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured banner="/missing-late-banner-v2.webp" tone="missing-late" summary={missingLateSummary} />
           </div> : null}
-          {dueToday.length || dashboardPreferences.showDueTodayWhenEmpty ? <div className="today-featured-slot due-featured-slot" aria-label="Assignments due today">
+          {dueToday.length > 0 ? <div className="today-featured-slot due-featured-slot" aria-label="Assignments due today">
             <MobileDueCard title="Due today" items={dueToday} empty="Nothing is due today." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured tone="today" summary={todaySummary} />
           </div> : null}
           {dashboardPreferencesLoaded && dashboardPreferences.showAnnouncements ? <AnnouncementStack items={data.announcements ?? []} onSelect={openAssignment} pending={data.enrichmentPending && !data.announcements.length} placeholderCount={data.announcementPlaceholderCount} /> : null}
-          {dueTomorrow.length || dashboardPreferences.showDueTomorrowWhenEmpty ? <div className="tomorrow-featured-slot due-featured-slot" aria-label="Assignments due tomorrow">
+          {dueTomorrow.length > 0 ? <div className="tomorrow-featured-slot due-featured-slot" aria-label="Assignments due tomorrow">
             <MobileDueCard title="Due tomorrow" items={dueTomorrow} empty="Nothing is due tomorrow." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured banner="/due-tomorrow-banner.webp" tone="tomorrow" summary={tomorrowSummary} />
           </div> : null}
-          {dueThisWeek.length || dashboardPreferences.showDueWeekWhenEmpty ? <div className="week-featured-slot due-featured-slot" aria-label="Assignments due this week">
+          {dueThisWeek.length > 0 ? <div className="week-featured-slot due-featured-slot" aria-label="Assignments due this week">
             <MobileDueCard title="Due this week" items={dueThisWeek} empty="Nothing else is due this week." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured banner="/this-week-banner.webp" tone="week" summary={weekSummary} />
           </div> : null}
-          {dashboardPreferences.showDueNextWeekWhenEmpty ? <div className="next-week-featured-slot due-featured-slot" aria-label="Assignments due next week">
+          {dueNextWeek.length > 0 && dashboardPreferences.showDueNextWeekWhenEmpty ? <div className="next-week-featured-slot due-featured-slot" aria-label="Assignments due next week">
             <MobileDueCard title="Due next week" items={dueNextWeek} empty="Nothing is due next week." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} featured banner="/next-week-banner.webp" tone="next-week" summary={nextWeekSummary} />
           </div> : null}
         </div>
@@ -3740,13 +3739,13 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
         <section className="overview-hero" aria-labelledby="dashboard-title">
           <div className="hero-message">
             <span className={`hero-check ${allClear ? "is-clear" : "needs-attention"}`} aria-hidden="true">{allClear ? "✓" : "!"}</span>
-            <div><p className="hero-kicker">{dayFormat.format(new Date(data.generatedAt))}</p><h2 id="dashboard-title">{allClear ? "All clear for today" : "Here’s what needs attention"}</h2><p>{allClear ? "No work is due today and there are no unread Canvas messages." : `${data.critical.length} item${data.critical.length === 1 ? "" : "s"} need attention today.`}</p></div>
+            <div><p className="hero-kicker">{dayFormat.format(new Date(data.generatedAt))}</p><h2 id="dashboard-title">{allClear ? "All clear for today" : "Here’s what needs attention"}</h2><p>{allClear ? "No work is due today and there are no unread Canvas messages." : `${criticalItems.length} item${criticalItems.length === 1 ? "" : "s"} need attention today.`}</p></div>
           </div>
           <div className="hero-landscape" aria-hidden="true"><i className="mountain mountain-back" /><i className="mountain mountain-mid" /><i className="mountain mountain-front" /><span className="hero-sun" /><span className="hero-student">B</span></div>
         </section>
 
         <section className="summary-grid" aria-label="Dashboard summary">
-          <article className={`summary-card critical-stat${data.critical.length ? "" : " is-zero"}`}><span aria-hidden="true">!</span><div><strong>{data.critical.length}</strong><small>Critical</small></div></article>
+          <article className={`summary-card critical-stat${criticalItems.length ? "" : " is-zero"}`}><span aria-hidden="true">!</span><div><strong>{criticalItems.length}</strong><small>Critical</small></div></article>
           <article className={`summary-card unread-stat${data.unreadCount ? "" : " is-zero"}`}><span aria-hidden="true">✉</span><div><strong>{data.unreadCount}</strong><small>Unread</small></div></article>
           <article className={`summary-card submitted-stat${data.submittedCount ? "" : " is-zero"}`}><span aria-hidden="true">✓</span><div><strong>{data.submittedCount}</strong><small>Submitted</small></div></article>
         </section>
@@ -3755,9 +3754,9 @@ export function DashboardHome({ immersive = false, onExit }: DashboardHomeProps 
 
         <section className={`critical-strip ${allClear ? "is-clear" : "needs-attention"}`}>
           <span className="critical-shield" aria-hidden="true">{allClear ? "✓" : "!"}</span>
-          <div><p>Critical information</p><strong>{allClear ? "Nothing is due today and there are no unread teacher messages." : `${data.critical.length} items need attention.`}</strong></div>
+          <div><p>Critical information</p><strong>{allClear ? "Nothing is due today and there are no unread teacher messages." : `${criticalItems.length} items need attention.`}</strong></div>
           <span className="critical-chevron" aria-hidden="true">›</span>
-          {!allClear ? <ActionList items={data.critical} empty="Nothing needs attention." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} /> : null}
+          {!allClear ? <ActionList items={criticalItems} empty="Nothing needs attention." onSelectAssignment={openAssignment} onPlayAssignment={setAssignmentPlayerItem} /> : null}
         </section>
 
         <div className="primary-dashboard-grid schedule-only-grid">

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { needsNoSubmission } from "../lib/assignment-submission-requirement.ts";
+import { needsNoSubmission, isPastNoSubmission } from "../lib/assignment-submission-requirement.ts";
 import { selectCourseTeacher } from "../lib/canvas-course-teacher.ts";
 
 test("reading instructions identify work with no submission, including HTML", () => {
@@ -33,4 +33,15 @@ test("teacher selection uses original course names and deduplicates identities",
   assert.deepEqual(selectCourseTeacher({ name: "English", original_name: "English - Knox", teachers: [teacher, { id: 8, display_name: "Coordinator" }] }), { name: teacher.display_name, avatarUrl: teacher.avatar_image_url });
   assert.equal(selectCourseTeacher({ name: "English", teachers: [teacher, teacher] }).name, teacher.display_name);
   assert.equal(selectCourseTeacher({ name: "English", teachers: [teacher, { id: 8, display_name: "Another Teacher" }] }), undefined);
+});
+
+test("no-submission tasks disappear only after their deadline", () => {
+  const now = "2026-11-18T20:00:00Z";
+  const reading = { kind: "assignment", description: "Nothing needs to be submitted for this reading assignment." };
+  assert.equal(isPastNoSubmission({ ...reading, dueAt: "2026-11-16T07:59:59Z" }, now), true);
+  assert.equal(isPastNoSubmission({ ...reading, dueAt: "2026-11-19T07:59:59Z" }, now), false);
+  assert.equal(isPastNoSubmission({ ...reading, dueAt: now }, now), false);
+  assert.equal(isPastNoSubmission({ ...reading, dueAt: null }, now), false);
+  assert.equal(isPastNoSubmission({ ...reading, dueAt: "invalid" }, now), false);
+  assert.equal(isPastNoSubmission({ kind: "assignment", description: "Submit your essay.", dueAt: "2026-11-16T07:59:59Z" }, now), false);
 });

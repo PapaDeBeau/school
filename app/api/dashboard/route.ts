@@ -1,3 +1,4 @@
+import { isPastNoSubmission } from "../../../lib/assignment-submission-requirement";
 import { selectCourseTeacher, type CourseTeacher, type CanvasTeacher } from "../../../lib/canvas-course-teacher";
 import { assignmentIsComplete, externalZeroNeedsAttention, type CanvasSubmissionStatus } from "../../../lib/canvas-assignment-status";
 import { isInDashboardDateWindow } from "../../../lib/dashboard-date-window";
@@ -415,7 +416,7 @@ export async function GET(request: Request) {
       });
     const now = new Date();
     const trackedAssignments = [...assignments, ...missingAssignments]
-      .filter((item) => isInDashboardDateWindow(item.dueAt, now));
+      .filter((item) => isInDashboardDateWindow(item.dueAt, now) && !isPastNoSubmission(item, now));
     const messages: ActionItem[] = unreadConversations.map((conversation) => ({
       id: `message-${conversation.id}`,
       kind: "message",

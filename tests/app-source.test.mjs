@@ -600,7 +600,7 @@ test("admin stores percentages and controls dashboard section visibility", async
   assert.match(dashboard, /showDueWeekWhenEmpty/);
   assert.match(dashboard, /showDueNextWeekWhenEmpty/);
   assert.match(dashboard, /Check it if you wish to display Next weeks activities\./);
-  assert.match(dashboard, /dashboardPreferences\.showDueNextWeekWhenEmpty \? <div className="next-week-featured-slot/);
+  assert.match(dashboard, /dueNextWeek\.length > 0 && dashboardPreferences\.showDueNextWeekWhenEmpty \? <div className="next-week-featured-slot/);
   assert.doesNotMatch(dashboard, /dueNextWeek\.length \|\| dashboardPreferences\.showDueNextWeekWhenEmpty/);
   assert.match(dashboard, /className="admin-toggle-list"[\s\S]*?className="admin-section admin-push-launcher"[\s\S]*?Six course slots[\s\S]*?<button className="admin-save" type="submit"/);
   assert.match(styles, /\.admin-push-launcher \{ margin-top: 0; \}/);
