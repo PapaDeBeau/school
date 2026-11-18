@@ -1,3 +1,4 @@
+import { selectCourseTeacher, type CourseTeacher, type CanvasTeacher } from "../../../lib/canvas-course-teacher";
 import { assignmentIsComplete, externalZeroNeedsAttention, type CanvasSubmissionStatus } from "../../../lib/canvas-assignment-status";
 import { isInDashboardDateWindow } from "../../../lib/dashboard-date-window";
 import { eq } from "drizzle-orm";
@@ -23,44 +24,6 @@ type CanvasCourse = {
     avatar_image_url?: string | null;
   }>;
 };
-
-type CourseTeacher = { name: string | null; avatarUrl: string | null };
-
-function normalizeNameForMatch(value: string) {
-  return value
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("en-US")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-function selectCourseTeacher(course: CanvasCourse): CourseTeacher | undefined {
-  const teachers = (course.teachers ?? []).filter((teacher) => teacher.display_name?.trim());
-  const courseWords = new Set(normalizeNameForMatch(course.name).split(" ").filter(Boolean));
-  const matches = teachers.filter((teacher) => {
-    const nameWords = normalizeNameForMatch(teacher.display_name!).split(" ").filter(Boolean);
-    const surname = nameWords.at(-1);
-    return Boolean(surname && surname.length > 2 && courseWords.has(surname));
-  });
-  if (matches.length === 1) {
-    return {
-      name: matches[0].display_name!.trim(),
-      avatarUrl: matches[0].avatar_image_url?.trim() || null,
-    };
-  }
-
-  // Some Canvas schools put the actual instructor surname in the course title
-  // while the teachers include returns a coordinator or account-level teacher.
-  const titleInstructor = course.name.match(/\s[-–—]\s*([\p{L}][\p{L}'’.-]*(?:\s+[\p{L}][\p{L}'’.-]*){0,2})\s*$/u)?.[1]?.trim();
-  if (titleInstructor) return { name: titleInstructor, avatarUrl: null };
-
-  if (teachers.length !== 1) return undefined;
-  return {
-    name: teachers[0].display_name!.trim(),
-    avatarUrl: teachers[0].avatar_image_url?.trim() || null,
-  };
-}
 
 type CanvasSubmission = CanvasSubmissionStatus;
 
@@ -399,6 +362,21 @@ export async function GET(request: Request) {
 
     // Canvas assignments do not identify an author. Associate a course-level
     // teacher only when the teacher is unambiguous; array order is not identity.
+    // The course include can omit teachers (including on the 406 fallback).
+    // Refresh incomplete identities from the course's teacher roster, not array order.
+    await mapWithConcurrency(courses, 4, async (course) => {
+      const selected = selectCourseTeacher(course);
+      if (selected?.name && selected.avatarUrl) return;
+      try {
+        const users = await canvasGetAll<{ id: number; name?: string; short_name?: string; avatar_url?: string }>(
+          `/api/v1/courses/${course.id}/users?enrollment_type[]=teacher&include[]=avatar_url&per_page=100`, token,
+        );
+        const roster: CanvasTeacher[] = users.map((user) => ({ id: user.id, display_name: user.name || user.short_name, avatar_image_url: user.avatar_url }));
+        if (roster.length) course.teachers = roster;
+      } catch {
+        // Keep available course metadata if this student's roster access is restricted.
+      }
+    });
     const courseTeachers = new Map(courses.map((course) => [course.id, selectCourseTeacher(course)] as const));
     const courseById = new Map(courses.map((course) => [course.id, course] as const));
     const courseByName = new Map(courses.map((course) => [course.name, course] as const));

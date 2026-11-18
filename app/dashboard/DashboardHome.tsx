@@ -3,6 +3,7 @@
 import { type CSSProperties, type FormEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import DOMPurify from "dompurify";
+import { needsNoSubmission } from "../../lib/assignment-submission-requirement";
 import { appPath } from "../../lib/app-paths";
 
 type ActionItem = {
@@ -2273,7 +2274,7 @@ function ActionList({ items, empty, onSelectAssignment, onPlayAssignment }: { it
           <span className="action-arrow" aria-hidden="true">›</span>
         </>;
         return item.kind === "assignment" ? (
-          <div className="action-assignment-row" key={item.id}>
+          <div className={`action-assignment-row${needsNoSubmission(item) ? " no-submission-required" : ""}`} key={item.id}>
             <button className="action-item" type="button" onClick={() => onSelectAssignment(item)} aria-label={`View details for ${item.title}`}>{content}</button>
             {item.audioUrl ? <button className="assignment-audio-play" type="button" onClick={() => onPlayAssignment(item)} aria-label={`Play ${item.title}`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}<img src={appPath("/assignment-details-play.webp")} alt="" aria-hidden="true" />
@@ -2361,10 +2362,10 @@ function MobileDueCard({ title, items, empty, onSelectAssignment, onPlayAssignme
         <div className="mobile-due-list">
           {items.map((item) => {
             return (
-              <div className="mobile-due-row" key={item.id}>
+              <div className={`mobile-due-row${needsNoSubmission(item) ? " no-submission-required" : ""}`} key={item.id}>
                 <button className="mobile-due-details" type="button" onClick={() => onSelectAssignment(item)} aria-label={`View details for ${item.title}`}>
                   <AssignmentTeacher item={item} />
-                  <span>{tone === "missing-late" ? <em className={`week-item-due is-alert-date is-${alertAssignmentStatus(item.state).toLocaleLowerCase("en-US")}`}><b>{alertAssignmentStatus(item.state)}:</b> {thisWeekDueLabel(item.dueAt)}</em> : tone === "week" || tone === "next-week" ? <em className="week-item-due"><b>Due:</b> {thisWeekDueLabel(item.dueAt)}</em> : null}<strong>{item.title}</strong><small>{item.authorName || "Teacher"}</small></span>
+                  <span>{needsNoSubmission(item) ? <em className="week-item-due">No submission required</em> : tone === "missing-late" ? <em className={`week-item-due is-alert-date is-${alertAssignmentStatus(item.state).toLocaleLowerCase("en-US")}`}><b>{alertAssignmentStatus(item.state)}:</b> {thisWeekDueLabel(item.dueAt)}</em> : tone === "week" || tone === "next-week" ? <em className="week-item-due"><b>Due:</b> {thisWeekDueLabel(item.dueAt)}</em> : null}<strong>{item.title}</strong><small>{item.authorName || "Teacher"}</small></span>
                   {!item.audioUrl ? <i aria-hidden="true">›</i> : null}
                 </button>
                 {item.audioUrl ? <button className="assignment-audio-play" type="button" onClick={() => onPlayAssignment(item)} aria-label={`Play ${item.title}`}>

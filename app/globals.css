@@ -2611,3 +2611,14 @@ footer { width: min(1160px, 100%); margin: 0 auto; display: flex; justify-conten
   .alert-editor-actions { grid-template-columns: 1fr 1fr; }
   .alert-editor-actions .alerts-save { grid-column: 1/-1; }
 }
+
+/* Reading/reference tasks remain clickable, but do not look like submission alerts. */
+.mobile-due-row.no-submission-required,
+.action-assignment-row.no-submission-required { background: #ededed; filter: grayscale(1); }
+.no-submission-required button,
+.no-submission-required .action-item { background: transparent !important; }
+.no-submission-required *,
+.no-submission-required .assignment-teacher > small { color: #666 !important; text-shadow: none !important; -webkit-text-stroke: 0 !important; }
+.no-submission-required .assignment-teacher-photo { border-color: #888; background: #ddd; box-shadow: none; }
+.no-submission-required img { filter: grayscale(1); }
+.no-submission-required .week-item-due { animation: none !important; }
